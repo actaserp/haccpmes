@@ -99,6 +99,7 @@
   "wm_test_master": { "name": "검사마스터", "templates": { "default": "test/test_master.html" } },
   "wm_test_method": { "name": "검사방법", "templates": { "default": "test/test_method.html" } },
   "wm_test_item": { "name": "검사항목", "templates": { "default": "test/test_item.html" } },
+  "wm_test_daily_report": { "name": "검사일보", "templates": { "default": "test/test_daily_report.html" } },
 
   "wm_custom_service": { "name": "고객별 부적합 분석", "templates": { "default": "support/custom_service.html"	} },
 
