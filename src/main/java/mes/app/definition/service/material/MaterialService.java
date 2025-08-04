@@ -19,13 +19,14 @@ public class MaterialService {
 	SqlRunner sqlRunner;
 	
 	
-	public List<Map<String, Object>> getMaterialList(String matType, String matGroupId, String keyword, String spjangcd){
+	public List<Map<String, Object>> getMaterialList(String matType, String matGroupId, String keyword, String spjangcd, String useYnFlag){
 		
 		MapSqlParameterSource paramMap = new MapSqlParameterSource();        
 		paramMap.addValue("mat_type", matType);
 		paramMap.addValue("mat_group_id", matGroupId);
 		paramMap.addValue("keyword", keyword);
 		paramMap.addValue("spjangcd", spjangcd);
+		paramMap.addValue("UseYn", useYnFlag);
         
         String sql = """
 			select m.id
@@ -94,6 +95,7 @@ public class MaterialService {
             left join bom b on b."Material_id" = m.id
             where 1=1
             AND m.spjangcd = :spjangcd
+            AND m."Useyn" = :UseYn
         """;
         if (StringUtils.isEmpty(matType)==false) sql +=" and mg.\"MaterialType\" = :mat_type ";
         if (StringUtils.isEmpty(matGroupId)==false) sql +=" and m.\"MaterialGroup_id\" = (:mat_group_id)::int ";
@@ -189,7 +191,13 @@ public class MaterialService {
 		dicParam.addValue("safetyStock", CommonUtil.tryFloatNull(data.getFirst("SafetyStock")));
 		dicParam.addValue("maxStock", CommonUtil.tryFloatNull(data.getFirst("MaxStock")));
 		dicParam.addValue("processSafetyStock", CommonUtil.tryFloatNull(data.getFirst("ProcessSafetyStock")));
-		dicParam.addValue("validDays", Integer.parseInt(data.getFirst("ValidDays").toString()));
+		String validDaysStr = data.getFirst("ValidDays") != null ? data.getFirst("ValidDays").toString().trim() : "";
+		if (!validDaysStr.isEmpty()) {
+			dicParam.addValue("validDays", Integer.parseInt(validDaysStr));
+		} else {
+			// 기본값 지정(예시) 또는 예외처리
+//			dicParam.addValue("validDays", 0);
+		}
 		
 		if(data.containsKey("lot_use_yn")) {
 			dicParam.addValue("lotUseYN", data.getFirst("lot_use_yn").toString());			

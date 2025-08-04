@@ -98,6 +98,14 @@
                                 <input type="text" class="form-control2" id="keyword" name="keyword">
                             </dd>
                         </dl>
+                        <dl>
+                            <dt>
+                                <label>사용중지여부</label>
+                            </dt>
+                            <dd>
+                                <input class="form-control2" type="checkbox" id="useYn_flag" name="useYn_flag"/>
+                            </dd>
+                        </dl>
 
                     </div>
                     <div class="search-wrap" style="margin-top: -20px; margin-left: auto;">
@@ -1405,6 +1413,7 @@
                     'mat_group': $('#cboMaterialGroup').val(),
                     'keyword': $('#keyword').val(),
                     'action': 'read',
+                    'useYn_flag': $('#useYn_flag').is(':checked') ? '1' : '0',
                     spjangcd: sessionStorage.getItem('spjangcd'),
                 };
 
