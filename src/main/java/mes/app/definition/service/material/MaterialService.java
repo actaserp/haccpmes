@@ -415,12 +415,12 @@ public class MaterialService {
         dicParam.addValue("mat_pk", matPK);
         String sql = "";
         
-        //품목에 연결된 단가삭제
-        sql = " delete from mat_comp_uprice where \"Material_id\" = :mat_pk";
-        this.sqlRunner.execute(sql, dicParam);
+//        //품목에 연결된 단가삭제
+//        sql = " delete from mat_comp_uprice where \"Material_id\" = :mat_pk";
+//        this.sqlRunner.execute(sql, dicParam);
         
         //품목 삭제
-    	sql = " delete from material where id = :mat_pk";
+    	sql = " UPDATE material SET \"Useyn\" = '1' WHERE id = :mat_pk;";
     	return this.sqlRunner.execute(sql, dicParam);
 	}
 
@@ -430,12 +430,12 @@ public class MaterialService {
 			MapSqlParameterSource dicParam = new MapSqlParameterSource();
 			dicParam.addValue("mat_pk", matPK);
 
-			// 1. 단가 삭제
-			String sql = "delete from mat_comp_uprice where \"Material_id\" = :mat_pk";
-			this.sqlRunner.execute(sql, dicParam);
+//			// 1. 단가 삭제
+//			String sql = "delete from mat_comp_uprice where \"Material_id\" = :mat_pk";
+//			this.sqlRunner.execute(sql, dicParam);
 
 			// 2. 품목 삭제
-			sql = "delete from material where id = :mat_pk";
+			String sql = " UPDATE material SET \"Useyn\" = '1' WHERE id = :mat_pk;";
 			total += this.sqlRunner.execute(sql, dicParam);
 		}
 		return total;

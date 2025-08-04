@@ -535,7 +535,7 @@
                                         </tr>
                                         <tr>
                                             <th>
-                                                <label for="MinOrder"><span class="eq">*</span>최소 발주량</label>
+                                                <label for="MinOrder">최소 발주량</label>
                                             </th>
                                             <td>
                                                 <input type="text" style="width: 100%;" id="MinOrder"
@@ -543,7 +543,7 @@
                                             </td>
 
                                             <th>
-                                                <label for="MaxOrder"><span class="eq">*</span>최대 발주량</label>
+                                                <label for="MaxOrder">최대 발주량</label>
                                             </th>
                                             <td>
                                                 <input type="text" style="width: 100%;" id="MaxOrder"
@@ -646,7 +646,7 @@
                                             </td>
 
                                             <th>
-                                                <label for="ValidDays"><span class="eq">*</span>사용기한(일)</label>
+                                                <label for="ValidDays">사용기한(일)</label>
                                             </th>
                                             <td>
                                                 <input type="number" style="width: 100%;" id="ValidDays"
@@ -2247,35 +2247,35 @@
                     return;
                 }
 
-                if (!data.MinOrder) {
-                    Alert.alert('', '최소 발주량을 입력해 주세요');
-                    $('#matStockForm #MinOrder').focus();  // 해당 input으로 포커스 이동
-                    // 탭 이동 및 내용 표시
-                    $('a[href="#tab_inventory"]').tab('show');  // 탭 전환
-                    $('#tab_basic').hide();
-                    $('#tab_inventory').show();  // 해당 탭 내용 표시
-                    return;
-                }
-
-                if (!data.MaxOrder) {
-                    Alert.alert('', '최대 발주량을 입력해 주세요');
-                    $('#matStockForm #MaxOrder').focus();  // 해당 input으로 포커스 이동
-                    // 탭 이동 및 내용 표시
-                    $('a[href="#tab_inventory"]').tab('show');  // 탭 전환
-                    $('#tab_basic').hide();
-                    $('#tab_inventory').show();  // 해당 탭 내용 표시
-                    return;
-                }
-
-                if (!data.ValidDays) {
-                    Alert.alert('', '사용기한(일)를 입력해 주세요');
-                    $('#matStockForm #ValidDays').focus();  // 해당 input으로 포커스 이동
-                    // 탭 이동 및 내용 표시
-                    $('a[href="#tab_inventory"]').tab('show');  // 탭 전환
-                    $('#tab_basic').hide();
-                    $('#tab_inventory').show();  // 해당 탭 내용 표시
-                    return;
-                }
+                // if (!data.MinOrder) {
+                //     Alert.alert('', '최소 발주량을 입력해 주세요');
+                //     $('#matStockForm #MinOrder').focus();  // 해당 input으로 포커스 이동
+                //     // 탭 이동 및 내용 표시
+                //     $('a[href="#tab_inventory"]').tab('show');  // 탭 전환
+                //     $('#tab_basic').hide();
+                //     $('#tab_inventory').show();  // 해당 탭 내용 표시
+                //     return;
+                // }
+                //
+                // if (!data.MaxOrder) {
+                //     Alert.alert('', '최대 발주량을 입력해 주세요');
+                //     $('#matStockForm #MaxOrder').focus();  // 해당 input으로 포커스 이동
+                //     // 탭 이동 및 내용 표시
+                //     $('a[href="#tab_inventory"]').tab('show');  // 탭 전환
+                //     $('#tab_basic').hide();
+                //     $('#tab_inventory').show();  // 해당 탭 내용 표시
+                //     return;
+                // }
+                //
+                // if (!data.ValidDays) {
+                //     Alert.alert('', '사용기한(일)를 입력해 주세요');
+                //     $('#matStockForm #ValidDays').focus();  // 해당 input으로 포커스 이동
+                //     // 탭 이동 및 내용 표시
+                //     $('a[href="#tab_inventory"]').tab('show');  // 탭 전환
+                //     $('#tab_basic').hide();
+                //     $('#tab_inventory').show();  // 해당 탭 내용 표시
+                //     return;
+                // }
 
                 Alert.confirm('',
                     '저장하시겠습니까?',
@@ -2578,6 +2578,23 @@
 
             page.searchDataBind();
         });
+
+        // 1. 폼 리셋 유틸 함수
+        function resetForms(formIds = []) {
+            formIds.forEach(selector => {
+                const form = document.querySelector(selector);
+                if (form) {
+                    form.reset();
+                    // 폼 내 id 필드 초기화
+                    if (form.querySelector('#id')) form.querySelector('#id').value = '';
+                    if (form.querySelector('#price_id')) form.querySelector('#price_id').value = '';
+                    // 폼 내 input, select 비활성화
+                    form.querySelectorAll('input, select').forEach(el => {
+                        if (!el.disabled) el.setAttribute('disabled', 'disabled');
+                    });
+                }
+            });
+        }
     </script>
 
 </th:block>
