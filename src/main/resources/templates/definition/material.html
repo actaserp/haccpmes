@@ -1313,6 +1313,7 @@
                 $('#keyword').on('keypress', function (e) {
                     if (event.keyCode == 13) {
                         _this.searchDataBind();
+                        resetForms();
                     }
                 });
 
@@ -1339,6 +1340,7 @@
                             Alert.alert('', '삭제되었습니다');
                             this.selectedIds = []; // ✅ 선택 항목 초기화!
                             this.searchDataBind();
+                            resetForms();
                         } else {
                             Alert.alert('', res.message);
                         }
@@ -1421,38 +1423,7 @@
                 if (result.success) {
                     _this.viewData.sourceCollection = result.data;
 
-                    // 기본정보 리셋
-                    $('#matBasicForm')[0].reset();
-                    $('#matBasicForm').find('#id').val('');
-                    // 재고정보 리셋
-                    $('#matProductionForm')[0].reset();
-                    // 재고정보 리셋
-                    $('#matStockForm')[0].reset();
-                    // 검사정보 리셋
-                    $('#matTestForm')[0].reset();
-                    // 라우팅정보 리셋
-                    //$('#matRoutingForm')[0].reset();
-                    // 도면 파일 리셋
-                    //_this.setUploader();
 
-                    //$('#mat_detail').find('input, select').each(function () {
-                    $('.mat_detail').find('input, select').each(function () {
-                        if (!$(this).is(':disabled')) {
-                            $(this).attr('disabled', 'disabled');
-                        }
-                    });
-
-                    // 단가정보 리셋
-                    /*$('#priceForm')[0].reset();*/
-
-                    /*_this.price_grid.setData([]);*/
-                    $('#companyPriceForm')[0].reset();
-                    $('#companyPriceForm').find('#price_id').val('');
-                    $('#companyPriceForm').find('input, select').each(function () {
-                        if (!$(this).is(':disabled')) {
-                            $(this).attr('disabled', 'disabled');
-                        }
-                    });
                 }
 
                 //this.setButtonDisable(false, true, true);
@@ -1637,6 +1608,7 @@
                     if (res.success) {
                         Alert.alert('', '삭제되었습니다'); // Notification
                         _this.searchDataBind();
+                        resetForms();
                         setTimeout(() => {
                             let targetIndex = -1;
                             for (let i = 0; i < _this.grid.rows.length; i++) { // ← 반드시 _this!
@@ -2109,11 +2081,13 @@
             // 검색버튼
             $('#btnSearch').click(function (e) {
                 page.searchDataBind();
+                resetForms();
             });
 
             $('#keyword').on('keypress', function (e) {
                 if (event.keyCode == 13) {
                     page.searchDataBind();
+                    resetForms();
                 }
             });
 
@@ -2586,21 +2560,41 @@
 
 
             page.searchDataBind();
+            resetForms();
         });
 
         // 1. 폼 리셋 유틸 함수
-        function resetForms(formIds = []) {
-            formIds.forEach(selector => {
-                const form = document.querySelector(selector);
-                if (form) {
-                    form.reset();
-                    // 폼 내 id 필드 초기화
-                    if (form.querySelector('#id')) form.querySelector('#id').value = '';
-                    if (form.querySelector('#price_id')) form.querySelector('#price_id').value = '';
-                    // 폼 내 input, select 비활성화
-                    form.querySelectorAll('input, select').forEach(el => {
-                        if (!el.disabled) el.setAttribute('disabled', 'disabled');
-                    });
+        function resetForms() {
+            // 기본정보 리셋
+            $('#matBasicForm')[0].reset();
+            $('#matBasicForm').find('#id').val('');
+            // 재고정보 리셋
+            $('#matProductionForm')[0].reset();
+            // 재고정보 리셋
+            $('#matStockForm')[0].reset();
+            // 검사정보 리셋
+            $('#matTestForm')[0].reset();
+            // 라우팅정보 리셋
+            //$('#matRoutingForm')[0].reset();
+            // 도면 파일 리셋
+            //_this.setUploader();
+
+            //$('#mat_detail').find('input, select').each(function () {
+            $('.mat_detail').find('input, select').each(function () {
+                if (!$(this).is(':disabled')) {
+                    $(this).attr('disabled', 'disabled');
+                }
+            });
+
+            // 단가정보 리셋
+            /*$('#priceForm')[0].reset();*/
+
+            /*_this.price_grid.setData([]);*/
+            $('#companyPriceForm')[0].reset();
+            $('#companyPriceForm').find('#price_id').val('');
+            $('#companyPriceForm').find('input, select').each(function () {
+                if (!$(this).is(':disabled')) {
+                    $(this).attr('disabled', 'disabled');
                 }
             });
         }
