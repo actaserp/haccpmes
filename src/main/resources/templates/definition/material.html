@@ -1098,9 +1098,11 @@
                         }
 
                         // useBOM === 1이면, 특정 컬럼/셀 스타일 적용
-                        if (item.useBOM === 1 || item.useBOM === '1') {
-                            if (col.binding === "mat_name") {
+                        if (col.binding === "mat_name") {
+                            if (item.useBOM === 1 || item.useBOM === '1') {
                                 e.cell.style.backgroundColor = "#d4edda";
+                            } else {
+                                e.cell.style.backgroundColor = "";
                             }
                         }
                     }
