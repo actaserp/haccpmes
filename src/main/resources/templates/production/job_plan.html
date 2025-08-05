@@ -40,8 +40,8 @@
                         <dd>
                             <div class="srch-box">
                                 <select id="cboDateKind" name="cboDateKind">
-                                    <option value="selectDate" selected>기간</option>
-                                    <option value="week">주간</option>
+<!--                                    <option value="selectDate" >기간</option>-->
+                                    <option value="week" selected>주간</option>
                                     <option value="month">월간</option>
                                 </select>
                                 <div id="extraSelectBox" style="display:inline-block; margin-left: 10px;"></div>
@@ -258,8 +258,8 @@
                             <td>
                                 <div class="input-group" id="prod_datepicker">
                                     <select id="datetype" name="datetype">
-                                        <option value="selectDate" selected>기간</option>
-                                        <option value="week">주간</option>
+<!--                                        <option value="selectDate" >기간</option>-->
+                                        <option value="week" selected>주간</option>
                                         <option value="month">월간</option>
                                     </select>
                                 </div>
@@ -505,7 +505,7 @@
 
                 //수주구분
                 AjaxUtil.fillSelectOptions($cmcode, 'system_code', 'choose', '', 'comunication_type');
-                initPopupDateKindHandler($content);
+
 
                 setTimeout(() => {
                     FormUtil.BindDataPlanForm(data, $planForm);
@@ -518,15 +518,29 @@
                         // select box가 생성되기까지 잠시 기다린 뒤 값 설정
                         setTimeout(() => {
                             if (datetype === 'week') {
-                                $content.find('#popupWeekSelector').val(data.popupWeekSelector);
-                                $content.find('#stdate').val(data.stdate);
-                                $content.find('#eddate').val(data.eddate);
+                                const $week = $content.find('#popupWeekSelector');
+                                // ① 서버에서 계산해온 주차 값이 있으면 그걸 사용
+                                if (data.popupWeekSelector) {
+                                    $week.val(data.popupWeekSelector).trigger('change');
+                                } else if (!data.stdate || !data.eddate) {
+                                    // ② 날짜가 비어있으면 오늘 기준 ISO 주차로 선택
+                                    const today = new Date();
+                                    const isoWeekStr =
+                                        `${getISOWeekYear(today)}-W${String(getISOWeekNumber(today)).padStart(2,'0')}`;
+                                    $week.val(isoWeekStr).trigger('change');
+                                } else {
+                                    // ③ 날짜가 있으면 그대로 유지 (핸들러가 덮어쓰지 않도록 값만 다시 주입)
+                                    $content.find('#stdate').val(data.stdate);
+                                    $content.find('#eddate').val(data.eddate);
+                                }
                             } else if (datetype === 'month') {
+                                $content.find('#popupMonthSelector').val(data.popupMonthSelector);
                                 $content.find('#stdate').val(data.stdate);
                                 $content.find('#eddate').val(data.eddate);
                             }
                         }, 10); // 너무 길게 줄 필요 없이 10~50ms 정도면 충분
                     }
+                    initPopupDateKindHandler($content);
                 }, 100);
 
                 // 수주등록 팝업 저장버튼 클릭
@@ -1041,10 +1055,10 @@
 
             page = new JobPlanPage();
 
-            $('#srchStartDt').val(CommonUtil.getYYYYMMDD(-7));
-            $('#srchEndDt').val(CommonUtil.getYYYYMMDD());
+            // $('#srchStartDt').val(CommonUtil.getYYYYMMDD(-7));
+            // $('#srchEndDt').val(CommonUtil.getYYYYMMDD());
 
-            page.searchMainData();
+
 
 
             // 검색
@@ -1170,6 +1184,10 @@
                 const diff = target - firstThursday;
                 return 1 + Math.round(diff / (7 * 24 * 60 * 60 * 1000));
             }
+            cboDateKind.dispatchEvent(new Event("change"));
+
+            // 날짜가 세팅된 다음에 검색 호출
+            page.searchMainData();
         });
 
 

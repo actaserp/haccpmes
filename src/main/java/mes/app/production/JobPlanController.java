@@ -82,6 +82,26 @@ public class JobPlanController {
 		
 		return result;
 	}
+
+	// 목록 조회
+	@GetMapping("/read_actual_plan")
+	public AjaxResult getActualPlanList(
+			@RequestParam(value="date_kind", required=false) String date_kind,
+			@RequestParam(value="start", required=false) String start_date,
+			@RequestParam(value="end", required=false) String end_date,
+			@RequestParam(value="spjangcd") String spjangcd,
+			HttpServletRequest request) {
+
+		if (start_date != null) start_date = start_date.replaceAll("-", "");
+		if (end_date != null) end_date = end_date.replaceAll("-", "");
+
+		Map<String, Object> items = this.jobPlanService.getActualPlanList(date_kind, start_date, end_date, spjangcd);
+
+		AjaxResult result = new AjaxResult();
+		result.data = items;
+
+		return result;
+	}
 	
 	// 상세정보 조회
 	@GetMapping("/detail")
