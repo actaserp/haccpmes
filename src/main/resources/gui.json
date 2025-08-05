@@ -103,6 +103,7 @@
   "wm_test_daily_report": { "name": "검사일보", "templates": { "default": "test/test_daily_report.html" } },
 
   "wm_custom_service": { "name": "고객별 부적합 분석", "templates": { "default": "support/custom_service.html"	} },
+  "wm_CAP_analysis" : { "name": "CAP분석", "templates": { "default": "support/CAP_analysis.html"	} },
 
   "wm_meeting_calendar": { "name": "캘린더", "templates": { "default": "support/meeting_calendar.html" } },
   "wm_doc_form": { "name": "문서종류", "templates": { "default": "document/doc_form.html" } },
