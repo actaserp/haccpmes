@@ -92,6 +92,10 @@
   "wm_prod_indi_list": { "name": "생산량 지표", "templates": { "default": "summary/prod_indi_list.html" } },
   "wm_short_indi_list": { "name": "납기 단축 지표", "templates": { "default": "summary/short_indi_list.html" } },
 
+  "wm_spc_management": { "name": "SPC관리기준", "templates": { "default": "spc/spc_management.html" } },
+  "wm_spc_statistics": { "name": "SPC통계적분석", "templates": { "default": "spc/spc_statistics.html" } },
+  "wm_process_capability": { "name": "공정능력분석", "templates": { "default": "spc/process_capability.html" } },
+  "wm_spc_report": { "name": "SPC리포트", "templates": { "default": "spc/spc_report.html" } },
   "wm_defect_type": { "name": "부적합유형", "templates": { "default": "definition/defect_type.html" } },
 
   "wm_devi_action_list": { "name": "이상발생 및 조치결재", "templates": { "default": "haccp/devi_action_list.html" } },
