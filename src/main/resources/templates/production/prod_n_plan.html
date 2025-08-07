@@ -138,7 +138,6 @@
                         )
                     ]
                 });
-
                 this.init();
 
             }
@@ -163,12 +162,12 @@
                         { binding: 'eddate', header: '계획 종료일', width: 120, align: 'center' },
                         { binding: 'work_date', header: '생산일', width: 120, align: 'center' },
                         { binding: 'actnm', header: '현장명', width: 200 },
-                        { binding: 'mat_code', header: '품목 코드', width: 150, align: 'center' },
+                        { binding: 'mat_code', header: '품목 코드', width: 130, align: 'center' },
                         { binding: 'mat_name', header: '품목', width: 300 },
                         { binding: 'plan_qty', header: '계획 수량', width: 100, format: 'n0', aggregate: wijmo.Aggregate.Sum, align: 'right' },
                         { binding: 'actual_qty', header: '생산 수량', width: 100, format: 'n0', aggregate: wijmo.Aggregate.Sum, align: 'right' },
                         { binding: 'diff_qty', header: '미달 수량', width: 100, format: 'n0', aggregate: wijmo.Aggregate.Sum, align: 'right' },
-                        { binding: 'achievement_rate', header: '달성률(%)', width: 100 },
+                        { binding: 'achievement_rate', header: '달성률(%)', width: 100 , aggregate: wijmo.Aggregate.Sum, align: 'right'},
                         { binding: 'remark', header: '메모', width: '*' },
                     ],
                     formatItem: (s, e) => {
@@ -229,6 +228,7 @@
                                 }
                                 return;
                             }
+
                         }
 
                         if (e.panel === s.columnFooters && col.binding === 'diff_qty') {
@@ -273,6 +273,7 @@
                         this.searchMainData();
                     }
                 });
+
             }
 
             searchMainData() {
@@ -333,6 +334,13 @@
                         _this.cv.sourceCollection = mergedData;
                         _this.cv.refresh();
 
+                        setTimeout(() => {
+                            _this.grid.rows.forEach(row => {
+                                if (row instanceof wijmo.grid.GroupRow) {
+                                    row.isCollapsed = true;
+                                }
+                            });
+                        }, 50);
                     }
                 };
                 AjaxUtil.getAsyncData(url, data, fnsuccess);
