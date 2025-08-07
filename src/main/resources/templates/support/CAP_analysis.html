@@ -127,6 +127,8 @@
                 <td >
                   <div class="input-with-button" style=" display: flex; gap: 4px;">
                   <input type="text" id="product" name="product" style="flex: 1;  min-width: 0;" placeholder="품목을 선택하세요"/>
+                  <input type="hidden" id="product_code" name="product_code" />
+                  <input type="hidden" id="material_id" name="material_id"/>
                   <a class="btn in_btn" title="품목 검색" id="btnProductSearch" >
                     <img src="/images/icon/btn-srch-black.svg" alt="검색 아이콘" />
                   </a>
@@ -198,8 +200,7 @@
 <th:block layout:fragment="scripts">
   <th:block th:replace="/common/approve_box :: approve_box"></th:block>
   <th:block th:replace="/common/ax5_uploader :: ax5_uploader"></th:block>
-  <th:block th:replace="/common/upload_one_image_box :: upload_one_image_box"></th:block>
-  <th:block th:replace="/common/popup_select_user_code :: popup_select_user_code"></th:block>
+  <th:block th:replace="/common/multiform_material :: multiform_material"></th:block>
 
   <script type="text/javascript">
     class CAPAnalysisPage {
@@ -226,8 +227,12 @@
             {binding: '', header: 'bh_id', width: 150, visible: false},
             {binding: '', header: 'CAP 번호', width: 150},
             {binding: '', header: '발생일', width: 70, align: 'center'},
+            {binding: '', header: '고객', width: 70, align: 'center'},
             {binding: '', header: '발생부서', width: 120, align: 'center'},
             {binding: '', header: '품목', width: 120, align: 'center'},
+            {binding: '', header: '조치항목', width: 120, align: 'center'},
+            {binding: '', header: '조치 일자', width: 120, align: 'center'},
+            {binding: '', header: '주요원인', width: 120, align: 'center'},
             {binding: '', header: '문제 요약', width: 120, align: 'center'},
             {binding: '', header: '진행상태', width: 120, align: 'center'},
             {binding: '', header: '담당자', width: 120, align: 'center'},
@@ -248,6 +253,21 @@
           _this.$btnEdit.trigger('click');
         });
 
+        $('#btnProductSearch').click(function () {
+          const $productName = $('#product');
+          const $productId = $('#material_id');
+          const $productCode = $('#product_code');
+
+          const pop = new PopMatComponent();
+          pop.material_type = 'product,sangpum';
+
+          pop.show(function (item) {
+            $productName.val(item.Name);
+            $productId.val(item.id);
+            $productCode.val(item.Code);
+          });
+        });
+
       }//init
 
     }//CAPAnalysisPage
@@ -259,7 +279,7 @@
 
       page = new CAPAnalysisPage();
 
-      page.searchMainData();
+      //page.searchMainData();
 
       // 검색버튼
       $('#btnSearch').click(function (e) {
@@ -279,14 +299,11 @@
         $('#CapAnalysisForm')[0].reset();
         $('#CapAnalysisForm').find('#id').val('');
 
-        $('#detail_box').find('input, select').each(function () {
+        $('#CapAnalysisForm').find('input, select, textarea').each(function () {
           if ($(this).is(':disabled')) {
-            $(this).removeAttr('disabled');
+            $(this).prop('disabled', false);
           }
         });
-
-        //page.setButtonDisable(true, false, true);
-        setButtonState();
       });
 
       // 저장버튼
