@@ -88,82 +88,58 @@ public class MaterialMoveService {
 		param.addValue("spjangcd", spjangcd);
 
 		String sql = """
-        with AA as(
-        select m.id as mat_id, count(ml.id) as mat_lot_check
-        from material m 
-        left join mat_lot ml on m.id = ml."Material_id"
-        where 1=1
-        and m.spjangcd = :spjangcd
-        """;
-		if(storehouse_id!=null) {
-			sql+="""
-			and ml."StoreHouse_id" = :storehouse_id
-			""";
-		}
-
-		if(mat_grp_pk!=null) {
-			sql+="""
-			and m."MaterialGroup_id" = :mat_grp_pk
-			""";
-		}
-
-		if(StringUtils.hasText(keyword)){
-			sql+="""
-			and ( upper(m."Name") like concat('%%',upper(:keyword),'%%') or upper(m."Code") = upper(:keyword) )
-			""";
-		}
-
-		sql+="""
-        group by m.id
-        )
-        select m.id as mat_id
-        , fn_code_name('mat_type', mg."MaterialType") as mat_type
-        , mg."Name" as mat_group
-        , m."Code" as mat_code
-        , m."Name" as material
-        , sh.id as storehouse_id
-        , sh."Name" as storehouse
-        , m."CurrentStock" as total_stock
-        , mh."CurrentStock" as current_stock
-        , count(*) over (partition by m.id) as house_count
-        , AA.mat_lot_check as mat_lot_count
-        , case when AA.mat_lot_check = 0 then 'N' else 'Y' end as mat_lot_check
-        , '' as cho_storehouse
-        from material m 
+        select 
+            m.id as mat_id,
+            fn_code_name('mat_type', mg."MaterialType") as mat_type,
+            mg."Name" as mat_group,
+            m."Code" as mat_code,
+            m."Name" as material,
+            sh.id as storehouse_id,
+            sh."Name" as storehouse,
+            m."CurrentStock" as total_stock,
+            mh."CurrentStock" as current_stock,
+            count(*) over (partition by m.id) as house_count,
+            case when m."LotUseYN" = 'Y' then 'Y' else 'N' end as mat_lot_check,
+            '' as cho_storehouse
+        from material m
         inner join mat_grp mg on mg.id = m."MaterialGroup_id"
-        inner join AA on AA.mat_id = m.id
         left join mat_in_house mh on mh."Material_id" = m.id
         left join store_house sh on sh.id = mh."StoreHouse_id"
         where 1 = 1
-        and "Useyn" = '0'
-		""";
-		if(storehouse_id!=null) {
-			sql+="""
-			and sh.id = :storehouse_id
-			""";
+          and m.spjangcd = :spjangcd
+          and m."Useyn" = '0'
+    """;
+
+		if (storehouse_id != null) {
+			sql += """
+            and sh.id = :storehouse_id
+        """;
 		}
 
-		if(mat_grp_pk!=null) {
-			sql+="""
-			and mg.id = :mat_grp_pk
-			""";
+		if (mat_grp_pk != null) {
+			sql += """
+            and mg.id = :mat_grp_pk
+        """;
 		}
 
-		if(StringUtils.hasText(keyword)){
-			sql+="""
-			and ( upper(m."Name") like concat('%%',upper(:keyword),'%%') or upper(m."Code") = upper(:keyword) )
-			""";
+		if (StringUtils.hasText(keyword)) {
+			sql += """
+            and (
+                upper(m."Name") like concat('%%', upper(:keyword), '%%') or
+                upper(m."Code") = upper(:keyword)
+            )
+        """;
 		}
 
-		sql+="""
-		order by mg."MaterialType", mg."Name", m."Code", m."Name", m.id, sh."Name"
-		""";
+		sql += """
+        order by mg."MaterialType", mg."Name", m."Code", m."Name", m.id, sh."Name"
+    """;
 
-		List<Map<String, Object>> items = this.sqlRunner.getRows(sql, param);
-		return items;
+		return this.sqlRunner.getRows(sql, param);
 	}
 
-	
+
+
 	public List<Map<String, Object>> getMaterialLotList(Integer storehouse_id, Integer material_id){
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		param.addValue("storehouse_id", storehouse_id);

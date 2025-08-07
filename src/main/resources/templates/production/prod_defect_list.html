@@ -169,7 +169,7 @@
             this.grid.columns.push(new wijmo.grid.Column({
                 binding: 'defect_type',
                 header: '부적합유형',
-                width: 150
+                width: 130
             }));
 
             const holidaySet = this._holidayCache[String(y)] || new Set();
@@ -197,7 +197,7 @@
             }
         }
 
-        updateFooter() {
+        updateFooter(isTotalMode = false) {
             if (!this.grid || !this.grid.collectionView || !this.grid.columnFooters) return;
 
             // footer row 3개 확보 (없으면 생성)
@@ -219,29 +219,27 @@
                 const binding = col.binding;
                 if (!binding || !binding.startsWith('count_')) return;
 
-                // 불량수 합계
                 let defectSum = 0;
-
-                // 검사수(total_prod_qty) - 중복 방지 (날짜별 동일값은 한 번만)
-                let totalProd = null;
+                let prodSum = 0;
+                const seen = new Set();
 
                 rows.forEach(r => {
                     defectSum += Number(r[binding] || 0);
 
-                    // 검사수 가져오기 (pivot 시 _dateKeyMap 세팅한 값 사용)
-                    if (totalProd == null &&
-                        r._dateKeyMap &&
-                        r._dateKeyMap[binding] &&
-                        r._dateKeyMap[binding].total_prod_qty != null) {
-                        totalProd = Number(r._dateKeyMap[binding].total_prod_qty) || 0;
+                    const dateInfo = r._dateKeyMap?.[binding];
+                    const qty = dateInfo?.[isTotalMode ? 'total_prod_qty' : 'line_prod_qty'];
+                    const dateKey = binding + (isTotalMode ? '_t' : '_l'); // 중복 방지
+
+                    if (qty != null && !seen.has(dateKey)) {
+                        prodSum += Number(qty);
+                        seen.add(dateKey);
                     }
                 });
 
-                const rate = totalProd > 0 ? (defectSum / totalProd * 100) : null;
+                const rate = prodSum > 0 ? (defectSum / prodSum * 100) : null;
 
-                // footer 각 행에 셀 데이터 넣기
-                this.grid.columnFooters.setCellData(footerRows[0].index, binding, totalProd != null ? totalProd : '-');
-                this.grid.columnFooters.setCellData(footerRows[1].index, binding, defectSum > 0 ? defectSum : '-');
+                this.grid.columnFooters.setCellData(footerRows[0].index, binding, prodSum || '-');
+                this.grid.columnFooters.setCellData(footerRows[1].index, binding, defectSum || '-');
                 this.grid.columnFooters.setCellData(footerRows[2].index, binding, rate != null ? rate.toFixed(1) : '-');
             });
         }
@@ -331,17 +329,19 @@
             const [y, m] = monthPicker.value.split('-');
             const firstDay = `${y}-${m}-01`;
             const lastDay = `${y}-${m}-${String(new Date(Number(y), Number(m), 0).getDate()).padStart(2, '0')}`;
+            const cboWorkCenterValue = $('#cboWorkCenter').val();
+            const isTotalMode = !cboWorkCenterValue;
 
             const param = {
                 date_from: firstDay,
                 date_to: lastDay,
-                cboWorkCenter: $('#cboWorkCenter').val(),
+                cboWorkCenter: cboWorkCenterValue,
             };
 
             let result = AjaxUtil.getSyncData(this.baseUrl + "/read", param);
             if (result?.data) {
                 // 서버 원시 리스트(ProductionDate 단위)를 피벗
-                const rows = this.pivotDefectsByDay(result.data, y, m);
+                const rows = this.pivotDefectsByDay(result.data, y, m, isTotalMode);
 
                 // 그리드에 바인딩
                 //   (이미 itemsSource가 CollectionView라면 sourceCollection만 교체)
@@ -357,7 +357,8 @@
                 this.renderDefectChart(labels, datasets);
 
                 // 푸터
-                this.updateFooter();
+                this.updateFooter(isTotalMode);
+
             } else {
                 // 데이터 없으면 빈 배열 바인딩
                 if (this.grid.itemsSource && this.grid.itemsSource.sourceCollection) {
@@ -373,7 +374,7 @@
         }
 
         // 1) 피벗 함수: 리스트 -> 그리드 행(불량유형별 일자 카운트)
-        pivotDefectsByDay(data, year, month) {
+        pivotDefectsByDay(data, year, month, isTotalMode = false) {
             const daysInMonth = new Date(year, month, 0).getDate();
             const map = new Map();
 
@@ -393,8 +394,13 @@
                 if (qty > 0) row[dayKey] = (row[dayKey] || 0) + qty; // 0은 추가 안 함
 
                 // 날짜별 검사수는 첫 유효값만 기록
-                if (row._dateKeyMap[dayKey] == null && r.total_prod_qty != null) {
-                    row._dateKeyMap[dayKey] = { total_prod_qty: Number(r.total_prod_qty) || 0 };
+                if (row._dateKeyMap[dayKey] == null) {
+                    const qtyField = isTotalMode ? r.total_prod_qty : r.line_prod_qty;
+                    if (qtyField != null) {
+                        row._dateKeyMap[dayKey] = {
+                            [isTotalMode ? 'total_prod_qty' : 'line_prod_qty']: Number(qtyField) || 0
+                        };
+                    }
                 }
             });
 

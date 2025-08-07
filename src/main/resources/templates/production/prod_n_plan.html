@@ -334,13 +334,14 @@
                         _this.cv.sourceCollection = mergedData;
                         _this.cv.refresh();
 
-                        setTimeout(() => {
-                            _this.grid.rows.forEach(row => {
-                                if (row instanceof wijmo.grid.GroupRow) {
-                                    row.isCollapsed = true;
-                                }
-                            });
-                        }, 50);
+                        // 그룹 처음부터 접혀있도록
+                        // setTimeout(() => {
+                        //     _this.grid.rows.forEach(row => {
+                        //         if (row instanceof wijmo.grid.GroupRow) {
+                        //             row.isCollapsed = true;
+                        //         }
+                        //     });
+                        // }, 50);
                     }
                 };
                 AjaxUtil.getAsyncData(url, data, fnsuccess);
