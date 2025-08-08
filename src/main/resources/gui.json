@@ -107,7 +107,7 @@
   "wm_test_item": { "name": "검사항목", "templates": { "default": "test/test_item.html" } },
   "wm_test_daily_report": { "name": "검사일보", "templates": { "default": "test/test_daily_report.html" } },
 
-  "wm_custom_service": { "name": "고객별 부적합 분석", "templates": { "default": "support/custom_service.html"	} },
+  "wm_custom_service": { "name": "고객별 부적합 분석", "templates": { "default": "support/customer_defect_analysis.html"}},
   "wm_CAP_analysis" : { "name": "CAP분석", "templates": { "default": "support/CAP_analysis.html"	} },
   "wm_material_optimal_stock_status" : { "name": "자재 적정 재고 현황", "templates": { "default": "support/material_optimal_stock_status.html"	} },
 

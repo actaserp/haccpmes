@@ -27,9 +27,8 @@ public class TestDailyReportController { // 검사일보
     LocalDate startDate = LocalDate.parse(searchDate + "-01");
     LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth()); // 월의 마지막 일
 
-    // 원하는 포맷으로 문자열 변환 (예: "2025-08-01", "2025-08-31")
-    String start = startDate.toString(); // "2025-08-01"
-    String end = endDate.toString();     // "2025-08-31"
+    String start = startDate.toString();
+    String end = endDate.toString();
 
     List<Map<String, Object>> items = testDailyReportServicr.getList(workCenterId,start,end );
     AjaxResult result = new AjaxResult();
@@ -38,5 +37,17 @@ public class TestDailyReportController { // 검사일보
     return result;
   }
 
+  @GetMapping("/detail")
+  public AjaxResult getTestDailtdetail(@RequestParam(value = "WorkCenter_id")Integer work_center_id,
+                                       @RequestParam(value = "SearchDate") String search_date,
+                                       @RequestParam(value = "defect_pk") Integer defect_pk) {
+
+//    log.info("검사일지 detail -- work_center_id:{}, searchDate:{},defect_pk:{} ", work_center_id, search_date, defect_pk);
+    Map<String, Object> item = testDailyReportServicr.getDetail(work_center_id,search_date,defect_pk);
+
+    AjaxResult result = new AjaxResult();
+    result.data = item;
+    return result;
+  }
 
 }

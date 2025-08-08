@@ -55,25 +55,10 @@
         </div>
         <div class="button-wrap">
           <ul>
-            <li>
-              <!-- <a class="btn btn-excell" title="신규" id="btnAddNew">
-                   <img src="/images/icon/ico-plus.svg" alt="신규 아이콘">
-                   신규
-               </a>-->
-              </button>
-            </li>
-            <li>
-              <!--<a class="btn btn-delete" title="삭제" id="btnDel">
-                  <img src="/images/icon/ico-delete.svg" alt="삭제 아이콘">
-                  삭제
-              </a>-->
+            <!--<li>
               <button type="button" class="btn-delete btn-danger" id="btnDel" title="삭제" style="width: 115px; height: 36px;"><i class="fas fa-trash">삭제</i></button>
-            </li>
+            </li>-->
             <li>
-              <!--<a class="btn btn-edit" title="저장" id="btnSave">
-                  <img src="/images/icon/ico-edit.svg" alt="저장 아이콘">
-                  저장
-              </a>-->
               <button type="button" class="btn-edit btn-default" id="btnEdit" title="수정" style="width: 115px; height: 36px;"><i class="fas fa-edit"></i>수정</button>
             </li>
           </ul>
@@ -83,8 +68,88 @@
         <div id="theGrid" style=""></div>
       </div>
     </section>
-
   </div>
+
+  <script type="text/x-tmpl" id="TestDailyEditTemplate">
+    <style>
+        input[readonly] {
+          background-color: #EDEFF5 !important;
+          cursor: not-allowed;
+        }
+
+    </style>
+     <div class="content_wrap popup" id="div_excel_upload">
+    <div class="table-wrap">
+      <form id="TestDailyReportForm">
+        <table class="write-table">
+          <caption>검사 수량 수정</caption>
+          <tbody>
+          <tr>
+            <th style="text-align: center">
+              <label for="ProductionDate">검사일</label>
+            </th>
+            <td>
+              <input type="date" id="ProductionDate" name="ProductionDate">
+            </td>
+            <th style="text-align: center">
+              <label for="WorkCenter">워크센터(라인)</label>
+            </th>
+            <td>
+             <select id="WorkCenter" name="WorkCenter"></select>
+            </td>
+          </tr>
+          <tr>
+            <th style="text-align: center">
+              <label for="WorkOrderNumber">작업지시번호</label>
+            </th>
+            <td>
+              <input type="text" id="WorkOrderNumber" name="WorkOrderNumber">
+            </td>
+            <th style="text-align: center">
+              <label for="DefectType">불량유형</label>
+            </th>
+            <td>
+              <select id="DefectType" name="DefectType"></select>
+            </td>
+          </tr>
+          <tr>
+            <th style="text-align: center">
+              <label for="total_prod_qty">검사 총수량</label>
+            </th>
+            <td>
+              <input type="text" id="total_prod_qty" name="total_prod_qty">
+            </td>
+            <th style="text-align: center">
+              <label for="defect_qty">불량 수량</label>
+            </th>
+            <td>
+              <input type="text" id="defect_qty" name="defect_qty">
+            </td>
+          </tr>
+          <tr>
+            <th style="text-align: center">
+              <label for="total_prod_qty">검사 총수량</label>
+            </th>
+            <td>
+              <textarea name="total_prod_qty" id="total_prod_qty"></textarea>
+              <te type="text" id="total_prod_qty" name="total_prod_qty">
+            </td>
+            <th style="text-align: center">
+              <label for="defect_qty">불량 수량</label>
+            </th>
+            <td>
+              <input type="text" id="defect_qty" name="defect_qty">
+            </td>
+          </tr>
+
+        </table>
+      </form>
+    </div>
+    <div class="popup-button">
+      <button type="button" class="btn-popup y_write_auth" id="btnPopTestDailySave">수정</button>
+      <button type="button" class="btn-popup" id="modal-close-button">닫기</button>
+    </div>
+  </script>
 </th:block>
 
 <th:block layout:fragment="scripts">
@@ -92,7 +157,7 @@
     class TestDailyReportPage {
       constructor() {
         this.grid = null;
-        this.selectedPk = null;
+        this.$btnEdit = $('#btnEdit');
         this.viewData = new wijmo.collections.CollectionView();
         this.url = '/api/test/test_daily_report';
         this.init();
@@ -107,7 +172,8 @@
         const [year, month] = yyyymm.split('-').map(Number);
 
         const fixedColumns = [
-          { binding: 'defect_type', header: '불량명', width: 110, align: 'left' },
+          { binding: 'defect_type', header: '불량명', width: 120, align: 'left' },
+          { binding: 'defect_pk', header: '불량id',width: 120, align: 'left', visible: false },
         ];
         const dayColumns = getDayColumnsByMonth(year, month);
         const allColumns = [...fixedColumns, ...dayColumns];
@@ -118,10 +184,12 @@
 
         // ✅ 새로 그리드 생성
         this.grid = new wijmo.grid.FlexGrid('#theGrid', {
-          selectionMode: wijmo.grid.SelectionMode.Row,
+          //selectionMode: wijmo.grid.SelectionMode.Row,
+          selectionMode: wijmo.grid.SelectionMode.Cell,
           headersVisibility: wijmo.grid.HeadersVisibility.Column,
           autoGenerateColumns: false,
           showMarquee: true,
+          frozenColumns: 1,
           isReadOnly: true,
           formatItem: (sender, e) => {
             if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
@@ -172,24 +240,40 @@
           const rowDefectQty = footerPanel.rows[1]; // 불량수
           const rowPpm = footerPanel.rows[2];       // ppm
 
-          // footer 각 행에 표시할 데이터 객체 구성
           const totalQtyData = { defect_type: '검사수' };
           const defectQtyData = { defect_type: '불량수' };
           const ppmData = { defect_type: 'ppm' };
 
-          // 예시: 날짜 컬럼 리스트
           const dayColumns = this.grid.columns.filter(col => /^\d+$/.test(col.header));
 
-          dayColumns.forEach(col => {
-            const field = col.binding;
+          const seenDates = new Set(); // 날짜 중복 방지
 
-            const total = this.viewData.items.reduce((sum, item) => sum + (item[`total_${field}`] || 0), 0);
-            const defect = this.viewData.items.reduce((sum, item) => sum + (item[`defect_${field}`] || 0), 0);
-            const ppm = total > 0 ? Math.round((defect / total) * 1000000) : 0;
+          dayColumns.forEach(col => {
+            const field = col.binding; // 예: day_05
+
+            let total = 0;
+            let defect = 0;
+
+            this.viewData.items.forEach(item => {
+              const totalKey = `total_${field}`;
+              const defectKey = field;
+
+              const prodDate = item.ProductionDate || item.production_date || field;
+              const key = `${prodDate}`; // 날짜 단위 중복 방지
+
+              if (!seenDates.has(key) && item[totalKey] > 0) {
+                total += item[totalKey];
+                seenDates.add(key);
+              }
+
+              defect += item[defectKey] || 0;
+            });
+
+            const ppm = total > 0 ? Math.round((defect / total) * 1_000_000) : 0;
 
             totalQtyData[field] = total > 0 ? total : '-';
-            defectQtyData[field] = defect > 0 ? defect:'-';
-            ppmData[field] = ppm > 0 ? ppm:'-';
+            defectQtyData[field] = defect > 0 ? defect : '-';
+            ppmData[field] = ppm > 0 ? ppm : '-';
           });
 
           rowTotalQty.dataItem = totalQtyData;
@@ -197,9 +281,85 @@
           rowPpm.dataItem = ppmData;
         });
 
+
+        this.grid.hostElement.addEventListener('dblclick', function (e) {
+          let items = _this.grid.selectedItems;
+          if (items.length === 0) {
+            return false;
+          }
+          _this.$btnEdit.trigger('click');
+        });
+
+        this.$btnEdit.click(function (e) {
+          const grid = _this.grid;
+          const selectedCell = grid.selection;
+
+          if (!selectedCell || !selectedCell.isSingleCell) {
+            Alert.alert('오류', '셀을 하나만 선택해주세요.');
+            return;
+          }
+
+          const rowIndex = selectedCell.row;
+          const colIndex = selectedCell.col;
+
+          // ✅ 행 유효성 확인
+          if (rowIndex < 0 || rowIndex >= grid.rows.length) return;
+
+          const row = grid.rows[rowIndex];
+          const selected = row.dataItem;
+
+          // ✅ 필수 데이터 확인
+          if (!selected || !selected.defect_pk) {
+            Alert.alert('오류', '불량명 행의 날짜 셀을 선택해주세요.');
+            return;
+          }
+
+          const selectedCol = grid.columns[colIndex];
+          const dayBinding = selectedCol.binding; // 예: day_15
+
+          let day = null;
+
+          if (/^day_\d+$/.test(dayBinding)) {
+            day = dayBinding.split('_')[1].padStart(2, '0'); // "15"
+          }
+
+          if (!day) {
+            Alert.alert('오류', '날짜 셀을 선택해주세요.');
+            return;
+          }
+
+          const yyyymm = $('#SearchDate').val(); // "2025-08"
+          const fullDate = `${yyyymm}-${day}`;   // "2025-08-15"
+
+          const data = {
+            WorkCenter_id: $('#WorkCenter_id').val(),
+            SearchDate: fullDate,
+            defect_pk: selected.defect_pk,
+            action: 'detail'
+          };
+
+          const fnsuccess = function (result) {
+            if (!result || !result.data) {
+              Alert.alert('오류', '상세 데이터를 불러올 수 없습니다.');
+              return;
+            }
+            if ($('.popup:visible').length > 0) {
+              return; // 이미 열려있다면 중복으로 열지 않음
+            }
+            result.data.mode = 'edit';
+            _this.showTestDailyReportForm(result.data);
+
+          };
+
+          AjaxUtil.getAsyncData(_this.url + '/detail', data, fnsuccess);
+        });
+
+
+
         $('#WorkCenter_id').off('change').on('change', function () {
           _this.searchMainData();
         });
+
 
         function getDayColumnsByMonth(year, month) {
           const lastDay = new Date(year, month, 0).getDate();
@@ -214,13 +374,73 @@
         }
       }
 
-      // 문서 목록 조회
+      showTestDailyReportForm(data) {
+        let _this = this;
+        let content = tmpl('TestDailyEditTemplate', data);
+        let $content = $(content);
+
+        let modalContainer = null;
+        if (data.mode === 'new') {
+          modalContainer = new PopupDraggable('검사일보 등록');
+        } else {
+          modalContainer = new PopupDraggable('검사일보 수정');
+        }
+        //팝업타이틀 설정
+        let $popTitle = $content.find('#popTitle');
+        if (data.mode === 'new') {
+          $popTitle.text('검사일보 등록');
+        } else {
+          // 발주 수정시 제품그룹과 제품을 수정하게 할 것 인지?
+          $popTitle.text('검사일보 수정');
+        }
+
+        //모달 크기
+        modalContainer.open({width: 1100, height: 250, $content});
+
+        let $btnPopSave = $content.find('#btnPopTestDailySave');
+        let $workOrderNumber = $content.find('#WorkOrderNumber');
+        let $productionDate = $content.find('#ProductionDate');
+        let $workCenter = $content.find('#WorkCenter');
+        let $defectQty = $content.find('#defect_qty');
+        let $totalQty = $content.find('#total_prod_qty');
+        let $defectType = $content.find('#DefectType');
+        let $TestDaily = $content.find('#TestDailyReportForm')
+
+        AjaxUtil.fillSelectOptions($defectType, 'defect_type','', false);
+        AjaxUtil.fillSelectOptions($workCenter, 'workcenter', '', false);
+
+        if (data.WorkCenter_id && !data.WorkCenter) {
+          data.WorkCenter = data.WorkCenter_id;
+        }
+        if (data.defect_pk && !data.DefectType) {
+          data.DefectType = data.defect_pk;
+        }
+        FormUtil.BindDataForm(data, $TestDaily);
+
+        // ✅ 'defect_qty'를 제외한 모든 입력/선택 요소 비활성화
+        $TestDaily.find('input, select').each(function () {
+          const name = $(this).attr('name');
+
+          if (name === 'defect_qty') {
+            $(this).removeAttr('readonly').removeAttr('disabled');
+          } else {
+            if ($(this).is('input')) {
+              $(this).attr('readonly', true);
+            } else if ($(this).is('select')) {
+              $(this).attr('disabled', true);
+            }
+          }
+        });
+
+      }
+
+      //검사일보 목록 조회
       searchMainData() {
         let _this = this;
         let url = this.url + '/read';
         let data = {
           'WorkCenter_id': $('#WorkCenter_id').val(),
-          'SearchDate' : $('#SearchDate').val()
+          'SearchDate': $('#SearchDate').val()
         };
 
         let fnsuccess = function (result) {
@@ -229,31 +449,32 @@
             return;
           }
 
-          const rawData = result.data; // ← 서버 응답 (defect_type + 날짜별 데이터)
+          const rawData = result.data;
 
-          // ✅ 1. defect_type 기준으로 그룹핑
           const grouped = {};
           rawData.forEach(row => {
-            const key = row.defect_type;
-            const date = row.ProductionDate;
-            const day = parseInt(date.split('-')[2]); //'2025-07-31' → 31
+            // 날짜에서 일(day)만 추출
+            const day = new Date(row.ProductionDate).getDate(); // ← 더 안전한 방식
+            const key = `${row.defect_type}_${row.defect_pk}`;
 
-            if (!grouped[key]) grouped[key] = { defect_type: key };
+            if (!grouped[key]) {
+              grouped[key] = {
+                defect_type: row.defect_type,
+                defect_pk: row.defect_pk
+              };
+            }
 
-            grouped[key][`defect_day_${day}`] = row.defect_qty;
-            grouped[key][`day_${day}`] = row.defect_qty;
-            grouped[key][`total_day_${day}`] = row.total_prod_qty;
+            // 누적 처리 (같은 날 중복 데이터 있을 경우 대비)
+            grouped[key][`day_${day}`] = (grouped[key][`day_${day}`] || 0) + row.defect_qty;
+            grouped[key][`total_day_${day}`] = (grouped[key][`total_day_${day}`] || 0) + row.total_prod_qty;
           });
 
-          // ✅ 2. 배열로 변환 후 바인딩
           const converted = Object.values(grouped);
           _this.viewData.sourceCollection = converted;
-          _this.selectedPk = null;
         };
 
         AjaxUtil.getAsyncData(url, data, fnsuccess);
       }
-
     }
 
     let holidayList = [];
@@ -326,6 +547,7 @@
       return `${yyyy}-${mm}-${dd}`;
     }
 
+
     let page = null;
 
     $(document).ready(function () {
@@ -383,26 +605,6 @@
       $('#btnNew').click(function (e) {
         let id = null; // ID 값 가져오기
         page.showEditPage(id,'new')
-      });
-
-      // 수정
-      $('#btnEdit').click(function (e) {
-        let grid = wijmo.Control.getControl('#theGrid'); // 그리드 객체 가져오기
-        let selection = grid.selection; // 현재 선택된 셀의 정보 가져오기
-
-        if (selection.length == 0) {
-          Alert.alert('제품이 선택되지 않았습니다.');
-          return;
-        }
-
-        if (selection.row > -1) { // 선택된 행이 있을 경우
-          let item = grid.rows[selection.row].dataItem; // 선택된 행의 데이터 가져오기
-
-          if (item) {
-            let id = item.id; // ID 값 가져오기
-            page.showEditPage(id,'edit')
-          }
-        }
       });
 
       // 삭제

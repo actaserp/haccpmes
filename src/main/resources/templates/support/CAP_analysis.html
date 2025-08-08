@@ -8,6 +8,41 @@
 </head>
 
 <th:block layout:fragment="content">
+
+  <style>
+      .input-with-button {
+          display: flex;
+          width: 100%;
+          gap: 4px;
+      }
+
+      .input-clear {
+          display: flex;
+          flex: 1;
+          position: relative;
+          align-items: center;
+      }
+
+      .input-clear input {
+          flex: 1;
+          min-width: 0;
+          padding-right: 24px; /* clear 버튼 공간 확보 */
+      }
+
+      .btn-clear {
+          position: absolute;
+          right: 6px;
+          cursor: pointer;
+      }
+
+      .in_btn.cap {
+          width: 35px;
+          padding: 4px;
+          min-width: 0;
+          align-items: center;
+          justify-content: left;
+      }
+  </style>
   <div class="layout-contents">
     <!-- Page Title -->
     <div class="page-title-wrap">
@@ -34,7 +69,7 @@
               </dt>
               <dd>
                 <div class="srch-box">
-                  <input type="text" id="txtMatgrp" name="txtMatgrp" class="form-control2"/>
+                  <input type="text" id="txtMatgrp" name="txtMatgrp" class="form-control2" placeholder="CAP 번호"/>
                 </div>
               </dd>
             </dl>
@@ -101,7 +136,7 @@
                   <label for="cap_number"><span class="eq">*</span>CAP 번호</label>
                 </th>
                 <td >
-                  <input type="text" id="cap_number" name="cap_number" style="width: 100%;" placeholder="CAP 번호"/>
+                  <input type="text" id="cap_number" name="cap_number" style="width: 100%;" placeholder="CAP 번호" readonly/>
                 </td>
               </tr>
               <tr>
@@ -109,78 +144,82 @@
                   <label for="date_occurrence"><span class="eq">*</span>발생일</label>
                 </th>
                 <td >
-                  <input type="text" id="date_occurrence" name="date_occurrence" style="width: 100%;" placeholder="발생일"/>
+                  <input type="date" id="date_occurrence" name="date_occurrence" style="width: 100%;" placeholder="발생일"/>
                 </td>
               </tr>
               <tr>
                 <th >
-                  <label for="cap_number"><span class="eq">*</span>발생 부서</label>
+                  <label for="cap_depart"><span class="eq">*</span>발생 부서</label>
                 </th>
                 <td >
-                  <input type="text" id="cap_number" name="cap_number" style="width: 100%;" placeholder="발생부서"/>
+                  <input type="text" id="cap_depart" name="cap_depart" style="width: 100%;" placeholder="발생부서"/>
                 </td>
               </tr>
               <tr>
                 <th >
                   <label for="product"><span class="eq">*</span>품목</label>
                 </th>
-                <td >
-                  <div class="input-with-button" style=" display: flex; gap: 4px;">
-                  <input type="text" id="product" name="product" style="flex: 1;  min-width: 0;" placeholder="품목을 선택하세요"/>
-                  <input type="hidden" id="product_code" name="product_code" />
-                  <input type="hidden" id="material_id" name="material_id"/>
-                  <a class="btn in_btn" title="품목 검색" id="btnProductSearch" >
-                    <img src="/images/icon/btn-srch-black.svg" alt="검색 아이콘" />
-                  </a>
+                <td style="width: 100%;">
+                  <div class="input-with-button">
+                    <div class="input-clear">
+                      <input type="text" id="product" name="product" placeholder="품목을 선택하세요" />
+                    </div>
+                    <a class="btn in_btn cap" title="품목 검색" id="btnProductSearch">
+                      <img src="/images/icon/btn-srch-black.svg" alt="검색 아이콘" />
+                    </a>
                   </div>
+
+                  <!-- hidden input -->
+                  <input type="hidden" id="product_code" name="product_code" />
+                  <input type="hidden" id="material_id" name="material_id" />
                 </td>
               </tr>
               <tr>
                 <th >
-                  <label for="cap_number"><span class="eq">*</span>측정단위</label>
+                  <label for="cap_unit"><span class="eq">*</span>측정단위</label>
                 </th>
                 <td >
-                  <input type="text" id="cap_number" name="cap_number" style="width: 100%;"/>
+                  <input type="text" id="cap_unit" name="cap_unit" style="width: 100%;" placeholder="층정단위"/>
                 </td>
               </tr>
               <tr>
                 <th >
-                  <label for="cap_number"><span class="eq">*</span>진행상태</label>
+                  <label for="cap_progress"><span class="eq">*</span>진행상태</label>
                 </th>
                 <td >
-                  <input type="text" id="cap_number" name="cap_number" style="width: 100%;"/>
+                  <input type="text" id="cap_progress" name="cap_progress" style="width: 100%;" placeholder="진행상태"/>
                 </td>
               </tr>
               <tr>
                 <th >
-                  <label for="cap_number"><span class="eq">*</span>발생공정</label>
+                  <label for="cap_process"><span class="eq">*</span>발생공정</label>
                 </th>
                 <td >
-                  <input type="text" id="cap_number" name="cap_number" style="width: 100%;"/>
+                  <input type="text" id="cap_process" name="cap_process" style="width: 100%;" placeholder="발생공정"/>
                 </td>
               </tr>
               <tr>
                 <th >
-                  <label for="cap_number"><span class="eq">*</span>크레임유형</label>
+                  <label for="cap_claims"><span class="eq">*</span>클레임 유형</label>
                 </th>
                 <td >
-                  <input type="text" id="cap_number" name="cap_number" style="width: 100%;"/>
+                  <input type="text" id="cap_claims" name="cap_claims" style="width: 100%;" placeholder="클레임 유형"/>
                 </td>
               </tr>
               <tr>
                 <th >
-                  <label for="cap_number"><span class="eq">*</span>작성자</label>
+                  <label for="cap_creater_id"><span class="eq">*</span>작성자</label>
                 </th>
                 <td >
-                  <input type="text" id="cap_number" name="cap_number" style="width: 100%;"/>
+                  <input type="text" id="cap_creater_id" name="cap_creater_id" style="width: 100%;" placeholder="작성자"/>
                 </td>
               </tr>
               <tr>
                 <th >
-                  <label for="cap_number"><span class="eq">*</span>문제 요약</label>
+                  <label for="cap_problem_content"><span class="eq">*</span>문제 요약</label>
                 </th>
                 <td >
-                  <input type="text" id="cap_number" name="cap_number" style="width: 100%;"/>
+                  <textarea type="text" id="cap_problem_content" name="cap_problem_content" style="width: 100%;" placeholder="문제요약"></textarea>
                 </td>
               </tr>
               </tbody>
@@ -206,7 +245,7 @@
     class CAPAnalysisPage {
       constructor() {
          this.theGrid = null;
-        this.viewData = new wijmo.collections.CollectionView();
+        this.viewData = new wijmo.collections.CollectionView([]);
         this.init();
       }
 
@@ -224,7 +263,7 @@
             }
           },
           columns: [
-            {binding: '', header: 'bh_id', width: 150, visible: false},
+            {binding: '', header: 'cap_id', width: 150, visible: false},
             {binding: '', header: 'CAP 번호', width: 150},
             {binding: '', header: '발생일', width: 70, align: 'center'},
             {binding: '', header: '고객', width: 70, align: 'center'},
@@ -268,6 +307,13 @@
           });
         });
 
+        $('#product').on('input', function () {
+          if (!$(this).val().trim()) {
+            $('#product_code').val('');
+            $('#material_id').val('');
+          }
+        });
+
       }//init
 
     }//CAPAnalysisPage
@@ -278,6 +324,9 @@
     $(document.body).ready(function (e) {
 
       page = new CAPAnalysisPage();
+
+      let today = new Date();
+      $('#date_occurrence').val(CommonUtil.formatYYYYMMDD(today));
 
       //page.searchMainData();
 
@@ -304,16 +353,6 @@
             $(this).prop('disabled', false);
           }
         });
-      });
-
-      // 저장버튼
-      $('#btnSave').click(function (e) {
-        saveMaterialGroup();
-      });
-
-      // 삭제버튼
-      $('#btnDel').click(function (e) {
-        deleteMaterialGroup();
       });
 
     });
