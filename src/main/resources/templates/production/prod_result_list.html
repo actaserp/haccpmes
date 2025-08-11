@@ -356,6 +356,9 @@
                 ],
                 itemsSource: new wijmo.collections.CollectionView([]),
                 formatItem: (s, e) => {
+                    if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+                        e.cell.style.textAlign = 'center';
+                    }
                     if (e.panel.cellType === wijmo.grid.CellType.Cell) {
                         const col = s.columns[e.col];
                         const item = s.rows[e.row].dataItem;
