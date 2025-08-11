@@ -5,10 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.transaction.Transactional;
@@ -306,44 +303,52 @@ public class MaterialInoutController {
 
 		Material m = this.materialRepository.getMaterialById(matPk);
 
-		String testYn = m.getInTestYN() != null ? m.getInTestYN() : "";
+//		String testYn = m.getInTestYN() != null ? m.getInTestYN() : "";
+		String testYn = Optional.ofNullable(m.getInTestYN()).orElse("").trim();
+		String curState = Optional.ofNullable(mi.getState()).orElse("").trim();
+		boolean isTest = "Y".equalsIgnoreCase(testYn);
+		boolean isWaiting = "waiting".equalsIgnoreCase(curState);
+		log.info("isTest={}, curState='{}'(len={}), isWaiting={}", isTest, curState, curState.length(), isWaiting);
 
-		if (type.equals("in")) {
-			mi.setInOut("in");
-			mi.setInputType(inoutType);
+        switch (type) {
+            case "in" -> {
+                mi.setInOut("in");
+                mi.setInputType(inoutType);
 
-			boolean isWaiting = mi.getState() != null && mi.getState().equals("waiting");
+//                boolean isWaiting = mi.getState() != null && mi.getState().equals("waiting");
 
-			if(testYn.equals("Y") && isWaiting) {
-				mi.setPotentialInputQty((float)qty);
-				state = "waiting";
-				_status = "t";
-			} else {
-				mi.setInputQty((float)qty);
-				mi.setOutputQty(0f);
-				mi.setOutputType("");
-			}
-		} else if(type.equals("recall")){
-			mi.setInOut("recall");
-			mi.setOutputType(inoutType);
-			mi.setOutputQty((float)qty);
-			mi.setInputQty(0f);
-			mi.setInputType("");
-
-		} else if(type.equals("return")){
-			mi.setInOut("return");
-			mi.setInputType(inoutType);
-			mi.setInputQty((float)qty);
-			mi.setOutputQty(0f);
-			mi.setOutputType("");
-
-		} else  {
-			mi.setInOut("out");
-			mi.setOutputType(inoutType);
-			mi.setOutputQty((float)qty);
-			mi.setInputQty(0f);
-			mi.setInputType("");
-		}
+                if (testYn.equals("Y")) {
+                    mi.setPotentialInputQty((float) qty);
+                    state = "waiting";
+                    _status = "t";
+                } else {
+                    mi.setInputQty((float) qty);
+                    mi.setOutputQty(0f);
+                    mi.setOutputType("");
+                }
+            }
+            case "recall" -> {
+                mi.setInOut("recall");
+                mi.setOutputType(inoutType);
+                mi.setOutputQty((float) qty);
+                mi.setInputQty(0f);
+                mi.setInputType("");
+            }
+            case "return" -> {
+                mi.setInOut("return");
+                mi.setInputType(inoutType);
+                mi.setInputQty((float) qty);
+                mi.setOutputQty(0f);
+                mi.setOutputType("");
+            }
+            default -> {
+                mi.setInOut("out");
+                mi.setOutputType(inoutType);
+                mi.setOutputQty((float) qty);
+                mi.setInputQty(0f);
+                mi.setInputType("");
+            }
+        }
 		mi.setDescription(description);
 		mi.setState(state);
 		mi.set_status(_status);
