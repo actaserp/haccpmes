@@ -443,11 +443,14 @@ public class BomController {
 					int cellIdx = productStartCol + pIdx;
 					if (row.size() <= cellIdx) continue;
 					String qtyStr = row.get(cellIdx);
-					double qty = 0;
-					try { qty = Double.parseDouble((qtyStr == null || qtyStr.trim().isEmpty()) ? "0" : qtyStr.trim()); }
-					catch (Exception ignore) { qty = 0; }
+					float qty = 0f;
+					try {
+						qty = Float.parseFloat((qtyStr == null || qtyStr.trim().isEmpty()) ? "0" : qtyStr.trim());
+					} catch (Exception ignore) {
+						qty = 0f;
+					}
 
-					if (qty <= 0) continue; // 수량이 0인 데이터 무시
+					if (qty <= 0f) continue; // 그래도 행 단위로 0인 건 건너뛰는 건 유지 가능
 
 					String description = "";
 					if (row.size() > 10 && row.get(10) != null)
@@ -480,13 +483,15 @@ public class BomController {
 					}
 
 				}
-				for (BomComponent comp : bomCompMap.values()) {
-					// 이미 DB에 (BOM_id, Material_id) 있는지 확인
-					Optional<BomComponent> dbCompOpt =
-							bomComponentRepository.findByBomIdAndMaterialId(comp.getBomId(), comp.getMaterialId());
+				// 기존: for (BomComponent comp : bomCompMap.values()) { ... 저장 ... }
+				List<BomComponent> validComponents = bomCompMap.values().stream()
+						.filter(c -> Optional.ofNullable(c.getAmount()).orElse(0f) > 0f)
+						.collect(Collectors.toList());
+
+				for (BomComponent comp : validComponents) {
+					Optional<BomComponent> dbCompOpt = bomComponentRepository.findByBomIdAndMaterialId(comp.getBomId(), comp.getMaterialId());
 					if (dbCompOpt.isPresent()) {
 						BomComponent dbComp = dbCompOpt.get();
-						// 기존과 합산
 						dbComp.setAmount(dbComp.getAmount() + comp.getAmount());
 						if (comp.getDescription() != null && !comp.getDescription().isEmpty()) {
 							if (dbComp.getDescription() == null || dbComp.getDescription().isEmpty())
@@ -494,9 +499,9 @@ public class BomController {
 							else
 								dbComp.setDescription(dbComp.getDescription() + ", " + comp.getDescription());
 						}
-						bomComponentRepository.save(dbComp); // **update!**
+						bomComponentRepository.save(dbComp);
 					} else {
-						bomComponentRepository.save(comp); // **insert!**
+						bomComponentRepository.save(comp);
 					}
 				}
 
