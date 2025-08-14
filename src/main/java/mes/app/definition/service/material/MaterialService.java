@@ -213,8 +213,8 @@ public class MaterialService {
 		}
 
 		dicParam.addValue("avrqty", CommonUtil.tryString(data.getFirst("avrqty")));
-		dicParam.addValue("ValidDays", CommonUtil.tryString(data.getFirst("ValidDays")));
-		dicParam.addValue("LeadTime", CommonUtil.tryString(data.getFirst("LeadTime")));
+		dicParam.addValue("validDays", CommonUtil.tryString(data.getFirst("validDays")));
+		dicParam.addValue("leadTime", CommonUtil.tryString(data.getFirst("leadTime")));
 		dicParam.addValue("packingUnitQty", CommonUtil.tryFloatNull(data.getFirst("PackingUnitQty")));
 		dicParam.addValue("packingUnitName", CommonUtil.tryString(data.getFirst("PackingUnitName")));
 		dicParam.addValue("minOrder", CommonUtil.tryFloatNull(data.getFirst("MinOrder")));
