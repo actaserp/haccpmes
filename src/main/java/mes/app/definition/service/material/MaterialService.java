@@ -192,12 +192,7 @@ public class MaterialService {
 		dicParam.addValue("maxStock", CommonUtil.tryFloatNull(data.getFirst("MaxStock")));
 		dicParam.addValue("processSafetyStock", CommonUtil.tryFloatNull(data.getFirst("ProcessSafetyStock")));
 		String validDaysStr = data.getFirst("ValidDays") != null ? data.getFirst("ValidDays").toString().trim() : "";
-		if (!validDaysStr.isEmpty()) {
-			dicParam.addValue("validDays", Integer.parseInt(validDaysStr));
-		} else {
-			// 기본값 지정(예시) 또는 예외처리
-			dicParam.addValue("validDays", 90);
-		}
+
 		
 		if(data.containsKey("lot_use_yn")) {
 			dicParam.addValue("lotUseYN", data.getFirst("lot_use_yn").toString());			
@@ -217,13 +212,9 @@ public class MaterialService {
 			dicParam.addValue("useyn", 0);
 		}
 
-		if(data.containsKey("LeadTime")) {
-			dicParam.addValue("LeadTime", data.getFirst("LeadTime").toString());
-		} else {
-			dicParam.addValue("LeadTime", 14);
-		}
 		dicParam.addValue("avrqty", CommonUtil.tryString(data.getFirst("avrqty")));
-
+		dicParam.addValue("ValidDays", CommonUtil.tryString(data.getFirst("ValidDays")));
+		dicParam.addValue("LeadTime", CommonUtil.tryString(data.getFirst("LeadTime")));
 		dicParam.addValue("packingUnitQty", CommonUtil.tryFloatNull(data.getFirst("PackingUnitQty")));
 		dicParam.addValue("packingUnitName", CommonUtil.tryString(data.getFirst("PackingUnitName")));
 		dicParam.addValue("minOrder", CommonUtil.tryFloatNull(data.getFirst("MinOrder")));

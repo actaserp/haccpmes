@@ -722,6 +722,7 @@ public class BomController {
 		newProd.setLotUseYn("0");
 		newProd.setMtyn("1");
 		newProd.setUseyn("0");
+		newProd.setPurchaseOrderStandard("mrp");
 		newProd.setSpjangcd(spjangcd);
 		newProd.setWorkCenterId(39);
 		newProd.setStoreHouseId(4);
@@ -745,6 +746,7 @@ public class BomController {
 		newMat.setLotUseYn("0");
 		newMat.setMtyn("1");
 		newMat.setUseyn("0");
+		newMat.setPurchaseOrderStandard("mrp");
 		newMat.setWorkCenterId(39);
 		newMat.setStoreHouseId(3);
 		newMat.setFactory_id(1);
@@ -770,6 +772,7 @@ public class BomController {
 		newProd.setLotUseYn("0");
 		newProd.setMtyn("1");
 		newProd.setUseyn("0");
+		newProd.setPurchaseOrderStandard("mrp");
 		newProd.setSpjangcd(spjangcd);
 		newProd.setWorkCenterId(39);
 		newProd.setStoreHouseId(4);
@@ -793,6 +796,7 @@ public class BomController {
 		newMat.setLotUseYn("0");
 		newMat.setMtyn("1");
 		newMat.setUseyn("0");
+		newMat.setPurchaseOrderStandard("mrp");
 		newMat.setWorkCenterId(39);
 		newMat.setStoreHouseId(3);
 		newMat.setFactory_id(1);
@@ -818,6 +822,7 @@ public class BomController {
 		newProd.setLotUseYn("0");
 		newProd.setMtyn("1");
 		newProd.setUseyn("0");
+		newProd.setPurchaseOrderStandard("mrp");
 		newProd.setSpjangcd(spjangcd);
 		newProd.setWorkCenterId(39);
 		newProd.setStoreHouseId(4);
@@ -843,6 +848,7 @@ public class BomController {
 		newMat.setLotUseYn("0");
 		newMat.setMtyn("1");
 		newMat.setUseyn("0");
+		newMat.setPurchaseOrderStandard("mrp");
 		newMat.setWorkCenterId(39);
 		newMat.setStoreHouseId(3);
 		newMat = materialRepository.save(newMat);
