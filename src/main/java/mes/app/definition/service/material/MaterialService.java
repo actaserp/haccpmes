@@ -196,7 +196,7 @@ public class MaterialService {
 			dicParam.addValue("validDays", Integer.parseInt(validDaysStr));
 		} else {
 			// 기본값 지정(예시) 또는 예외처리
-//			dicParam.addValue("validDays", 0);
+			dicParam.addValue("validDays", 90);
 		}
 		
 		if(data.containsKey("lot_use_yn")) {
@@ -216,6 +216,12 @@ public class MaterialService {
 		} else {
 			dicParam.addValue("useyn", 0);
 		}
+
+		if(data.containsKey("LeadTime")) {
+			dicParam.addValue("LeadTime", data.getFirst("LeadTime").toString());
+		} else {
+			dicParam.addValue("LeadTime", 14);
+		}
 		dicParam.addValue("avrqty", CommonUtil.tryString(data.getFirst("avrqty")));
 
 		dicParam.addValue("packingUnitQty", CommonUtil.tryFloatNull(data.getFirst("PackingUnitQty")));
@@ -223,8 +229,7 @@ public class MaterialService {
 		dicParam.addValue("minOrder", CommonUtil.tryFloatNull(data.getFirst("MinOrder")));
 		dicParam.addValue("maxOrder", CommonUtil.tryFloatNull(data.getFirst("MaxOrder")));
 		dicParam.addValue("lotSize", CommonUtil.tryFloatNull(data.getFirst("LotSize")));
-		dicParam.addValue("leadTime", CommonUtil.tryFloatNull(data.getFirst("LeadTime")));
-		
+
 		dicParam.addValue("standardTime", CommonUtil.tryFloatNull(data.getFirst("StandardTime")));
 		dicParam.addValue("standardTimeUnit", CommonUtil.tryString(data.getFirst("StandardTimeUnit")));
 		dicParam.addValue("thickness", CommonUtil.tryFloatNull(data.getFirst("Thickness")));
