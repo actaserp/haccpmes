@@ -191,6 +191,11 @@ public class ShipmentOrderController {
 
 			MatSummary summary = GroupedMaterial.get(matid);
 
+			//재고관리를 안하는 품목이면 건너뛰기
+			if(!material.getMtyn().equals("1")){
+				continue;
+			}
+
 			if(summary != null){
 				int totalQty = summary.totalQty; // 출하하려는 재고
 				float currentStock = material.getCurrentStock();
@@ -203,7 +208,6 @@ public class ShipmentOrderController {
 			}
 		}
 		smh = this.shipmentHeadRepository.save(smh);
-
 
 		for(int i = 0; i < data.size(); i++) {
 
@@ -322,9 +326,9 @@ public class ShipmentOrderController {
 		smh.setTotalVat(totalVat);
 
 		smh = this.shipmentHeadRepository.save(smh);
-		
+
 		result.data = smh;
-		
+
 		return result;
 	}
 		
