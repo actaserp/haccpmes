@@ -53,6 +53,37 @@
             </dd>
           </dl>
           <dl>
+            <dt>
+              기준일자<span class="eq"></span>
+            </dt>
+            <dd>
+              <ul class="date-box">
+                <li>
+                  <input class="tac w150 date_from " type="date" id="srchStartDt" name="srchStartDt"/>
+                  <label for="srchStartDt" class="hide">시작일</label>
+                </li>
+                <li>
+                  <input class="tac w150 date_to" type="date" id="srchEndDt" name="srchEndDt"/>
+                  <label for="srchEndDt" class="hide">종료일</label>
+                </li>
+              </ul>
+            </dd>
+          </dl>
+          <dl>
+            <dt>
+              <label for="cboState">
+                재고상태
+              </label>
+            </dt>
+            <dd>
+              <div class="srch-box">
+                <select id="cboState" name="cboState">
+
+                </select>
+              </div>
+            </dd>
+          </dl>
+          <dl>
             <dt>&nbsp;</dt>
             <dd>
               <li>
@@ -76,11 +107,12 @@
 <th:block layout:fragment="scripts">
 
   <script type="text/javascript">
-    class MaterialStockPage {
+    class MaterialOptimalStockStatusPage {
       constructor() {
         this.gird = null;
         this.init();
-        this.url = '/api/inventory/material_current_stock';
+        this.spjangcd = sessionStorage.getItem('spjangcd');
+        this.url = '/api/support/material_optimal_stock_status';
       }
 
       init() {
@@ -90,21 +122,22 @@
           frozenColumns: 0, // 열 고정
           headersVisibility: wijmo.grid.HeadersVisibility.Column,
           selectionMode: wijmo.grid.SelectionMode.None, // 다중 선택 불가
-          allowSorting: true, // 정렬 가능
+          allowSorting: true, // 정렬 가능l
           formatItem: (sender, e) => {
             if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
               e.cell.style.textAlign = 'center';
             }
           },
           columns: [
-            {binding: '', header: '자재코드', width: 100, align: 'left', isReadOnly: true},
-            {binding: '', header: '자재명', width: 120, align: 'left', isReadOnly: true},
-            {binding: '', header: '단위', width: 100, align: 'center', isReadOnly: true},
-            {binding: '', header: '현재고', width: 250, align: 'left', isReadOnly: true},
-            {binding: '', header: '적정재고', width: 250, align: 'left', isReadOnly: true},
-            {binding: '', header: '차이재고', width: 250, align: 'left', isReadOnly: true},
-            {binding: '', header: '상태', width: 250, align: 'left', isReadOnly: true},
-            {binding: '', header: '최근입고일', width: 250, align: 'left', isReadOnly: true},
+            {binding: 'material_code', header: '자재코드', width: 100, align: 'left', isReadOnly: true},
+            {binding: 'material_name', header: '자재명', width: '*', align: 'left', isReadOnly: true},
+            {binding: 'unit_name', header: '단위', width: 100, align: 'center', isReadOnly: true},
+            {binding: 'current_stock', header: '현재고', width: 120, align: 'left', isReadOnly: true},
+            {binding: 'optimal_stock', header: '적정재고', width: 120, align: 'left', isReadOnly: true},
+            {binding: 'diff_stock', header: '차이재고', width: 120, align: 'left', isReadOnly: true},
+            {binding: 'house_name', header: '창고명', width: 120, align: 'center', isReadOnly: true},
+            {binding: 'state', header: '상태', width: 120, align: 'center', isReadOnly: true},
+            {binding: 'last_in_date', header: '최근입고일', width: 150, align: 'center', isReadOnly: true},
 
           ],
           itemsSource: new wijmo.collections.CollectionView([]), // 빈 데이터로 초기화
@@ -133,13 +166,12 @@
         let _this = this;
 
         let param = {
-          'action': 'read',
-          'mat_type': $('#cboMatType').val(),
-          'mat_grp_pk': $('#cboMatGrp').val(),
           'mat_name': $('#txtMatName').val(),
           'store_house_id': $('#cboStoreHouse').val(),
+          'Inventory_status': $('#cboState').val(),
+          'srchStartDt' : $('#srchStartDt').val(),
+          'srchEndDt' :$('#srchEndDt').val() ,
           'spjangcd' : sessionStorage.getItem('spjangcd')
-
         };
 
 
@@ -154,27 +186,26 @@
     let page = null;
 
     $(document).ready(function (e) {
-      page = new MaterialStockPage();
+      page = new MaterialOptimalStockStatusPage();
 
-      AjaxUtil.fillSelectOptions($('#cboMatType'), 'system_code', 'all', null, 'mat_type');
-      AjaxUtil.fillSelectOptions($('#cboMatGrp'), 'material_group', 'all', false);
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0'); // 월은 0부터 시작
+      const dd = String(today.getDate()).padStart(2, '0');
 
-      $('#cboMatType').on('change', function (e) {
-        let mat_type = $('#cboMatType').val();
-        AjaxUtil.fillSelectOptions($('#cboMatGrp'), 'material_group', 'all', false, mat_type);
-      });
+      const firstDay = `${yyyy}-${mm}-01`;
+      const currentDay = `${yyyy}-${mm}-${dd}`;
 
-      $('#cboMatGrp').change(function () {
-        let grp_pk = $('#cboMatGrp').val();
+      $('#srchStartDt').val(firstDay);
+      $('#srchEndDt').val(currentDay);
 
-      });
 
+      AjaxUtil.fillSelectOptions($('#cboState'), 'system_code', 'all', false, 'Inventory_status') ;
       AjaxUtil.fillSelectOptions($('#cboStoreHouse'), 'store_house', 'all', false);
 
       // 검색버튼
       $('#btnSearch').click(function (e) {
         page.searchDataBind();
-
       });
 
       page.searchDataBind();
