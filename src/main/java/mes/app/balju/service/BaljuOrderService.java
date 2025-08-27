@@ -193,7 +193,7 @@ public class BaljuOrderService {
           MAX("BalJuHeadType") AS "BalJuHeadType",
           MAX("bh_StateName") AS "bh_StateName",
           SUM("SujuQty2") AS "SujuQty2",
-          SUM("SujuQty3") AS "SujuQty3",
+          SUM(GREATEST("SujuQty" - COALESCE("SujuQty2", 0), 0)) AS "SujuQty3",
           MAX("ShipmentStateName") AS "ShipmentStateName",
           MAX("DeliveryDate") AS "DueDate",
           MAX("Description") AS "Description"
