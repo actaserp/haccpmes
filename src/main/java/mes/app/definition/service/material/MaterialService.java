@@ -140,7 +140,7 @@ public class MaterialService {
             , m."Usage" 
             , m."Class1", m."Class2", m."Class3"
             , m."Standard1", m."Standard2" 
-            , m."PurchaseOrderStandard", m."ManagementLevel" 
+            , m."PurchaseOrderStandard", m."ManagementLevel"
             , m."Description"
             , m."InputManCount", m."InputManHour"
             , m."MaxStock"
