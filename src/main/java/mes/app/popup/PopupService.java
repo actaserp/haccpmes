@@ -32,7 +32,7 @@ public class PopupService {
             from company
             WHERE ("CompanyType" = 'sale'
             OR "CompanyType" = 'sale-purchase')
-            and "relyn" = '0'
+            AND ("relyn" = '0' OR "relyn" IS NULL)
             and spjangcd = :spjangcd
             union all
             select a.id
