@@ -820,7 +820,7 @@ public class PopupController {
             , "AccountManagerPhone" as invoiceetel1
             , "Email" as invoiceeemail1
             from company
-            AND ("relyn" = '0' OR "relyn" IS NULL)
+            WHERE ("relyn" = '0' OR "relyn" IS NULL)
 			""";
 
 		if (compCode != null && !compCode.isEmpty()) {
