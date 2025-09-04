@@ -228,7 +228,7 @@ public class SujuController {
 				MultiValueMap<String, Object> priceData = new LinkedMultiValueMap<>();
 				priceData.add("Material_id", suju.getMaterialId());
 				priceData.add("Company_id", companyId);
-				priceData.add("UnitPrice", suju.getUnitPrice());
+				priceData.add("UnitPrices", suju.getUnitPrice());
 				priceData.add("ApplyStartDate", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
 				priceData.add("type", "02");
 				priceData.add("ChangerName", user.getUsername());

@@ -211,9 +211,9 @@
                         </li>
                     </ul>
                     <div class="layout-sidebar-tabcont">
-                        <div style="margin-top: 10px" id="searchkeyword-box">
-                            <input type="text" style="width: 90%" id="searchkeyword" name="searchkeyword" />
-                        </div>
+<!--                        <div style="margin-top: 10px" id="searchkeyword-box">-->
+<!--                            <input type="text" style="width: 90%" id="searchkeyword" name="searchkeyword" />-->
+<!--                        </div>-->
                         <nav class="layout-nav sidebar-tabcont" id="menu">
                             <ul class="dep1">
                                 <li class="dep1-1">
@@ -783,24 +783,24 @@
     });
 
     //메뉴 검색바 엔터시 발동함수
-    document.getElementById('searchkeyword').addEventListener("keydown", (e) => {
-        if(e.key === 'Enter'){
-            e.preventDefault();
-
-            const inputValue = $('#searchkeyword').val();
-
-            const matchedItem = menu_arr.find(obj => {
-                const key = Object.keys(obj)[0];
-                return key.trim() === inputValue;
-            })
-
-            if(matchedItem) {
-                const url = matchedItem[inputValue];
-                const target = url.substring(url.lastIndexOf("/")+1);
-                document.querySelector(`[data-objid="${target}"]`)?.click();
-            }
-        }
-    });
+    // document.getElementById('searchkeyword').addEventListener("keydown", (e) => {
+    //     if(e.key === 'Enter'){
+    //         e.preventDefault();
+    //
+    //         const inputValue = $('#searchkeyword').val();
+    //
+    //         const matchedItem = menu_arr.find(obj => {
+    //             const key = Object.keys(obj)[0];
+    //             return key.trim() === inputValue;
+    //         })
+    //
+    //         if(matchedItem) {
+    //             const url = matchedItem[inputValue];
+    //             const target = url.substring(url.lastIndexOf("/")+1);
+    //             document.querySelector(`[data-objid="${target}"]`)?.click();
+    //         }
+    //     }
+    // });
 </script>
 
 <script type="text/javascript">
