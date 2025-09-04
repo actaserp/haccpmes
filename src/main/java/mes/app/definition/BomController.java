@@ -488,22 +488,9 @@ public class BomController {
 						.filter(c -> Optional.ofNullable(c.getAmount()).orElse(0f) > 0f)
 						.collect(Collectors.toList());
 
-				for (BomComponent comp : validComponents) {
-					Optional<BomComponent> dbCompOpt = bomComponentRepository.findByBomIdAndMaterialId(comp.getBomId(), comp.getMaterialId());
-					if (dbCompOpt.isPresent()) {
-						BomComponent dbComp = dbCompOpt.get();
-						dbComp.setAmount(dbComp.getAmount() + comp.getAmount());
-						if (comp.getDescription() != null && !comp.getDescription().isEmpty()) {
-							if (dbComp.getDescription() == null || dbComp.getDescription().isEmpty())
-								dbComp.setDescription(comp.getDescription());
-							else
-								dbComp.setDescription(dbComp.getDescription() + ", " + comp.getDescription());
-						}
-						bomComponentRepository.save(dbComp);
-					} else {
-						bomComponentRepository.save(comp);
-					}
-				}
+				bomComponentRepository.deleteByBomId(bom.getId());
+				bomComponentRepository.flush();
+				bomComponentRepository.saveAll(validComponents);
 
 			}
 			result.success = true;
@@ -595,6 +582,8 @@ public class BomController {
 					}
 				}
 			}
+			bomComponentRepository.deleteByBomId(bom.getId());
+			bomComponentRepository.flush();
 			// 수량이 0 초과인 것만 저장
 			bomComponentRepository.saveAll(
 					bomCompMap.values().stream()
@@ -687,6 +676,8 @@ public class BomController {
 					}
 				}
 			}
+			bomComponentRepository.deleteByBomId(bom.getId());
+			bomComponentRepository.flush();
 			// 수량이 0 초과인 것만 저장
 			bomComponentRepository.saveAll(
 					bomCompMap.values().stream()

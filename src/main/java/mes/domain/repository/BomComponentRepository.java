@@ -10,4 +10,6 @@ public interface BomComponentRepository extends JpaRepository<BomComponent, Inte
 	public BomComponent getBomComponentById(int id);
 
     Optional<BomComponent> findByBomIdAndMaterialId(int bomId, int materialId);
+
+    void deleteByBomId(int bomId);
 }
