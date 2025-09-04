@@ -129,6 +129,7 @@ public class MaterialController {
         	
         } else {
         	result.success = false;
+			result.message = "등록중 오류가 발생하였습니다.\n사용중지 품목을 확인하여 주십시오";
         }; 
         
 		return result;

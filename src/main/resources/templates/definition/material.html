@@ -79,7 +79,7 @@
                                 <label>품목구분</label>
                             </dt>
                             <dd>
-                                <select class="form-control2" id="cboMaterialType" name="cboMaterialType"></select>
+                                <select class="form-control2" id="cboMaterialType" name="cboMaterialType" style="width: 100px;"></select>
                             </dd>
                         </dl>
                         <dl>
@@ -87,7 +87,7 @@
                                 <label>품목그룹</label>
                             </dt>
                             <dd>
-                                <select class="form-control2" id="cboMaterialGroup" name="cboMaterialGroup"></select>
+                                <select class="form-control2" id="cboMaterialGroup" name="cboMaterialGroup" style="width: 136px;"></select>
                             </dd>
                         </dl>
                         <dl>
@@ -95,12 +95,12 @@
                                 <label>품목명</label>
                             </dt>
                             <dd>
-                                <input type="text" class="form-control2" id="keyword" name="keyword">
+                                <input type="text" class="form-control2" id="keyword" name="keyword" style="width: 205px;">
                             </dd>
                         </dl>
                         <dl>
                             <dt>
-                                <label>사용중지여부</label>
+                                <label>사용중지</label>
                             </dt>
                             <dd>
                                 <input class="form-control2" type="checkbox" id="useYn_flag" name="useYn_flag"/>
@@ -125,7 +125,7 @@
                             <dd>
                                 <li>
                                     <button type="button" class="btn-delete btn-danger" id="batchDelete"
-                                            style="width: 115px; height: 36px;">
+                                            style="width: 86px; height: 36px;">
                                         <i class="fas fa-trash"></i>일괄삭제
                                     </button>
                                 </li>
@@ -759,20 +759,6 @@
                                         </li>
                                     </ul>
                                 </div>
-                                <div class="search-wrap">
-                                    <form id="priceForm" style="margin-left: auto;">
-                                        <dl>
-                                            <dt>
-                                                <label>평균단가</label>
-                                            </dt>
-                                            <dd>
-                                                <input type="number" id="UnitPrice" name="UnitPrice">
-                                            </dd>
-                                        </dl>
-                                    </form>
-                                    <div id="unitcostSaveButtonContainer" style="display: none; margin-top: 10px;">
-                                    </div>
-                                </div>
                             </div>
 
                             <div class="">
@@ -794,8 +780,6 @@
                                                         <option value="04">가공비</option>
                                                     </select>
                                                 </td>
-                                            </tr>
-                                            <tr>
                                                 <th>
                                                     <label for="Company_id">업체</label>
                                                 </th>
@@ -806,10 +790,33 @@
                                             </tr>
                                             <tr>
                                                 <th>
-                                                    <label for="UnitPrices">변경 단가</label>
+                                                    <label for="UnitPrice">입고 단가</label>
                                                 </th>
                                                 <td>
-                                                    <input type="text" id="UnitPrices" name="UnitPrice"
+                                                    <input type="number" id="UnitPrice" name="UnitPrice"
+                                                           style="width: 100%;">
+                                                </td>
+                                                <th>
+                                                    <label for="partPrices">부품 단가</label>
+                                                </th>
+                                                <td>
+                                                    <input type="number" id="partPrices" name="partPrices"
+                                                           style="width: 100%;">
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>
+                                                    <label for="procPrices">가공비</label>
+                                                </th>
+                                                <td>
+                                                    <input type="number" id="procPrices" name="procPrices"
+                                                           style="width: 100%;">
+                                                </td>
+                                                <th>
+                                                    <label for="UnitPrices">납품 단가</label>
+                                                </th>
+                                                <td>
+                                                    <input type="text" id="UnitPrices" name="UnitPrices"
                                                            style="width: 100%;">
                                                 </td>
                                             </tr>
@@ -817,7 +824,7 @@
                                                 <th>
                                                     <label for="ApplyStartDate">적용시작일</label>
                                                 </th>
-                                                <td>
+                                                <td colspan="3">
                                                     <input type="date" style="width: 100%;" id="ApplyStartDate"
                                                            name="ApplyStartDate">
                                                 </td>
@@ -1701,6 +1708,13 @@
                 let result = AjaxUtil.getSyncData(this.url + '/detailPrice', param);
                 if (result != null) {
                     console.log(result.data);
+                    // 품목구분 제품, 자재에 따라서 input disabled 특정값 활성화
+                    if(result.data.MaterialType === 'product'){
+                        delete result.data.UnitPrice;
+                    }else if(result.data.MaterialType === 'jajae'){
+                        delete result.data.partPrices;
+                        delete result.data.procPrices;
+                    }
                     FormUtil.BindDataForm(result.data, $('#companyPriceForm'));
 
                     // ApplyStartDate를 UTC에서 한국시간(KST)으로 변환하여 datetime-local 포맷으로 설정
@@ -2446,12 +2460,29 @@
                 // 단가 상세정보 리셋
                 $('#companyPriceForm')[0].reset();
                 $('#companyPriceForm').find('#price_id').val('');
-
                 $('#companyPriceForm').find('input, select').each(function () {
                     if ($(this).is(':disabled')) {
                         $(this).removeAttr('disabled');
                     }
                 });
+                // let hitTest = this.grid.hitTest(e);
+                // if (hitTest.cellType === wijmo.grid.CellType.Cell) {
+                //     let row = hitTest.row;
+                //     let selectedItem = this.grid.rows[row].dataItem;
+                //     let mat_type = selectedItem.mat_type_name;
+                //     $('#companyPriceForm').find('input, select').each(function () {
+                //         if ($(this).is(':disabled')) {
+                //             $(this).removeAttr('disabled');
+                //         }
+                //     });
+                //     if(mat_type === '제품') {
+                //         document.getElementById('UnitPrice').attributes('disabled');
+                //     }else if(mat_type === '자재'){
+                //         document.getElementById('procPrices').attributes('disabled');
+                //         document.getElementById('partPrices').attributes('disabled');
+                //     }
+                // }
+
 
                 page.setPriceButtonState();
 
@@ -2559,6 +2590,8 @@
                     $("#unitcostSaveButtonContainer").hide();
                 }
             });
+            // 단가정보 input 이벤트 메서드 호출
+            bindPriceCalculator("partPrices", "procPrices", "UnitPrices");
 
 
             page.searchDataBind();
@@ -2600,6 +2633,23 @@
                 }
             });
         }
+        // 단가정보 input 이벤트 메서드
+        function bindPriceCalculator(partId, procId, unitId) {
+            const partInput = document.getElementById(partId);
+            const procInput = document.getElementById(procId);
+            const unitInput = document.getElementById(unitId);
+
+            function update() {
+                const part = parseFloat(partInput.value) || 0;
+                const proc = parseFloat(procInput.value) || 0;
+                unitInput.value = (part + proc).toFixed(0);
+            }
+
+            // 두 input 모두 같은 이벤트 함수 바인딩
+            partInput.addEventListener("input", update);
+            procInput.addEventListener("input", update);
+        }
+
     </script>
 
 </th:block>

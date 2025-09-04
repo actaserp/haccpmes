@@ -247,7 +247,6 @@ public class MaterialService {
 		dicParam.addValue("vatExemptionYN", CommonUtil.tryString(data.getFirst("VatExemptionYN")));
 		
 		dicParam.addValue("routingId", CommonUtil.tryIntNull(data.getFirst("Routing_id")));
-		dicParam.addValue("unitPrice", CommonUtil.tryFloatNull(data.getFirst("UnitPrice")));
 		dicParam.addValue("user_id", CommonUtil.tryIntNull(data.getFirst("user_id").toString()));
 		
 		String sql = "";
@@ -299,7 +298,6 @@ public class MaterialService {
 						, "PurchaseOrderStandard" 
 						, "VatExemptionYN" 
 						, "Routing_id" 
-						, "UnitPrice"
 						 , "Mtyn"
 						 , "Useyn"
 						 ,"Avrqty"
@@ -350,7 +348,6 @@ public class MaterialService {
 						, :purchaseOrderStandard
 						, :vatExemptionYN
 						, :routingId
-						, :unitPrice
 						, :mtyn
 						, :useyn
 						, :avrqty
@@ -403,7 +400,6 @@ public class MaterialService {
 					, "PurchaseOrderStandard" = :purchaseOrderStandard
 					, "VatExemptionYN" = :vatExemptionYN 
 					, "Routing_id" = :routingId
-					, "UnitPrice" = :unitPrice
 					, "Mtyn" = :mtyn
 					, "Useyn" = :useyn
 					,"Avrqty" = :avrqty
