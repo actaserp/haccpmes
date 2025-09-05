@@ -507,10 +507,14 @@
         ];
 
         formatFields.forEach(selector => {
-          $row.find(selector).off('keyup').on('keyup', function () {
-            formatNumberInput($(this).val(), this);
-          });
+          // ⬇️ 최소 변경: keyup → input.format (네임스페이스로 분리)
+          $row.find(selector)
+            .off('input.format')
+            .on('input.format', function () {
+              formatNumberInput($(this).val(), this);
+            });
 
+          // 초기 값 포맷 유지
           $row.find(selector).each(function () {
             if ($(this).val()) {
               formatNumberInput($(this).val(), this);
@@ -519,7 +523,8 @@
         });
 
         // 계산 이벤트 바인딩
-        $row.find('input[name^="quantity_"], input[name^="BaljuUnitPrice_"]').off('keyup change').on('keyup change', function () {
+        $row.find('input[name^="quantity_"], input[name^="BaljuUnitPrice_"]')
+          .off('keyup change').on('keyup change', function () {
           calculateAmount({ row: $row, $content });
           updateBaljuTotalPrice($content);
         });

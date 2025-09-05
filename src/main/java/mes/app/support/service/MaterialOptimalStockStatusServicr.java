@@ -259,7 +259,7 @@ public class MaterialOptimalStockStatusServicr {
     paramMap.addValue("spjangcd", spjangcd);
 
     String sql = """
-        WITH
+        WITH RECURSIVE
         -- 0) 자재 마스터 (+ Avrqty 숫자 변환)
         mat AS (
           SELECT
@@ -306,23 +306,54 @@ public class MaterialOptimalStockStatusServicr {
           WHERE rn = 1
         ),
         -- 3) BOM 자식 여부 (표시용)
-        bom_child AS (
-          SELECT DISTINCT bc."Material_id" AS mat_id
-          FROM bom_comp bc
-        ),
-        -- 4) 발주구분 자동결정(표시용)
-        order_type_resolved AS (
-          SELECT
-            m.id,
-            CASE
-              WHEN m.order_type IN ('mrp','rop') THEN m.order_type
-              WHEN bc.mat_id IS NOT NULL         THEN 'mrp'
-              ELSE 'rop'
-            END AS order_type_resolved
-          FROM mat m
-          LEFT JOIN bom_child bc ON bc.mat_id = m.id
-        )
-
+         bom_edges AS (
+            SELECT
+              b."Material_id"  AS parent_id,
+              bc."Material_id" AS child_id
+            FROM bom b
+            JOIN bom_comp bc ON bc."BOM_id" = b.id
+          ),
+          bom_desc AS (
+            -- 1레벨
+            SELECT
+              e.parent_id,
+              e.child_id,
+              1 AS lvl,
+              ARRAY[e.parent_id, e.child_id] AS path
+            FROM bom_edges e
+            UNION ALL
+            -- 2레벨+
+            SELECT
+              d.parent_id,
+              e.child_id,
+              d.lvl + 1 AS lvl,
+              d.path || e.child_id
+            FROM bom_desc d
+            JOIN bom_edges e
+              ON e.parent_id = d.child_id
+            WHERE NOT e.child_id = ANY(d.path)  -- 사이클 방지
+          ),
+          bom_child AS (
+            -- 어떤 상위품 트리에서든 "자식으로 등장"한 자재 (최소 레벨 포함)
+            SELECT
+              child_id AS mat_id,
+              MIN(lvl) AS min_child_level
+            FROM bom_desc
+            GROUP BY child_id
+          ),
+          -- 4) 발주구분 자동결정(표시용)
+              order_type_resolved AS (
+            SELECT
+              m.id,
+              CASE
+                WHEN m.order_type IN ('mrp','rop') THEN m.order_type
+                WHEN bc.mat_id IS NOT NULL         THEN 'mrp'
+                ELSE 'rop'
+              END AS order_type_resolved,
+              bc.min_child_level                   -- (선택) 표시용
+            FROM mat m
+            LEFT JOIN bom_child bc ON bc.mat_id = m.id
+          )
         SELECT
           m.code                        AS "material_code",
           m.name                        AS "material_name",
