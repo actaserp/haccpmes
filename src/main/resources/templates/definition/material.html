@@ -2642,7 +2642,7 @@
             function update() {
                 const part = parseFloat(partInput.value) || 0;
                 const proc = parseFloat(procInput.value) || 0;
-                unitInput.value = (part + proc).toFixed(0);
+                unitInput.value = (part + proc).toFixed(2);
             }
 
             // 두 input 모두 같은 이벤트 함수 바인딩
