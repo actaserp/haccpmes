@@ -213,10 +213,10 @@ public class SujuController {
 			suju.setMaterialId(Integer.parseInt(item.get("Material_id").toString()));
 			suju.setSujuQty(Integer.parseInt(item.get("quantity").toString()));
 			suju.setSujuQty2(Integer.parseInt(item.get("quantity").toString()));
-			suju.setUnitPrice(Integer.parseInt(item.get("unitPrice").toString()));
-			suju.setPrice(Integer.parseInt(item.get("supplyAmount").toString()));
-			suju.setVat(Integer.parseInt(item.get("VatAmount").toString()));
-			suju.setTotalAmount(Integer.parseInt(item.get("totalAmount").toString()));
+			suju.setUnitPrice(Double.parseDouble(item.get("unitPrice").toString()));
+			suju.setPrice(Double.parseDouble(item.get("supplyAmount").toString()));
+			suju.setVat(Double.parseDouble(item.get("VatAmount").toString()));
+			suju.setTotalAmount(Double.parseDouble(item.get("totalAmount").toString()));
 			suju.setProject_id(item.get("projectHidden").toString());
 			suju.setInVatYN(invatyn);
 			suju.setDescription((String) item.get("description"));
@@ -565,10 +565,10 @@ public class SujuController {
 			suju.setAvailableStock((float) 0); // 없으면 0으로 보내기 추가
 			suju.set_status("manual");
 			suju.set_audit(user);
-			suju.setUnitPrice(unit_price.intValue());
-			suju.setPrice(total_price.intValue());
-			suju.setVat( (int)(total_price.intValue() * 0.1) );
-			suju.setTotalAmount( total_price.intValue() + (int)(total_price.intValue() * 0.1) );
+			suju.setUnitPrice(unit_price.doubleValue());
+			suju.setPrice(total_price.doubleValue());
+			suju.setVat(total_price.doubleValue() * 0.1);
+			suju.setTotalAmount(total_price.doubleValue() + (total_price.doubleValue() * 0.1));
 			suju.setInVatYN("N");
 			suju.setProject_id(project.getId().getProjno());
 			suju.setSpjangcd(spjangcd);

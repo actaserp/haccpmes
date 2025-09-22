@@ -502,7 +502,7 @@
                         {binding: 'JumunDate', header: '수주일', width: 130, align: 'center'},
                         {binding: 'JumunNumber', header: '수주 번호', width: 150, align: 'center'},
                         {binding: 'product_name', header: '제품명', width: 400},
-                        {binding: 'TotalPrice', header: '총액', width: 120, align: 'right', format: 'n0'},
+                        {binding: 'TotalPrice', header: '총액', width: 120, align: 'right', format: 'n2'},
                         {binding: 'DueDate', header: '납기일', width: 130, align: 'center'},
                         {binding: 'StateName', header: '작업상태', width: 100, align: 'center'},
                         {binding: 'ShipmentStateName', header: '출하상태', width: 100, align: 'center'},
@@ -927,22 +927,38 @@
 
                     const $this = $(this);
                     const input = this;
-                    const raw = $this.val().replace(/[^0-9]/g, '');
-                    const cursor = input.selectionStart;
-                    const prevLength = input.value.length;
+                    let raw = $this.val();
 
-                    if (raw === '') {
-                        $this.val('');
-                    } else {
-                        const formatted = Number(raw).toLocaleString();
-                        $this.val(formatted);
+                    // quantity_ → 정수만
+                    if ($this.attr('name').startsWith('quantity_')) {
+                        raw = raw.replace(/[^0-9]/g, '');
+                        if (raw === '') {
+                            $this.val('');
+                        } else {
+                            const formatted = Number(raw).toLocaleString();
+                            $this.val(formatted);
+                        }
+                    }
+                    // 나머지 → 소수 둘째 자리까지 허용
+                    else {
+                        raw = raw.replace(/[^0-9.]/g, ''); // 숫자와 소수점만
+                        // 소수점 여러개 입력 방지
+                        raw = raw.replace(/(\..*)\./g, '$1');
 
-                        const diff = formatted.length - prevLength;
-                        input.setSelectionRange(cursor + diff, cursor + diff);
+                        if (raw === '') {
+                            $this.val('');
+                        } else {
+                            const num = parseFloat(raw);
+                            if (!isNaN(num)) {
+                                const formatted = num.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+                                $this.val(formatted);
+                            }
+                        }
                     }
 
                     isInternalFormatting = false;
                 });
+
 
                 // 검색 버튼 클릭 시 팝업
                 $content.on('click', 'a[title="품목 검색"]', function () {

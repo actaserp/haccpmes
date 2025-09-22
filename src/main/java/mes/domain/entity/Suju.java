@@ -68,13 +68,13 @@ public class Suju extends AbstractAuditModel {
 	Integer sujuQty2;
 	
 	@Column(name="\"UnitPrice\"")
-	Integer unitPrice;
+	Double unitPrice;
 	
 	@Column(name="\"Price\"")
-	Integer price;
+	Double price;
 	
 	@Column(name="\"Vat\"")
-	Integer vat;
+	Double vat;
 	
 	@Column(name="\"PlanDataPk\"")
 	Integer planDataPk;
@@ -98,7 +98,7 @@ public class Suju extends AbstractAuditModel {
 	String inVatYN;
 
 	@Column(name="\"TotalAmount\"")
-	Integer totalAmount;
+	Double totalAmount;
 
 	@Column(name="\"project_id\"")
 	String project_id;
