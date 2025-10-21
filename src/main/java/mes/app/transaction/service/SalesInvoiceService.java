@@ -338,7 +338,12 @@ public class SalesInvoiceService {
         String spjangcd = (String) form.get("spjangcd");
         Map<String, Object> invoicer = this.getInvoicerDatail(spjangcd);
         if (invoicer != null) {
-            salesment.setIcercorpnum((String) invoicer.get("saupnum")); // 사업자번호
+            String saupnum = (String) invoicer.get("saupnum");
+            if (saupnum != null) {
+                // 하이픈 제거
+                saupnum = saupnum.replaceAll("-", "");
+                salesment.setIcercorpnum(saupnum);
+            }
             salesment.setIcercorpnm((String) invoicer.get("spjangnm"));
             salesment.setIcerceonm((String) invoicer.get("prenm"));
             salesment.setIceraddr((String) invoicer.get("address"));
@@ -2026,7 +2031,9 @@ public class SalesInvoiceService {
                 	m.iveraddr,
                 	m.iverbiztype,
                 	m.iverbizclass,
-                	m.supplycost
+                	m.supplycost,
+                    m.taxtotal,
+                 	m.totalamt
                 FROM tb_salesment m
                 WHERE m.misnum = :misnum
                 """;
@@ -2072,11 +2079,15 @@ public class SalesInvoiceService {
             """;
 
         Map<String, Object> master = this.sqlRunner.getRow(sql, paramMap);
-        List<Map<String, Object>> detailList = this.sqlRunner.getRows(detailSql, paramMap);
 
-        if (detailList == null || detailList.isEmpty()) {
-            detailList = this.sqlRunner.getRows(fallbackDetailSql, paramMap);
-        }
+        // 기존에 shipment_head 에 misnum 을 가지고 있으면 해당 단가등 정보를 가져왔는데,
+        // 프린트는 매출등록 이후에 진행하니 tb_salesmentdetail 에서 정보를 가져오게 수정
+//        List<Map<String, Object>> detailList = this.sqlRunner.getRows(detailSql, paramMap);
+        List<Map<String, Object>> detailList = this.sqlRunner.getRows(fallbackDetailSql, paramMap);
+
+//        if (detailList == null || detailList.isEmpty()) {
+//            detailList = this.sqlRunner.getRows(fallbackDetailSql, paramMap);
+//        }
 
         UtilClass.decryptItem(master, "ivercorpnum", 0);
 

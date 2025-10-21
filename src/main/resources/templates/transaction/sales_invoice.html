@@ -71,6 +71,7 @@
                 size: A4 portrait;
                 margin: 10mm;
             }
+
         }
     </style>
 
@@ -1082,11 +1083,36 @@
                             ${$('#print_invoice_css')[0].outerHTML}
                             <style>
                                 @media print {
-                                    .print-page {
-                                        page-break-after: always;
-                                        break-after: page;
-                                    }
+                                  @page {
+                                    size: A4 portrait;
+                                    margin: 5mm;
+                                  }
+
+                                  /* 한 거래명세서 묶음 (공급받는자용 + 공급자용) */
+                                  .invoice-pair {
+                                    display: block;
+                                    page-break-inside: avoid;   /* ✅ 둘은 항상 한 페이지에 함께 */
+                                    break-inside: avoid-page;
+                                    page-break-after: always;   /* ✅ 다음 거래명세서로 넘어갈 때 새 페이지 */
+                                  }
+
+                                  .invoice-buyer,
+                                  .invoice-seller {
+                                    page-break-inside: avoid;   /* ✅ 내부 분리 방지 */
+                                    break-inside: avoid-page;
+                                  }
+
+                                  table, tr, td, thead, tbody, tfoot {
+                                    page-break-inside: avoid !important;
+                                    break-inside: avoid-page !important;
+                                  }
+
+                                  hr {
+                                    border: 1px dashed #aaa;
+                                    margin: 10px 0;
+                                  }
                                 }
+
                             </style>
                         </head>
                         <body>
@@ -1094,11 +1120,24 @@
 
                     for (const item of items) {
                         const result = await getInvoiceData(item.misnum);
-                        const html = renderInvoiceHtml(result.data);
-                        const $content = $(html);
+                        const htmlBase = renderInvoiceHtml(result.data);
 
-                        allHtml += `<div class="print-page">${$content[0].outerHTML}</div>`;
-                    }
+                        // 상단: 공급받는자용
+                        const htmlForBuyer = htmlBase.replace('(공급받는자용)', '(공급받는자용)');
+
+                        // 하단: 공급자용
+                        const htmlForSeller = htmlBase.replace('(공급받는자용)', '(공급자용)');
+
+                        // 하나의 페이지에 두 개 쌓기
+                        allHtml += `
+                            <div class="invoice-pair">
+                                <div class="invoice-seller">${htmlForSeller}</div>
+                                <hr>
+                                <div class="invoice-buyer">${htmlForBuyer}</div>
+                            </div>
+                                                `;
+                                        }
+
 
                     allHtml += `</body></html>`;
 
@@ -1125,6 +1164,7 @@
 
 
                 function renderInvoiceHtml(data) {
+                    console.log('data', data);
                     let template = document.getElementById('writPrint_Template').innerHTML;
 
                     function formatNumber(value) {
@@ -1172,7 +1212,8 @@
                         tfoot.innerHTML = `
                           <td colspan="6" style="text-align: center; font-weight: bold;">합계</td>
                           <td style="text-align: right;">${formatNumber(data.supplycost)}</td>
-                          <td colspan="3"></td>
+                          <td style="text-align: right;">${formatNumber(data.taxtotal)}</td>
+                          <td colspan="2" style="text-align: right;">${formatNumber(data.totalamt)}</td>
                         `;
                                     }
 
