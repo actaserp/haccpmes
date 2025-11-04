@@ -33,7 +33,7 @@
                         </dt>
                         <dd>
                             <div class="srch-box">
-                                <select  id="cboYear" name="cboYear"></select>
+                                <select id="cboYear" name="cboYear"></select>
                             </div>
                         </dd>
                     </dl>
@@ -44,7 +44,7 @@
                         </dt>
                         <dd>
                             <div class="srch-box">
-                                <select  id="ioflag" name="ioflag">
+                                <select id="ioflag" name="ioflag">
                                     <option value="0">매출</option>
                                     <option value="1">매입</option>
                                 </select>
@@ -59,8 +59,17 @@
                         <dd>
                             <input type="text" id="btnCompanySearch" name="btnCompanySearch" placeholder="입력 후 엔터를 눌러 검색하세요."/>
                             <input type="hidden" id="cboCompanyHidden">
-                            <input type="hidden"  id="cltflag" name="cltflag"/>
+                            <input type="hidden" id="cltflag" name="cltflag"/>
                             <input type="hidden" id="spjangcdHidden">
+                        </dd>
+                    </dl>
+
+                    <dl>
+                        <dt>
+                            <label>마감유무</label>
+                        </dt>
+                        <dd>
+                            <input type="checkbox" id="Allcheck">
                         </dd>
                     </dl>
 
@@ -76,28 +85,20 @@
                         </dd>
                     </dl>
 
-                    <dl>
-                        <dt>
-                            <label>마감유무 전체선택</label>
-                        </dt>
-                        <dd>
-                            <input type="checkbox" id="Allcheck">
-                        </dd>
-                    </dl>
-
-
                 </div>
 
                 <div class="button-wrap">
                     <ul>
                         <li>
                             <button type="button" class="btn-excellt btn-default" id="btnMagam"
-                                    style="width: 115px; height: 36px;">마감</button>
+                                    style="width: 115px; height: 36px;">마감
+                            </button>
                         </li>
 
                         <li>
                             <button type="button" class="btn-delete btn-default" id="btnMagamCancel"
-                                    style="width: 115px; height: 36px; display: none;">마감취소</button>
+                                    style="width: 115px; height: 36px; display: none;">마감취소
+                            </button>
                         </li>
 
                     </ul>
@@ -118,253 +119,315 @@
         class YearamtPage {
             constructor() {
                 this.grid = null;
-                this.selectedPk = null;
                 this.viewData = new wijmo.collections.CollectionView();
                 this.baseUrl = '/api/definition/yearamt';
                 this.init();
             }
 
             init() {
-                let _this = this;
-
-                // FlexGrid 초기화
-                this.grid = new wijmo.grid.FlexGrid('#yearamt-grid', {
+                const gridEl = '#yearamt-grid';
+                // FlexGrid
+                this.grid = new wijmo.grid.FlexGrid(gridEl, {
                     selectionMode: wijmo.grid.SelectionMode.Row,
                     headersVisibility: wijmo.grid.HeadersVisibility.All,
                     autoGenerateColumns: false,
                     showMarquee: true,
                     isReadOnly: false,
-                    formatItem: (sender, e) => {
+                    formatItem: (s, e) => {
                         if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
                             e.cell.style.textAlign = 'center';
                         }
-                    },
-                    columns: [
-                        {binding: 'id', header: '거래처ID', width: 100, align: 'center', isReadOnly: true},
-                        {binding: 'cltflag', header: '거래처구분', width: 100, visible: false },
-                        //{binding: 'cltflagnm', header: '거래처구분', width: 100, align: 'center'},
-                        {binding: 'company_name', header: '거래처명', width: 270, align: 'center', isReadOnly: true},
-                        {binding: 'ioflag', header: '매출/매입구분', width: 120, align: 'center', isReadOnly: true},
-                        {binding: 'yyyymm', header: '마감년월', width: 130, align: 'center', isReadOnly: true},
-                        {binding: 'balance', header: '마감금액', width: 250, align: 'right'},
-                        {binding: 'endyn', header: '마감유무', width: 130, align: 'center', dataType: 'Boolean'},
-                        {binding: '', header: '', width: "*", align: 'left'},
-                    ],
-                    itemsSource: this.viewData, // 데이터를 설정할 배열
-                });
+                        if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+                            const col = s.columns[e.col];
+                            const item = s.rows[e.row].dataItem;
+                            if (!item) return;
 
-                // 데이터 로드 후 초기 선택 상태 해제
-                this.grid.loadedRows.addHandler(() => {
-                    setTimeout(() => {
-                        this.grid.select(-1, -1); // 선택 상태 초기화
-                    }, 0); // 비동기로 처리하여 초기 선택 해제
-                });
-
-                let selector = new wijmo.grid.selector.Selector(this.grid, {
-                    itemChecked: function () {
-
-                    }
-                })
-
-                // selectionChanged 이벤트 처리 (this.grid에서 호출)
-                let isInitialLoad = true; // 초기 상태 플래그
-                this.grid.selectionChanged.addHandler((s, e) => {
-                    if (isInitialLoad) {
-                        isInitialLoad = false; // 초기 로드 이후 플래그 해제
-                        return;
-                    }
-
-                    let selectedRowIndex = s.selection.row; // 선택된 행의 인덱스
-                    if (selectedRowIndex >= 0) { // 유효한 행이 선택되었는지 확인
-                        let selectedRowData = s.rows[selectedRowIndex].dataItem; // 선택된 행의 데이터
-                        console.log(selectedRowData); // 선택된 데이터 출력
-
-                        // 마감 여부에 따라 버튼 표시 상태 조절
-                        if (selectedRowData.endyn === true) {
-                            document.getElementById("btnMagam").style.display = "none";
-                            document.getElementById("btnMagamCancel").style.display = "";
-                        } else {
-                            document.getElementById("btnMagam").style.display = "";
-                            document.getElementById("btnMagamCancel").style.display = "none";
-                        }
-
-                    }
-                });
-
-                // 셀 포맷팅
-                this.grid.formatItem.addHandler((s, e) => {
-                    if (e.panel.cellType === wijmo.grid.CellType.Cell) {
-                        let col = s.columns[e.col];
-                        let item = s.rows[e.row].dataItem;
-
-                        if (col.binding === "ioflag") {
-                            e.cell.textContent = (item.ioflag === 0 || item.ioflag === '0') ? '매출' : '매입';
-                        }
-
-                        // yyyymm을 yyyy-mm으로 포맷
-                        if (col.binding === "yyyymm" && item.yyyymm) {
-                            let yyyymm = item.yyyymm.toString();
-                            if (yyyymm.length === 6) {
-                                e.cell.textContent = yyyymm.substring(0, 4) + '-' + yyyymm.substring(4, 6);
+                            if (col.binding === 'endyn') {
+                                const closed = (item.endyn === true || item.endyn === 'Y');
+                                e.cell.textContent = closed ? '마감' : '미마감';
+                                e.cell.style.textAlign = 'center';
                             }
                         }
-                    }
+                    },
+                    columns: [
+                        {binding: 'id', header: '거래처ID', width: 100, align: 'center', isReadOnly: true, visible: false},
+                        {binding: 'cltflag', header: '거래처구분', width: 100, visible: false},
+                        {binding: 'company_name', header: '거래처명', width: 270, align: 'center', isReadOnly: true},
+                        {binding: 'ioflag_nm', header: '매출/매입구분', width: 120, align: 'center', isReadOnly: true},
+                        {binding: 'yyyymm_fmt', header: '마감년월', width: 130, align: 'center', isReadOnly: true},
+                        {binding: 'balance', header: '마감금액', width: 250, align: 'right'},
+                        {
+                            binding: 'endyn',
+                            header: '마감유무',
+                            width: 130,
+                            align: 'center',
+                            //dataType: 'Boolean',
+                            isReadOnly: true,
+                            cssClass: 'col-endyn-readonly'
+                        },
+                        {binding: '', header: '', width: "*", align: 'left'},
+                    ],
+                    itemsSource: this.viewData,
                 });
 
-                // ContextMenu 및 다운로드 파일 설정
+                // 로드 직후 선택 해제
+                this.grid.loadedRows.addHandler(() => {
+                    setTimeout(() => this.grid.select(-1, -1), 0);
+                });
+
+                // Selector (체크박스) + 선택 변경 시 버튼 상태 갱신
+                const selector = new wijmo.grid.selector.Selector(this.grid, {
+                    itemChecked: () => this.updateActionButtons()
+                });
+
+                // 선택 변경 → 버튼 상태 갱신
+                let isInitialLoad = true;
+                this.grid.selectionChanged.addHandler((s, e) => {
+                    if (isInitialLoad) { isInitialLoad = false; return; }
+                    this.updateActionButtons();
+                });
+
+                // ContextMenu/다운로드 이름
                 new FlexGridContextMenu(this.grid);
-                this.grid.downloadFileName = '거래구분';
+                this.grid.downloadFileName = '매입매출년마감';
 
-                // 'Allcheck' 체크박스 이벤트
-                document.getElementById('Allcheck').addEventListener('change', function () {
-                    let isChecked = this.checked;
-
-                    // viewData가 CollectionView일 경우 .items 배열 사용
-                    _this.viewData.items.forEach(item => {
-                        item.endyn = isChecked;
-                    });
-
-                    // 그리드 다시 그리기
-                    _this.grid.invalidate();
-                });
             }
 
+            /** 현재 선택에 맞춰 마감/마감취소 버튼 표시 전환 */
+            updateActionButtons() {
+                const magamBtn  = document.getElementById('btnMagam');
+                const cancelBtn = document.getElementById('btnMagamCancel');
 
-            //  조회
+                // 다중선택 고려: 선택된 행들
+                const selItems = this.grid.rows
+                    .filter(r => r.isSelected)
+                    .map(r => r.dataItem)
+                    .filter(Boolean);
+
+                if (selItems.length === 0) {
+                    // 선택 없음 → 기본: 마감 보이기, 취소 숨김
+                    if (magamBtn)  magamBtn.style.display  = '';
+                    if (cancelBtn) cancelBtn.style.display = 'none';
+                    return;
+                }
+
+                const hasOpen  = selItems.some(it => it.endyn !== true); // 미마감 포함?
+                const hasClose = selItems.some(it => it.endyn === true); // 마감 포함?
+
+                // 미마감이 하나라도 있으면 [마감] 노출
+                if (magamBtn)  magamBtn.style.display  = hasOpen ? '' : 'none';
+                // 마감건이 하나라도 있으면 [마감취소] 노출
+                if (cancelBtn) cancelBtn.style.display = hasClose ? '' : 'none';
+            }
+
+            /** 조회 */
             searchMainData() {
-                let _this = this;
-                let param = {
-                    'cboYear': $('#cboYear').val(),
-                    'ioflag': $('#ioflag').val(),
-                    'searchId': $('#cboCompanyHidden').val(),
-                    'searchname': $('#btnCompanySearch').val(),
+
+                const endynFilter = $('#Allcheck').is(':checked') ? 'Y' : 'N';
+
+                const param = {
+                    cboYear: $('#cboYear').val(),
+                    ioflag: $('#ioflag').val(),               // '0' or '1'
+                    endyn: endynFilter,
+                    searchId: $('#cboCompanyHidden').val(),
+                    searchname: $('#btnCompanySearch').val(),
                     spjangcd: sessionStorage.getItem('spjangcd'),
+                };
+
+                const url = '/api/definition/yearamt';
+                const result = AjaxUtil.getSyncData(url + '/read', param);
+                if (!result || !result.data) {
+                    this.viewData.sourceCollection = [];
+                    this.applyEndynFilter();
+                    this.updateActionButtons();
+                    return;
                 }
 
-                let url = '/api/definition/yearamt';
+                const mapped = result.data.map(raw => {
+                    const endynBool = (raw.endyn === 'Y' || raw.endyn === true);
+                    const ioflagNm = (raw.ioflag === 0 || raw.ioflag === '0') ? '매출' : '매입';
 
-                let result = AjaxUtil.getSyncData(url + '/read',param);
+                    let yyyymmFmt = '';
+                    if (raw.yyyymm) {
+                        const y = String(raw.yyyymm);
+                        yyyymmFmt = y.length === 6 ? `${y.slice(0, 4)}-${y.slice(4, 6)}` : y;
+                    }
 
-                if (result.data != null) {
-                    result.data.forEach(item => {
-                        item.endyn = (item.endyn == 'Y');
-                    });
-                    /*console.log(result.data);*/
-                    _this.viewData.sourceCollection = result.data;
+                    return {
+                        ...raw,
+                        endyn: endynBool,
+                        ioflag_nm: ioflagNm,
+                        yyyymm_fmt: yyyymmFmt,
+                    };
+                });
+
+                this.viewData.sourceCollection = mapped;
+
+                // 선택/버튼 상태 초기화
+                if (this.grid) {
+                    this.grid.select(-1, -1);
                 }
+                $('#btnMagam').show();
+                $('#btnMagamCancel').hide();
 
+                // 버튼 상태 보정
+                this.updateActionButtons();
             }
 
+            /** 마감유무(Y) 필터 */
+            applyEndynFilter() {
+                const onlyClosed = $('#Allcheck').is(':checked');
+                const cv = this.grid.collectionView;
+                cv.beginUpdate();
+                cv.filter = onlyClosed ? (item) => item.endyn === true : null;
+                cv.endUpdate();
 
-            saveMagam() {
-                let _this = this;
-                let url = '/api/definition/yearamt/magam';
+                // 행 필터 후 선택 초기화 및 버튼 보정
+                this.grid.select(-1, -1);
+                this.updateActionButtons();
+            }
 
-                // 선택된 행들 가져오기
-                let selectedItems = _this.grid.rows
-                    .filter(row => row.isSelected)  // Selector에서 체크된 행
-                    .map(row => row.dataItem);
+            /** 저장 공통 (type: 'magam' | 'magam_cancel') */
+            saveSelected(type) {
+                const $btns = $('#btnMagam, #btnMagamCancel');
+                if (!this.grid) return;
 
-                // 유효성 체크
-                if (selectedItems.length === 0) {
+                this.grid.finishEditing(true);
+
+                // 현재 선택된 행만
+                let selectedItems = this.grid.rows.filter(r => r.isSelected).map(r => r.dataItem);
+
+                if (!selectedItems.length) {
                     Alert.alert('', '선택된 행이 없습니다.');
                     return;
                 }
 
-                // 서버로 전송할 데이터
-                let data = {
-                    list: selectedItems
-                };
+                // 미마감만 마감 / 마감건만 취소
+                if (type === 'magam') {
+                    selectedItems = selectedItems.filter(it => it && it.endyn !== true);
+                    if (!selectedItems.length) {
+                        Alert.alert('', '선택 항목 중 미마감 데이터가 없습니다.');
+                        return;
+                    }
+                } else {
+                    selectedItems = selectedItems.filter(it => it && it.endyn === true);
+                    if (!selectedItems.length) {
+                        Alert.alert('', '선택 항목 중 마감된 데이터가 없습니다.');
+                        return;
+                    }
+                }
 
-                /*console.log(data);*/
-
-                let fnSuccess = function (res) {
-                    Alert.alert('', '마감되었습니다');
-                    _this.searchMainData(); // 저장 후 갱신
-                };
-                AjaxUtil.postJsonData(url, data, fnSuccess);
-
-            }
-
-            saveMagamCancel() {
-                let _this = this;
-                let url = '/api/definition/yearamt/magamCancel';
-
-                // 선택된 행들 가져오기
-                let selectedItems = _this.grid.rows
-                    .filter(row => row.isSelected)  // Selector에서 체크된 행
-                    .map(row => row.dataItem);
-
-                // 유효성 체크
-                if (selectedItems.length === 0) {
-                    Alert.alert('', '선택된 행이 없습니다.');
+                const year = String($('#cboYear').val() || '').trim();
+                const yyyymm =
+                    (year && /^\d{4}$/.test(year)) ? (year + '12')
+                        : (selectedItems[0]?.yyyymm ? String(selectedItems[0].yyyymm).slice(0, 6) : '');
+                if (!/^\d{6}$/.test(yyyymm)) {
+                    Alert.alert('오류', '마감년월(yyyymm)을 확인하세요.');
                     return;
                 }
 
-                // 서버로 전송할 데이터
-                let data = {
-                    list: selectedItems
+                const spjangcd = (sessionStorage.getItem('spjangcd') || '').slice(0, 2);
+                const toNum = v => {
+                    if (v == null) return 0;
+                    const n = Number(String(v).replace(/,/g, ''));
+                    return Number.isFinite(n) ? n : 0;
                 };
 
-                /*console.log(data);*/
+                const endyn = (type === 'magam') ? 'Y' : 'N';
+                const comboIoflag = ($('#ioflag').val() === '0') ? '0' : '1';
 
-                let fnSuccess = function (res) {
-                    Alert.alert('', '취소되었습니다');
-                    _this.searchMainData(); // 저장 후 갱신
-                };
-                AjaxUtil.postJsonData(url, data, fnSuccess);
+                const list = selectedItems.map(it => {
+                    const itemIoflag =
+                        (it.ioflag === 0 || it.ioflag === '0') ? '0'
+                            : (it.ioflag === 1 || it.ioflag === '1') ? '1'
+                                : comboIoflag;
+
+                    return {
+                        ioflag: itemIoflag,
+                        yyyymm: yyyymm,
+                        cltcd: Number(it.id),
+                        yearamt: toNum(it.balance),
+                        endyn: endyn,
+                        spjangcd: spjangcd,
+                        vercode: it.vercode ?? ''
+                    };
+                });
+
+                const data = { list };
+                const url = (type === 'magam')
+                    ? `${this.baseUrl}/magam`
+                    : `${this.baseUrl}/magamCancel`;
+
+                $btns.prop('disabled', true);
+
+                AjaxUtil.postJsonData(
+                    url,
+                    data,
+                    (res) => {
+                        if (res?.success) {
+                            Alert.alert('', (type === 'magam') ? '마감되었습니다.' : '마감이 취소되었습니다.');
+                            this.searchMainData();
+                        } else {
+                            Alert.alert('오류', res?.message ?? '저장에 실패했습니다.');
+                        }
+                        $btns.prop('disabled', false);
+                    },
+                    (req, status, error) => {
+                        Alert.alert('오류', `요청 실패: ${status} ${error}`);
+                        $btns.prop('disabled', false);
+                    }
+                );
             }
-
-
         }
 
-        function companyPopupOpenCustom(intputId, hiddenid, hiddenflag){
-
+        // 거래처 팝업
+        function companyPopupOpenCustom(intputId, hiddenid, hiddenflag) {
             const value = document.getElementById(intputId).value;
-
             let poppage = new PopCompComponentCustom(value);
 
-            let result = AjaxUtil.getSyncData('/api/popup/search_Comp_Custom', { item2 : value, spjangcd : getSpjangcdFromSession() });
+            let result = AjaxUtil.getSyncData('/api/popup/search_Comp_Custom', {
+                item2: value,
+                spjangcd: getSpjangcdFromSession()
+            });
 
             let searchcallback = function (items) {
-
                 document.getElementById(intputId).focus();
-
                 document.getElementById(intputId).value = items.item2;
                 document.getElementById(hiddenid).value = items.id;
                 document.getElementById(hiddenflag).value = items.cltflag;
             };
-            if(result && result.data.length === 1){
-                searchcallback(result.data[0]);   ``
+            if (result && result.data.length === 1) {
+                searchcallback(result.data[0]);
                 return;
             }
-
             poppage.show(searchcallback, result.data);
         }
 
         let page = null;
 
-        $(document.body).ready(function (e) {
+        $(document.body).ready(function () {
             page = new YearamtPage();
 
-            AjaxUtil.fillSelectOptions($('#cboYear'), 'data_year', '', false, function() {
-                // 콜백에서 첫 번째 옵션을 자동 선택
+            AjaxUtil.fillSelectOptions($('#cboYear'), 'data_year', '', false, function () {
                 $('#cboYear').val($('#cboYear option:first').val());
             });
 
+            // 최초 로드
             page.searchMainData();
-            //검색
-            $('#btnSearch').click(function (e) {
+
+            // 검색
+            $('#btnSearch').on('click', function () {
                 page.searchMainData();
             });
 
+            // 거래처 팝업
             $('#btnCompanySearch').on('click keydown', function (e) {
                 if (e.type === 'keydown' && (e.key === 'Enter' || e.keyCode === 13)) {
                     e.preventDefault();
-
                     companyPopupOpenCustom('btnCompanySearch', 'cboCompanyHidden', 'cltflag');
                 }
             });
+
             $('#btnCompanySearch').on('input', function () {
                 const val = $(this).val();
                 if (val === '') {
@@ -373,81 +436,34 @@
                 }
             });
 
-            $('#btnSave').click(function (e) {
-                Alert.confirm('',
-                    '저장하시겠습니까?',
-                    function () {
-                        page.saveData()
-                    },
-                    function () {
-                    }
-                );
+            // 마감/마감취소
+            $('#btnMagam').off('click').on('click', function (e) {
+                e.preventDefault();
+                Alert.confirm('', '선택된 미마감 건을 마감하시겠습니까?', function () {
+                    page.saveSelected('magam');
+                });
             });
 
-            $('#btnMagam').click(function (e) {
-                Alert.confirm('',
-                    '마감하시겠습니까?',
-                    function () {
-                        page.saveMagam()
-                    },
-                    function () {
-                    }
-                );
+            $('#btnMagamCancel').off('click').on('click', function (e) {
+                e.preventDefault();
+                Alert.confirm('', '선택된 마감 건을 취소하시겠습니까?', function () {
+                    page.saveSelected('magam_cancel');
+                });
             });
 
-            $('#btnMagamCancel').click(function (e) {
-                Alert.confirm('',
-                    '마감취소 하시겠습니까?',
-                    function () {
-                        page.saveMagamCancel()
-                    },
-                    function () {
-                    }
-                );
-            });
-
-
-
-
-            $('#btnDel').click(function (e) {
-
-                Alert.confirm('',
-                    '삭제하시겠습니까?',
-                    function () {
-                        page.deleteData()
-                    },
-                    function () {
-                    }
-                );
-
-            });
-
-            $('#btnNew').click(function (e) {
-                $('#tradeForm')[0].reset();
-                $('#tradeForm').find('#id').val('');
-            });
-
-            $('#searchtradenm').on('keypress', function (e) {
-                if (event.keyCode == 13) {
-                    page.searchMainData();
-                }
-            });
-
-            // .btn-clear 클릭 후 input 이벤트 강제 발생
             $(document).on('click', '.btn-clear', function () {
                 const $input = $(this).siblings('input[type="text"]');
                 $input.val('');
-                $input.trigger('input'); // 🔥 input 이벤트 강제 발생
+                $input.trigger('input');
             });
-            // 초기화 버튼 클릭 이벤트
-            $('#btnClear').click(function () {
 
+            $('#btnClear').on('click', function () {
                 document.getElementById('cboCompany').value = '';
                 document.getElementById('cboCompanyHidden').value = '';
             });
-
         });
     </script>
+
 </th:block>
 
 </html>

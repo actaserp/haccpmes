@@ -41,7 +41,7 @@ public class inspection_reports extends AbstractAuditModel{
   Date inspectiondate;
 
   @Column(name="\"WorkCenter_id\"")
-  Integer worjCenter_id;
+  Integer workCenter_id;
 
   @Column(name="\"InspectionQty\"")
   Double inspectionQty;

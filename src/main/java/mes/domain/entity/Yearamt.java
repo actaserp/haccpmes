@@ -5,10 +5,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 
 @Entity
 @Table(name="tb_yearamt")
@@ -17,20 +14,16 @@ import javax.persistence.Table;
 @EqualsAndHashCode( callSuper=false)
 public class Yearamt {
 
-    @Column(name = "ioflag")
-    String ioflag; //입출금구분
-
-    @Column(name = "yyyymm")
-    String yyyymm; //마감년월
-
-    @Id
-    @Column(name = "cltcd")
-    Integer cltcd; //거래처ID
+    @EmbeddedId
+    private YearamtId id;
 
     @Column(name = "yearamt")
     Integer yearamt; //마감금액
 
     @Column(name = "endyn")
     String endyn;  // 마감유무
+
+    @Column(name="spjangcd")
+    String spjangcd;
 
 }
