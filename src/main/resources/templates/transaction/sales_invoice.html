@@ -1164,7 +1164,6 @@
 
 
                 function renderInvoiceHtml(data) {
-                    console.log('data', data);
                     let template = document.getElementById('writPrint_Template').innerHTML;
 
                     function formatNumber(value) {
@@ -1182,6 +1181,7 @@
                     tempDiv.innerHTML = template;
 
                     const tbody = tempDiv.querySelector('#detailRows');
+                    let totalQty = 0;
                     let supplyTotal = 0;
                     let taxTotal = 0;
 
@@ -1191,6 +1191,10 @@
 
                         for (let i = 0; i < Math.max(list.length, minRows); i++) {
                             const item = list[i] || {};  // 없는 항목은 빈 객체 처리
+
+                            const qty = parseFloat(item.qty) || 0;
+                            totalQty += qty;
+
                             const tr = document.createElement('tr');
                             tr.innerHTML = `
                                     <td>${i + 1}</td>
@@ -1198,7 +1202,7 @@
                                     <td>${item.day || ''}</td>
                                     <td class="text-left">${item.name || ''}</td>
                                     <td>${formatNumber(item.qty)}</td>
-                                    <td>${formatNumber(item.unitcost)}</td>
+                                    <td class="text-right">${formatNumber(item.unitcost)}</td>
                                     <td class="text-right">${formatNumber(item.supplycost)}</td>
                                     <td class="text-right">${formatNumber(item.tax)}</td>
                                     <td class="text-left" colspan="2">${item.remark || ''}</td>
@@ -1210,7 +1214,9 @@
                     const tfoot = tempDiv.querySelector('tfoot tr');
                     if (tfoot) {
                         tfoot.innerHTML = `
-                          <td colspan="6" style="text-align: center; font-weight: bold;">합계</td>
+                          <td colspan="4" style="text-align: center; font-weight: bold;">합계</td>
+                          <td style="text-align: center;">${formatNumber(totalQty)}</td>
+                          <td> </td>
                           <td style="text-align: right;">${formatNumber(data.supplycost)}</td>
                           <td style="text-align: right;">${formatNumber(data.taxtotal)}</td>
                           <td colspan="2" style="text-align: right;">${formatNumber(data.totalamt)}</td>
@@ -1774,7 +1780,6 @@
 
             // 등록 팝업
             showInvoiceForm(data) {
-
                 let _this = this;
                 let content = tmpl('popup_invoiceTemplate', data);
                 let $content = $(content);
@@ -1834,7 +1839,6 @@
                     //     }
                     // };
                     // AjaxUtil.getAsyncData(url, data1, fnSaveSuccess);
-
                     // 출고리스트에서 작성시에는 신규이지만 거래처 정보가 있음
                     if (data.invoicee) {
                         const i = data.invoicee;
@@ -2512,6 +2516,14 @@
                         $row.find('input[id$=".ItemId"]').val(item.id || '');
                         $row.find('textarea[id$=".ItemName"]').val(item.Name || '');
                         $row.find('textarea[id$=".Spec"]').val(item.Spec || '');
+
+                        const company_id = $('#InvoiceeID').val();
+                        const today = new Date().getFullYear().toString();
+                        const month = $row.find('input[id$=".PurchaseDT1"]').val() || '01';
+                        const day = $row.find('input[id$=".PurchaseDT2"]').val() || '01';
+                        const JumunDate = `${today}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+
+                        tryShowPrice(item.id, company_id, $row, JumunDate);
                     };
 
                     if (!keyword) {
@@ -3005,7 +3017,7 @@
                 });
 
 
-                // let data = FormUtil.extractForm($taxForm);
+                //   let data = FormUtil.extractForm($taxForm);
 
                 // $content.find('#InvoiceeID').change(function () {
                 //     $content.find('tr[id^="item_"]').each(function () {
@@ -3029,33 +3041,33 @@
                 //         tryShowPrice($Material_id.val(), $InvoiceeID.val(), $row, JumunDate);
                 //     }
                 // }
-
+                //
                 // $(document).on('change', 'input[id$=".PurchaseDT1"], input[id$=".PurchaseDT2"]', function () {
                 //     const $row = $(this).closest('tr');
                 //     checkAndTryShowPrice($row);
                 // });
 
-                // function tryShowPrice(mat_pk, company_id, row, JumunDate) {
-                //     let url = '/api/sales/suju/readPriceSuju';
-                //     let data = {
-                //         'mat_pk': mat_pk,
-                //         'company_id': company_id,
-                //         'JumunDate': JumunDate
-                //     };
-                //
-                //     if (mat_pk && company_id && JumunDate) {
-                //         let fnsuccess = function (result) {
-                //             if (result && result.data && result.data.length > 0) {
-                //                 let unitPrice = parseFloat(result.data[0].UnitPrice);
-                //                 row.find('input[id$=".UnitCost"]').val(unitPrice.toLocaleString());
-                //             } else {
-                //                 row.find('input[id$=".UnitCost"]').val('');
-                //             }
-                //         };
-                //
-                //         AjaxUtil.getAsyncData(url, data, fnsuccess);
-                //     }
-                // }
+                function tryShowPrice(mat_pk, company_id, row, JumunDate) {
+                    let url = '/api/sales/suju/readPriceSuju';
+                    let data = {
+                        'mat_pk': mat_pk,
+                        'company_id': company_id,
+                        'JumunDate': JumunDate
+                    };
+
+                    if (mat_pk && company_id && JumunDate) {
+                        let fnsuccess = function (result) {
+                            if (result && result.data && result.data.length > 0) {
+                                let unitPrice = parseFloat(result.data[0].UnitPrice);
+                                row.find('input[id$=".UnitCost"]').val(unitPrice.toLocaleString());
+                            } else {
+                                row.find('input[id$=".UnitCost"]').val('');
+                            }
+                        };
+
+                        AjaxUtil.getAsyncData(url, data, fnsuccess);
+                    }
+                }
 
             }
 
@@ -3305,103 +3317,108 @@
 
                 fnLoadShipList();
 
+                // 📦 세금계산서용 품목 리스트 구성 함수
                 $content.find('#btnShipAction').on('click', async function () {
-                    let items = _this.shipListGrid.rows
+                    const items = _this.shipListGrid.rows
                         .filter(row => row.isSelected)
                         .map(row => row.dataItem);
 
-                    if (items.length === 0) {
+                    const invoiceData = await buildInvoiceDetail(items);
+                    if (!invoiceData) return;
+
+                    _this.showInvoiceForm(invoiceData);
+                    modalContainer.close();
+                });
+
+// 📦 세금계산서용 품목 리스트 구성 함수
+                async function buildInvoiceDetail(items) {
+                    if (!items || items.length === 0) {
                         Alert.alert('', '선택된 리스트가 없습니다.');
-                        return;
+                        return null;
                     }
 
+                    // ✅ 업체 중복 방지
                     const companyIds = [...new Set(items.map(item => item.company_id))];
                     if (companyIds.length > 1) {
                         Alert.alert('', '하나의 업체만 선택해주세요.');
-                        return;
+                        return null;
                     }
 
-                    const allMaterialIds = items
-                        .map(item => item.material_ids || '')
-                        .flatMap(ids => ids.split(',').map(id => id.trim()))
-                        .filter(id => id);
+                    const company_id = companyIds[0];
+                    const headIds = items.map(i => i.id); // ✅ 여러 출하전표 ID
+                    const order_date = items[0].order_date;
 
-                    const materialCount = allMaterialIds.length;
-                    const shipIds = items.map(item => item.id);
-
-                    const total_price_raw = items.reduce((sum, item) => sum + (item.total_price || 0), 0);
-                    const total_vat_raw = items.reduce((sum, item) => sum + (item.total_vat || 0), 0);
-                    const total_price = total_price_raw.toLocaleString();
-                    const total_vat = total_vat_raw.toLocaleString();
-
-                    let defaultData = {
-                        id: '',
-                        mode: 'new',
-                        shipids: shipIds,
-                        detailList: []
-                    };
-
-                    // Ajax 요청을 Promise로 감싸기
-                    const getMaterial = (material_id) => {
-                        return new Promise(resolve => {
-                            AjaxUtil.getAsyncData(_this.url + '/get_material', {material_id}, result => {
-                                resolve(result?.data || null);
-                            });
+                    // ✅ Helper 함수
+                    const getShipmentItems = (head_id, company_id) =>
+                        new Promise(resolve => {
+                            AjaxUtil.getAsyncData(
+                                '/api/shipment/shipment_list/shipment_item_list',
+                                { head_id, company_id },
+                                result => resolve(result?.data || [])
+                            );
                         });
-                    };
 
-                    const getCompany = (id) => {
-                        return new Promise(resolve => {
-                            AjaxUtil.getAsyncData('/api/popup/get_Comp', {id}, result => {
+                    const getCompany = (id) =>
+                        new Promise(resolve => {
+                            AjaxUtil.getAsyncData('/api/popup/get_Comp', { id }, result => {
                                 resolve(result?.data?.[0] || null);
                             });
                         });
-                    };
 
-                    const material_id = parseInt(allMaterialIds[0], 10);
+                    // ✅ 모든 head_id에 대해 품목 목록 가져오기
+                    const shipmentItemLists = await Promise.all(
+                        headIds.map(head_id => getShipmentItems(head_id, company_id))
+                    );
 
-                    const [materialData, companyData] = await Promise.all([
-                        materialCount >= 1 ? getMaterial(material_id) : Promise.resolve(null),
-                        getCompany(companyIds[0])
-                    ]);
+                    // ✅ 결과 통합
+                    const allItems = shipmentItemLists.flat();
 
+                    // ✅ 업체 정보
+                    const companyData = await getCompany(company_id);
+                    if (!companyData) {
+                        Alert.alert('', '업체 정보를 불러올 수 없습니다.');
+                        return null;
+                    }
+
+                    // ✅ 날짜 정보
                     const now = new Date();
                     const month = String(now.getMonth() + 1).padStart(2, '0');
                     const day = String(now.getDate()).padStart(2, '0');
 
-                    // 자재 정보가 있으면 detailList 구성
-                    if (materialData) {
-                        if (materialCount === 1) {
-                            const total_qty = items.reduce((sum, item) => sum + (item.total_qty || 0), 0);
-                            defaultData.detailList = [{
-                                PurchaseDT1: month,
-                                PurchaseDT2: day,
-                                SupplyCost: total_price,
-                                Tax: total_vat,
-                                ItemName: materialData.material_name,
-                                Spec: materialData.spec,
-                                Qty: total_qty
-                            }];
-                        } else {
-                            defaultData.detailList = [{
-                                PurchaseDT1: month,
-                                PurchaseDT2: day,
-                                SupplyCost: total_price,
-                                Tax: total_vat,
-                                ItemName: `${materialData.material_name} 외 ${materialCount - 1}개`
-                            }];
+                    // ✅ 품목 합치기 (자재 코드별 그룹핑)
+                    const grouped = {};
+                    for (const item of allItems) {
+                        const key = item.material_id;
+                        if (!grouped[key]) {
+                            grouped[key] = {
+                                mat_name: item.mat_name,
+                                unit_name: item.unit_name,
+                                qty: 0,
+                                price: 0,
+                                vat: 0,
+                                unit_price: item.unit_price,
+                            };
                         }
-                    } else {
-                        Alert.alert('', '자재 정보가 없습니다.');
-                        return;
+                        grouped[key].qty += parseFloat(item.ship_qty || 0);
+                        grouped[key].price += parseFloat(item.price || 0);
+                        grouped[key].vat += parseFloat(item.vat || 0);
                     }
 
-                    if (!companyData) {
-                        Alert.alert('', '업체 정보를 불러올 수 없습니다.');
-                        return;
-                    }
+                    // ✅ detailList 생성
+                    const detailList = Object.values(grouped).map(item => ({
+                        PurchaseDT1: month,
+                        PurchaseDT2: day,
+                        ItemName: item.mat_name,
+                        Spec: item.unit_name,
+                        Qty: item.qty.toLocaleString(),
+                        UnitCost: parseFloat(item.unit_price || 0).toLocaleString(),
+                        SupplyCost: Math.round(parseFloat(item.price || 0)).toLocaleString(),
+                        Tax: Math.round(parseFloat(item.vat || 0)).toLocaleString(),
+                        isParent: true
+                    }));
 
-                    defaultData.invoicee = {
+                    // ✅ 업체 정보 구성
+                    const invoicee = {
                         id: companyData.id,
                         business_number: companyData.business_number,
                         invoiceetaxregid: companyData.invoiceetaxregid,
@@ -3415,9 +3432,15 @@
                         invoiceeemail1: companyData.invoiceeemail1
                     };
 
-                    _this.showInvoiceForm(defaultData);
-                    modalContainer.close();
-                });
+                    // ✅ 최종 반환
+                    return {
+                        id: '',
+                        mode: 'new',
+                        shipids: headIds,
+                        detailList,
+                        invoicee
+                    };
+                }
 
 
             }

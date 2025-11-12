@@ -608,7 +608,7 @@ public class SalesInvoiceService {
 
         String sql = """
                 WITH material_summary AS (
-                	SELECT\s
+                	SELECT
                 		s."ShipmentHead_id",
                 		STRING_AGG(s."Material_id"::text, ',' ORDER BY s."Material_id") AS material_ids
                 	FROM shipment s

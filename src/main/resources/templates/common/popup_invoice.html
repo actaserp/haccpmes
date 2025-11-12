@@ -1785,6 +1785,10 @@
         $(document).on('keydown', 'input, textarea', function (e) {
             const key = e.key;
 
+            if ($(this).is('textarea') && key === 'Enter') {
+                return; // 기본 줄바꿈 동작 허용
+            }
+
             if (!['Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key)) return;
             e.preventDefault();
 
