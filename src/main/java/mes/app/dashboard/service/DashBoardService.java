@@ -1,5 +1,6 @@
 package mes.app.dashboard.service;
 
+import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -820,5 +821,182 @@ public class DashBoardService {
 	        
 	     return items;
 	}
+
+	public List<Map<String, Object>> getList(String spjangcd) {
+		MapSqlParameterSource paramMap = new MapSqlParameterSource();
+		paramMap.addValue("spjangcd", spjangcd);
+
+		String sql = """
+    WITH RECURSIVE
+    mat AS (
+      SELECT
+        m.id,
+        m."Code"  AS material_code,
+        m."Name"  AS material_name,
+        u."Name"  AS unit_name,
+        m.spjangcd,
+        COALESCE(
+            NULLIF(regexp_replace(m."Avrqty", '[^0-9\\.]', '', 'g'), '')::numeric,
+            0
+        ) AS safety_stock
+      FROM material m
+      LEFT JOIN unit u ON u.id = m."Unit_id"
+      left join mat_grp mg on mg.id = m."MaterialGroup_id"
+      where m."Useyn" != '1'
+      and mg."MaterialType" != 'product'
+    ),
+
+    -- 수주량(생산완료, 출하된것 제외)
+	orders_fg AS (
+		SELECT
+		  s."Material_id" AS fg_id,
+		  SUM(
+			CASE WHEN COALESCE(s."SujuQty2",0)>0
+				 THEN s."SujuQty2" ELSE s."SujuQty" END
+		  )::numeric AS fg_qty
+		FROM suju_head h
+		JOIN suju s ON s."SujuHead_id" = h.id
+	  
+		-- ① 출하된 수주 제외
+		LEFT JOIN shipment sh
+			   ON sh."SourceTableName" = 'rela_data'
+			  AND sh."SourceDataPk" = s.id
+	  
+		-- ② job_res에서 생산완료된 수주 제외
+		LEFT JOIN job_res jr
+			   ON jr."SourceTableName" = 'suju'
+			  AND jr."SourceDataPk" = s.id
+			  AND jr."State" = 'finished'
+	  
+		WHERE h.spjangcd = :spjangcd
+		  AND sh.id IS NULL        -- 출하된 건 제외
+		  AND jr.id IS NULL        -- 생산완료된 건 제외
+	  
+		GROUP BY s."Material_id"
+	  ),
+
+    bom_pick AS (
+      SELECT DISTINCT ON (b."Material_id")
+             b.id AS bom_id,
+             b."Material_id" AS parent_id,
+             COALESCE(NULLIF(b."OutputAmount",0),1)::numeric AS output_amount
+      FROM bom b
+      WHERE (b."StartDate" IS NULL OR b."StartDate" <= now())
+        AND (b."EndDate"   IS NULL OR b."EndDate"   >= now())
+      ORDER BY b."Material_id", COALESCE(b."StartDate",'1900-01-01'::timestamp) DESC
+    ),
+
+    bom_walk AS (
+      SELECT o.fg_id,
+             bc."Material_id" AS comp_id,
+             1 AS lvl,
+             ARRAY[o.fg_id, bc."Material_id"] AS path,
+             (bc."Amount"::numeric / bp.output_amount) AS acc_ratio
+      FROM orders_fg o
+      JOIN bom_pick bp ON bp.parent_id = o.fg_id
+      JOIN bom_comp bc ON bc."BOM_id"  = bp.bom_id
+
+      UNION ALL
+
+      SELECT w.fg_id,
+             bc."Material_id",
+             w.lvl + 1,
+             w.path || bc."Material_id",
+             w.acc_ratio * (bc."Amount"::numeric / bp.output_amount)
+      FROM bom_walk w
+      JOIN bom_pick bp ON bp.parent_id = w.comp_id
+      JOIN bom_comp bc ON bc."BOM_id"  = bp.bom_id
+      WHERE NOT bc."Material_id" = ANY(w.path)
+    ),
+
+    exploded_sum AS (
+      SELECT w.comp_id AS material_id,
+             SUM(o.fg_qty * w.acc_ratio)::numeric AS order_qty
+      FROM bom_walk w
+      JOIN orders_fg o ON o.fg_id = w.fg_id
+      GROUP BY w.comp_id
+    ),
+
+    -- 현재고
+    stock_now AS (
+      SELECT
+        mi."Material_id",
+        SUM(COALESCE(mi."InputQty",0)) - SUM(COALESCE(mi."OutputQty",0)) AS current_stock
+      FROM mat_inout mi
+      WHERE mi.spjangcd = :spjangcd
+      GROUP BY mi."Material_id"
+    ),
+
+    -- 전체 발주 기준 미입고 (기간 제한 없이)
+    po_lines AS (
+      SELECT
+        b.id AS balju_id,
+        b."Material_id",
+        b."SujuQty"::numeric AS ordered_qty
+      FROM balju_head bh
+      JOIN balju b ON b."BaljuHead_id" = bh.id
+      WHERE bh.spjangcd = :spjangcd
+        AND COALESCE(b."State",'') NOT IN ('canceled','force_completion')
+    ),
+
+    po_line_receipts AS (
+      SELECT
+        mi."SourceDataPk" AS balju_id,
+        SUM(COALESCE(mi."InputQty",0))::numeric AS received_qty
+      FROM mat_inout mi
+      WHERE mi."SourceTableName" = 'balju'
+        AND mi."InOut" = 'in'
+        AND COALESCE(mi."_status",'a') = 'a'
+      GROUP BY mi."SourceDataPk"
+    ),
+
+    incoming AS (
+      SELECT
+        p."Material_id",
+        SUM(GREATEST(p.ordered_qty - COALESCE(r.received_qty,0),0))::numeric AS incoming_qty
+      FROM po_lines p
+      LEFT JOIN po_line_receipts r ON r.balju_id = p.balju_id
+      GROUP BY p."Material_id"
+    )
+
+    SELECT *
+    FROM (
+      SELECT
+        m.material_code,
+        m.material_name,
+        m.unit_name,
+        COALESCE(es.order_qty,0)       AS order_qty,
+        COALESCE(i.incoming_qty,0)     AS incoming_qty,
+        COALESCE(sn.current_stock,0)   AS current_stock,
+        COALESCE(m.safety_stock,0)     AS optimal_stock,
+
+        GREATEST(
+            (COALESCE(es.order_qty,0) + COALESCE(m.safety_stock,0))
+            - (COALESCE(sn.current_stock,0) + COALESCE(i.incoming_qty,0)),
+            0
+        ) AS need_more_qty,
+
+        CASE
+          WHEN (COALESCE(sn.current_stock,0) + COALESCE(i.incoming_qty,0))
+                 >= (COALESCE(es.order_qty,0) + m.safety_stock * 2)
+            THEN '여유'
+          WHEN (COALESCE(sn.current_stock,0) + COALESCE(i.incoming_qty,0))
+                 >= (COALESCE(es.order_qty,0) + m.safety_stock)
+            THEN '적정'
+          ELSE '부족'
+        END AS state
+
+      FROM mat m
+      LEFT JOIN exploded_sum es ON es.material_id = m.id
+      LEFT JOIN stock_now sn     ON sn."Material_id" = m.id
+      LEFT JOIN incoming i       ON i."Material_id" = m.id
+    ) t
+    WHERE t.state = '부족'
+    ORDER BY t.material_code
+    """;
+
+		return sqlRunner.getRows(sql, paramMap);
+	}
+
 
 }

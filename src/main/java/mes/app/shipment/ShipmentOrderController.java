@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.transaction.Transactional;
 
+import mes.app.common.SseBroadcaster;
 import mes.domain.entity.*;
 import mes.domain.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +49,8 @@ public class ShipmentOrderController {
 	@Autowired
 	MaterialRepository materialRepository;
 
+	@Autowired
+	SseBroadcaster broadcaster;
 
 	@GetMapping("/suju_list")
 	public AjaxResult getSujuList(
@@ -330,6 +333,7 @@ public class ShipmentOrderController {
 		smh.setTotalVat(totalVat);
 
 		smh = this.shipmentHeadRepository.save(smh);
+		broadcaster.sendEvent("refresh", "update");
 
 		result.data = smh;
 
@@ -410,7 +414,6 @@ public class ShipmentOrderController {
         AjaxResult result = new AjaxResult();
 		
 		ShipmentHead head = this.shipmentHeadRepository.getShipmentHeadById(head_id);
-
 		if ("shipped".equals(head.getState())) {
 			result.success = false;
 		} else {
@@ -427,6 +430,8 @@ public class ShipmentOrderController {
 				}				
 			});					
 		}
+		broadcaster.sendEvent("refresh", "update");
 		return result;
+
 	}
 }

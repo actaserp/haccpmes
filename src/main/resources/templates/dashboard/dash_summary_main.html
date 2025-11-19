@@ -60,41 +60,26 @@
         </div>
 
         <div class="tab-wrap">
-            <div class="tab-contents" style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="tab-contents" style="display: flex; flex-direction: row; gap: 10px; min-height: 0;">
 
-                <!-- 첫 줄 -->
-                <div style="display: flex; gap: 10px; flex: 1; min-height: 0;">
-                    <section style="flex: 1;">
-                        <div class="title-wrap"><h3>금일/금주 발전현황</h3></div>
-                        <div class="content-wrap" style="display: flex; flex-direction: column; flex: 1;">
-                            <p class="card-text">전주 대비 발전량을 표시합니다.</p>
-                            <div id="produce-grid" class="wj-flexgrid"></div>
-                        </div>
-                    </section>
-                    <section style="flex: 1;">
+                <!-- 왼쪽 : 부족재고현황 -->
+                <section style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                    <div class="title-wrap"><h3>부족 재고 현황</h3></div>
+                    <div class="content-wrap" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
+                        <p class="card-text">부족재고 현황을 표시합니다.</p>
+                        <div id="material-stock-grid" class="wj-flexgrid" style="flex: 1;"></div>
+                    </div>
+                </section>
+
+                <!-- 오른쪽 : 생산성과, 수익현황 -->
+                <section style="flex: 1; display: flex; flex-direction: column; gap: 10px; min-height: 0;">
+
+                    <!-- 생산성과 -->
+                    <section style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
                         <div class="title-wrap"><h3>생산 성과</h3></div>
                         <div class="content-wrap" style="display: flex; flex-direction: column; flex: 1;">
                             <p class="card-text">금일 생산 성과를 표시합니다.</p>
-                            <div id="today-prod-grid" class="wj-flexgrid"></div>
-                        </div>
-                    </section>
-                </div>
-
-                <!-- 두 번째 줄 -->
-                <div style="display: flex; gap: 10px; flex: 1; min-height: 0;">
-                    <!-- 부적합 생산량 -->
-                    <section style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
-                        <div class="title-wrap"><h3>부적합 생산량</h3></div>
-                        <div class="content-wrap" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
-                            <p class="card-text">부적합 생산량을 표시합니다.</p>
-                            <div style="display: flex; flex: 1; gap: 10px; min-height: 0;">
-                                <div style="flex: 5; display: flex; flex-direction: column; flex: 1; min-height: 0;">
-                                    <div id="defect-grid" class="wj-flexgrid" style="flex: 1;"></div>
-                                </div>
-                                <div class="chart-wrapper">
-                                    <canvas id="defect-chart" class="chart-canvas" style="width: 100%; height: 100%;"></canvas>
-                                </div>
-                            </div>
+                            <div id="today-prod-grid" class="wj-flexgrid" style="flex: 1;"></div>
                         </div>
                     </section>
 
@@ -113,9 +98,10 @@
                             </div>
                         </div>
                     </section>
-                </div>
+                </section>
             </div>
         </div>
+
     </div>
 
 </th:block>
@@ -136,23 +122,23 @@
             }
 
             initGrids() {
-                this.produceGrid = new wijmo.grid.FlexGrid('#produce-grid', {
-                    autoGenerateColumns: false,
-                    headersVisibility: wijmo.grid.HeadersVisibility.Column,
-                    isReadOnly: true,
-                    formatItem: (s, e) => {
-                        if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
-                            e.cell.style.textAlign = 'center';
-                        }
-                    },
-                    columns: [
-                        { header: ' ', binding: 'type', width: '*', align: 'center' },
-                        { header: '작업 지시', binding: 'ord', width: 160, align: 'right' },
-                        { header: '발전', binding: 'com', width: 160, align: 'right' },
-                        { header: '작업', binding: 'wor', width: 160, align: 'right' },
-                        { header: '발전율(%)', binding: 'wor_per', width: 160, align: 'right' }
-                    ]
-                });
+                // this.produceGrid = new wijmo.grid.FlexGrid('#produce-grid', {
+                //     autoGenerateColumns: false,
+                //     headersVisibility: wijmo.grid.HeadersVisibility.Column,
+                //     isReadOnly: true,
+                //     formatItem: (s, e) => {
+                //         if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+                //             e.cell.style.textAlign = 'center';
+                //         }
+                //     },
+                //     columns: [
+                //         { header: ' ', binding: 'type', width: '*', align: 'center' },
+                //         { header: '작업 지시', binding: 'ord', width: 160, align: 'right' },
+                //         { header: '발전', binding: 'com', width: 160, align: 'right' },
+                //         { header: '작업', binding: 'wor', width: 160, align: 'right' },
+                //         { header: '발전율(%)', binding: 'wor_per', width: 160, align: 'right' }
+                //     ]
+                // });
 
                 this.todayProdGrid = new wijmo.grid.FlexGrid('#today-prod-grid', {
                     autoGenerateColumns: false,
@@ -173,23 +159,23 @@
                     ]
                 });
 
-                this.defectGrid = new wijmo.grid.FlexGrid('#defect-grid', {
-                    autoGenerateColumns: false,
-                    headersVisibility: wijmo.grid.HeadersVisibility.Column,
-                    isReadOnly: true,
-                    formatItem: (s, e) => {
-                        if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
-                            e.cell.style.textAlign = 'center';
-                        }
-                    },
-                    columns: [
-                        { header: '품목그룹', binding: 'prod_grp', width: 95 },
-                        { header: '품목명', binding: 'prod', width: 100 },
-                        { header: '단가', binding: 'unitp', width: 90, align: 'right' },
-                        { header: '부적합량', binding: 'deq', width: 100, align: 'right' },
-                        { header: '총금액', binding: 'dep', width: '*', align: 'right' }
-                    ]
-                });
+                // this.defectGrid = new wijmo.grid.FlexGrid('#defect-grid', {
+                //     autoGenerateColumns: false,
+                //     headersVisibility: wijmo.grid.HeadersVisibility.Column,
+                //     isReadOnly: true,
+                //     formatItem: (s, e) => {
+                //         if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+                //             e.cell.style.textAlign = 'center';
+                //         }
+                //     },
+                //     columns: [
+                //         { header: '품목그룹', binding: 'prod_grp', width: 95 },
+                //         { header: '품목명', binding: 'prod', width: 100 },
+                //         { header: '단가', binding: 'unitp', width: 90, align: 'right' },
+                //         { header: '부적합량', binding: 'deq', width: 100, align: 'right' },
+                //         { header: '총금액', binding: 'dep', width: '*', align: 'right' }
+                //     ]
+                // });
 
                 this.stockGrid = new wijmo.grid.FlexGrid('#stock-grid', {
                     autoGenerateColumns: false,
@@ -208,33 +194,76 @@
                         { header: '총금액', binding: 'stp', width: '*', align: 'right' }
                     ]
                 });
-            }
 
-            initCharts() {
-                this.defectChart = new Chart(document.getElementById('defect-chart'), {
-                    type: 'pie',
-                    data: { labels: [], datasets: [{ data: [], backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'] }] },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    label: function (tooltipItem) {
-                                        let total = tooltipItem.dataset.data.reduce((acc, value) => acc + value, 0);
-                                        let value = tooltipItem.raw;
-                                        let percentage = ((value / total) * 100).toFixed(2) + "%";
-                                        return tooltipItem.label + ": " + value.toLocaleString() + " (" + percentage + ")";
-                                    }
-                                }
-                            },
-                            legend: {
-                                display: true,
-                                position: "bottom"
+                this.materialStockGrid = new wijmo.grid.FlexGrid('#material-stock-grid', {
+                    autoGenerateColumns: false,
+                    frozenColumns: 0, // 열 고정
+                    headersVisibility: wijmo.grid.HeadersVisibility.Column,
+                    selectionMode: wijmo.grid.SelectionMode.None, // 다중 선택 불가
+                    allowSorting: true, // 정렬 가능l
+                    formatItem: (sender, e) => {
+                        if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+                            e.cell.style.textAlign = 'center';
+                        }
+                    },
+                    columns: [
+                        {binding: 'material_code', header: '자재코드', width: 80, align: 'center', isReadOnly: true},
+                        {binding: 'material_name', header: '자재명', width: 250, align: 'left', isReadOnly: true},
+                        {binding: 'unit_name', header: '단위', width: 50, align: 'center', isReadOnly: true},
+                        {binding: 'order_qty', header: '수주량', width: 70, align: 'right', isReadOnly: true},
+                        {binding: 'incoming_qty', header: '미입고', width: 70, align: 'right', isReadOnly: true},
+                        {binding: 'current_stock', header: '현재고', width: 70, align: 'right', isReadOnly: true},
+                        {binding: 'optimal_stock', header: '적정재고', width: 70, align: 'right', isReadOnly: true},
+                        {binding: 'need_more_qty', header: '필요수량', width: 70, align: 'right', isReadOnly: true},
+                        {binding: 'state', header: '상태', width: 70, align: 'center', isReadOnly: true},
+                    ],
+                    itemsSource: new wijmo.collections.CollectionView([]), // 빈 데이터로 초기화
+                    itemFormatter: (panel, row, col, cell) => {
+                        if (panel.cellType === wijmo.grid.CellType.Cell) {
+                            const item = panel.rows[row].dataItem; // 현재 행 데이터
+                            const column = panel.columns[col]; // 현재 열
+
+                            // 'cur_stock' 열에 대해 조건에 따른 클래스 추가
+                            if (column.binding === 'cur_stock' && item.cur_stock < item.safety_stock) {
+                                cell.classList.add('grid-cell-red');
+                            }
+
+                            // 'house_stock' 열에 대해 조건에 따른 클래스 추가
+                            if (column.binding === 'house_stock' && item.house_stock < 0) {
+                                cell.classList.add('redText');
                             }
                         }
                     }
                 });
+                new FlexGridContextMenu(this.materialStockGrid);
+                this.materialStockGrid.downloadFileName = '수주대비 재고현황 내역';
+            }
+
+            initCharts() {
+                // this.defectChart = new Chart(document.getElementById('defect-chart'), {
+                //     type: 'pie',
+                //     data: { labels: [], datasets: [{ data: [], backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'] }] },
+                //     options: {
+                //         responsive: true,
+                //         maintainAspectRatio: false,
+                //         plugins: {
+                //             tooltip: {
+                //                 callbacks: {
+                //                     label: function (tooltipItem) {
+                //                         let total = tooltipItem.dataset.data.reduce((acc, value) => acc + value, 0);
+                //                         let value = tooltipItem.raw;
+                //                         let percentage = ((value / total) * 100).toFixed(2) + "%";
+                //                         return tooltipItem.label + ": " + value.toLocaleString() + " (" + percentage + ")";
+                //                     }
+                //                 }
+                //             },
+                //             legend: {
+                //                 display: true,
+                //                 position: "bottom"
+                //             }
+                //         }
+                //     }
+                // });
 
                 this.stockChart = new Chart(document.getElementById('stock-chart'), {
                     type: 'pie',
@@ -263,19 +292,27 @@
             }
 
             setData() {
-                let prodData = AjaxUtil.getSyncData('/api/dashboard/today_week_prod');
-                this.produceGrid.itemsSource = prodData.data;
+                // let prodData = AjaxUtil.getSyncData('/api/dashboard/today_week_prod');
+                // this.produceGrid.itemsSource = prodData.data;
 
                 let todayProdData = AjaxUtil.getSyncData('/api/dashboard/today_prod');
                 this.todayProdGrid.itemsSource = todayProdData.data;
 
-                let defectData = AjaxUtil.getSyncData('/api/dashboard/year_def_prod');
-                this.defectGrid.itemsSource = defectData.data;
-                this.updateChart(this.defectChart, defectData.data, 'prod', 'dep');
+                // let defectData = AjaxUtil.getSyncData('/api/dashboard/year_def_prod');
+                // this.defectGrid.itemsSource = defectData.data;
+                // this.updateChart(this.defectChart, defectData.data, 'prod', 'dep');
 
                 let stockData = AjaxUtil.getSyncData('/api/dashboard/mat_stock');
                 this.stockGrid.itemsSource = stockData.data;
                 this.updateChart(this.stockChart, stockData.data, 'prod', 'stp');
+
+                let materialStockData = AjaxUtil.getSyncData('/api/dashboard/optimal_stock');
+                this.materialStockGrid.itemsSource = materialStockData.data;
+            }
+
+            refreshOptimalStock() {
+                let materialStockData = AjaxUtil.getSyncData('/api/dashboard/optimal_stock');
+                this.materialStockGrid.itemsSource = materialStockData.data;
             }
 
             updateChart(chart, data, labelKey, valueKey) {
@@ -291,6 +328,13 @@
 
         $(document).ready(function (e) {
             page = new DashboardPage();
+
+            const evtSource = new EventSource('/sse/stream');
+            evtSource.addEventListener("refresh", function(event) {
+                console.log("실시간 이벤트 감지 → 부족재고 갱신");
+                page.refreshOptimalStock();
+            });
+
         });
     </script>
 </th:block>

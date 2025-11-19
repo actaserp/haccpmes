@@ -1,5 +1,6 @@
 package mes.app.dashboard;
 
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 
@@ -158,6 +159,17 @@ public class DashBoardController {
 		AjaxResult result = new AjaxResult();
 		result.data = haccpProcessItems;
 		
+		return result;
+	}
+
+	@GetMapping("/optimal_stock")
+	public AjaxResult getList(@RequestParam(value = "spjangcd")String spjangcd) {
+		AjaxResult result = new AjaxResult();
+    	/*log.info("자재 적정재고 현황 mat_name:{}, Inventory_status:{}, srchStartDt:{}, srchEndDt:{}, spjangcd:{}"
+        , mat_name, status, startDt,endDt, spjangcd );*/
+
+		List<Map<String,Object>> items = dashBoardService.getList(spjangcd);
+		result.data = items;
 		return result;
 	}
 	

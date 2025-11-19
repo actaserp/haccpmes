@@ -3,6 +3,7 @@ package mes.app.balju;
 import lombok.extern.slf4j.Slf4j;
 import mes.app.MailService;
 import mes.app.balju.service.BaljuOrderService;
+import mes.app.common.SseBroadcaster;
 import mes.domain.entity.Balju;
 import mes.domain.entity.BaljuHead;
 import mes.domain.entity.User;
@@ -51,6 +52,9 @@ public class BaljuOrderController {
 
   @Autowired
   MailService mailService;
+
+  @Autowired
+  SseBroadcaster broadcaster;
 
   // 발주 목록 조회
   @GetMapping("/read")
@@ -211,7 +215,7 @@ public class BaljuOrderController {
 
     head.setTotalPrice(totalPriceSum);
     balJuHeadRepository.save(head);
-
+    broadcaster.sendEvent("refresh", "update");
     AjaxResult result = new AjaxResult();
     result.data = Map.of("headId", head.getId(), "totalPrice", totalPriceSum);
     return result;
@@ -265,6 +269,7 @@ public class BaljuOrderController {
 
     // 3. balju_head 삭제
     balJuHeadRepository.deleteById(id);
+    broadcaster.sendEvent("refresh", "update");
 
     result.success = true;
     return result;
@@ -277,6 +282,8 @@ public class BaljuOrderController {
 
     List<Map<String, Object>> items = this.baljuOrderService.balju_stop(id);
     AjaxResult result = new AjaxResult();
+    broadcaster.sendEvent("refresh", "update");
+
     result.data = items;
     return result;
   }

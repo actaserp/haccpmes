@@ -11,6 +11,7 @@ import java.util.*;
 
 import javax.servlet.http.HttpServletRequest;
 
+import mes.app.common.SseBroadcaster;
 import mes.app.definition.service.EquipmentService;
 import mes.app.production.service.EquipmentRunChartService;
 import mes.domain.entity.*;
@@ -110,6 +111,9 @@ public class ProductionResultController {
 
     @Autowired
     EquRunRepository equRunRepository;
+
+    @Autowired
+    SseBroadcaster broadcaster;
 
     @GetMapping("/read")
     public AjaxResult getProdResult(
@@ -550,6 +554,8 @@ public class ProductionResultController {
 
             equRunRepository.save(equ);
         }
+
+        broadcaster.sendEvent("refresh", "update");
 
         Map<String, Object> item = new HashMap<String, Object>();
         item.put("jr_pk", jrPk);

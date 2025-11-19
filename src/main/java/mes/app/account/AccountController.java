@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Resource;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -60,51 +61,57 @@ public class AccountController {
 	
 	@Resource(name="authenticationManager")
     private AuthenticationManager authManager;
-	
+
 	@GetMapping("/login")
-    public ModelAndView loginPage(
-    		HttpServletRequest request,
-    		HttpServletResponse response,
-    		HttpSession session, Authentication auth) {
+	public ModelAndView loginPage(HttpServletRequest request,
+								  HttpServletResponse response,
+								  HttpSession session,
+								  Authentication auth) {
 
-		//User-Agent를 기반으로 모바일 여부 감지
-		String userAgent = request.getHeader("User-Agent").toLowerCase();
-		boolean isMobile = userAgent.contains("mobile") || userAgent.contains("android") || userAgent.contains("iphone");
+		// ✅ 1️⃣ 자동로그인 쿠키 검사
+		if (auth == null) {
+			Cookie[] cookies = request.getCookies();
+			if (cookies != null) {
+				for (Cookie cookie : cookies) {
+					if ("DY_AUTO_LOGIN".equals(cookie.getName())) {
+						String username = cookie.getValue();
 
-		String serverName = request.getServerName();
+						User user = userRepository.findByUsername(username).orElse(null);
 
-//		if (isMobile && serverName.equalsIgnoreCase("actascld.co.kr")) {
-//			String redirectUrl = "https://mes.actascld.co.kr";
-//			try {
-//				response.sendRedirect(redirectUrl);
-//				return null; // redirect 했으므로 이후 처리 중단
-//			} catch (IOException e) {
-//				e.printStackTrace(); // 로그로 출력하거나, 에러 뷰로 포워딩도 가능
-//				return new ModelAndView("error/redirect_error"); // 예외 시 fallback 처리
-//			}
-//		}
+						if (user != null && user.getActive()) {
+							UsernamePasswordAuthenticationToken token =
+									new UsernamePasswordAuthenticationToken(
+											user, null, Collections.emptyList());
 
-		// 세션을 이용해 모바일에서 한 번만 리디렉션되도록 설정
-		Boolean isMobileRedirected = (Boolean) session.getAttribute("isMobileRedirected");
+							SecurityContextHolder.getContext().setAuthentication(token);
+							session.setAttribute("SPRING_SECURITY_CONTEXT", SecurityContextHolder.getContext());
 
-		if (isMobile && (isMobileRedirected == null || !isMobileRedirected)) {
-			session.setAttribute("isMobileRedirected", true);  // ✅ 모바일에서 리디렉션 상태 저장
-			return new ModelAndView("redirect:/MobileFirstPage");
+							return new ModelAndView("redirect:/");
+						} else {
+							Cookie clearCookie = new Cookie("DY_AUTO_LOGIN", null);
+							clearCookie.setMaxAge(0);
+							clearCookie.setPath("/");
+							response.addCookie(clearCookie);
+						}
+					}
+
+				}
+			}
 		}
 
-		// 모바일이면 "mlogin" 뷰 반환, 웹이면 "login" 뷰 반환
+		// ✅ 2️⃣ 기존 로그인 페이지 로직
+		String userAgent = request.getHeader("User-Agent").toLowerCase();
+		boolean isMobile = userAgent.contains("mobile") || userAgent.contains("iphone");
 		ModelAndView mv = new ModelAndView(isMobile ? "mlogin" : "login");
-		
-		Map<String, Object> userInfo = new HashMap<String, Object>(); 
-		Map<String, Object> gui = new HashMap<String, Object>();
-		
-		mv.addObject("userinfo", userInfo);
-		mv.addObject("gui", gui);
-		if(auth!=null) {
-			SecurityContextLogoutHandler handler =  new SecurityContextLogoutHandler();
+		mv.addObject("userinfo", new HashMap<>());
+		mv.addObject("gui", new HashMap<>());
+
+		// ✅ 3️⃣ 이미 로그인된 상태라면 강제 로그아웃 처리
+		if (auth != null) {
+			SecurityContextLogoutHandler handler = new SecurityContextLogoutHandler();
 			handler.logout(request, response, auth);
 		}
-		
+
 		return mv;
 	}
 
@@ -113,67 +120,76 @@ public class AccountController {
 		session.removeAttribute("isMobileRedirected");  // ✅ 모바일 첫 페이지에서 세션 값 초기화
 		return new ModelAndView("/mobile/MobileFirstPage");
 	}
-	
+
 	@GetMapping("/logout")
-	public void logout(
-			HttpServletRequest request
-			, HttpServletResponse response) throws IOException {
-		
-		Authentication auth = SecurityContextHolder.getContext().getAuthentication();		
-		SecurityContextLogoutHandler handler =  new SecurityContextLogoutHandler();
-		
+	public void logout(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		SecurityContextLogoutHandler handler = new SecurityContextLogoutHandler();
+
+		// ✅ 로그아웃 로그 저장
 		this.accountService.saveLoginLog("logout", auth);
-		
+
+		// ✅ 세션 & SecurityContext 정리
 		handler.logout(request, response, auth);
-	    response.sendRedirect("/login");
+
+		// ✅ 자동로그인 쿠키 제거
+		Cookie clearCookie = new Cookie("DY_AUTO_LOGIN", null);
+		clearCookie.setMaxAge(0);     // 즉시 만료
+		clearCookie.setPath("/");     // 전체 경로 적용
+		response.addCookie(clearCookie);
+
+		// ✅ 로그인 페이지로 리다이렉트
+		response.sendRedirect("/login");
 	}
 
-    @PostMapping("/login")
-    public AjaxResult postLogin(
-    		@RequestParam("username") final String username, 
-    		@RequestParam("password") final String password,
-    		final HttpServletRequest request) {
-    	// 여기로 들어오지 않음.
-    	
-    	AjaxResult result = new AjaxResult();
-    	
-    	HashMap<String, Object> data = new HashMap<String, Object>();
-    	result.data = data;
-    	
-        UsernamePasswordAuthenticationToken authReq = new UsernamePasswordAuthenticationToken(username, password);
+	@PostMapping("/login")
+	public AjaxResult postLogin(
+			@RequestParam("username") final String username,
+			@RequestParam("password") final String password,
+			@RequestParam(value = "autoLogin", required = false) String autoLogin,
+			HttpServletRequest request,
+			HttpServletResponse response) {
+
+		AjaxResult result = new AjaxResult();
+		HashMap<String, Object> data = new HashMap<>();
+		result.data = data;
+
+		UsernamePasswordAuthenticationToken authReq = new UsernamePasswordAuthenticationToken(username, password);
 		CustomAuthenticationToken auth = null;
 
-		try{
-			auth = (CustomAuthenticationToken)authManager.authenticate(authReq);
-
-
+		try {
+			auth = (CustomAuthenticationToken) authManager.authenticate(authReq);
 		} catch (InsufficientAuthenticationException e) {
 			data.put("code", "null");
 			return result;
-		}catch (AuthenticationException e){
-			//e.printStackTrace();
+		} catch (AuthenticationException e) {
 			data.put("code", "NOUSER");
 			return result;
 		}
 
+		if (auth != null) {
+			User user = (User) auth.getPrincipal();
 
-		if(auth!=null) {
-			User user = (User)auth.getPrincipal();
-
-			if (!user.getActive()) {  // user.getActive()가 false인 경우
+			if (!user.getActive()) {
 				data.put("code", "noactive");
 			} else {
 				data.put("code", "OK");
-
 				try {
 					this.accountService.saveLoginLog("login", auth);
 				} catch (UnknownHostException e) {
-					// Handle the exception (e.g., log it)
 					e.printStackTrace();
+				}
+				// 자동 로그인
+				if ("on".equals(autoLogin)) {
+					Cookie autoLoginCookie = new Cookie("DY_AUTO_LOGIN", username);
+					autoLoginCookie.setHttpOnly(true);
+					autoLoginCookie.setPath("/");
+					autoLoginCookie.setMaxAge(60 * 60 * 24 * 365); // 30일 자동 로그인
+					response.addCookie(autoLoginCookie);
 				}
 			}
 		} else {
-			result.success=false;
+			result.success = false;
 			data.put("code", "NOID");
 		}
 

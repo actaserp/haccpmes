@@ -124,6 +124,21 @@
                         if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
                             e.cell.style.textAlign = 'center';
                         }
+                        if (e.panel.cellType === wijmo.grid.CellType.ColumnFooter) {
+
+                            // 총합 셀 (col = 3) 가운데 정렬
+                            if (e.col === 3) {
+                                e.cell.style.textAlign = 'center';
+                                e.cell.style.fontWeight = 'bold';
+                            }
+
+                            // 금액 합계 셀 (col = 4) 오른쪽 정렬
+                            if (e.col === 4) {
+                                e.cell.style.textAlign = 'right';
+                                e.cell.style.fontWeight = 'bold';
+                                e.cell.style.paddingRight = '8px';
+                            }
+                        }
                     },
                     columns: [
                         {binding: 'mat_type_name', header: '품목유형', width: 100, align: 'left', isReadOnly: true},
@@ -209,6 +224,24 @@
                         }
                     }
                 });
+                this.grid.columnFooters.rows.push(new wijmo.grid.Row());
+                this.grid.loadedRows.addHandler(() => {
+
+                    // 모든 행
+                    const rows = this.grid.rows;
+
+                    // 합계 계산
+                    const total = rows
+                        .map(r => +r.dataItem?.stock_price || 0)
+                        .reduce((a, b) => a + b, 0);
+
+                    // 🔥 Footer 첫 번째 컬럼(0)에 '총합'
+                    this.grid.columnFooters.setCellData(0, 3, '총합');
+
+                    // 🔥 Footer 두 번째 컬럼(1)에 합계 표시
+                    this.grid.columnFooters.setCellData(0, 4, total);
+                });
+
                 new FlexGridContextMenu(this.grid);
                 this.grid.downloadFileName = '재고 현황 내역';
             }

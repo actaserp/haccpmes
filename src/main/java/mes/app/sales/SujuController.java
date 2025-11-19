@@ -20,6 +20,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.transaction.Transactional;
 
 import lombok.extern.slf4j.Slf4j;
+import mes.app.common.SseBroadcaster;
 import mes.app.definition.service.material.UnitPriceService;
 import mes.app.sales.service.SujuUploadService;
 import mes.config.Settings;
@@ -84,7 +85,10 @@ public class SujuController {
     @Autowired
     private SujuRepository sujuRepository;
 
-	// 수주 목록 조회 
+	@Autowired
+	SseBroadcaster broadcaster;
+
+	// 수주 목록 조회
 	@GetMapping("/read")
 	public AjaxResult getSujuList(
 			@RequestParam(value="date_kind", required=false) String date_kind,
@@ -240,7 +244,7 @@ public class SujuController {
 			SujuRepository.save(suju);
 		}
 
-
+		broadcaster.sendEvent("refresh", "update");
 		AjaxResult result = new AjaxResult();
 		result.success = true;
 		return result;
@@ -301,6 +305,7 @@ public class SujuController {
 
 		SujuRepository.deleteBySujuHeadId(id);
 		sujuHeadRepository.deleteById(id);
+		broadcaster.sendEvent("refresh", "update");
 		
 		return result;
 	}
@@ -585,7 +590,7 @@ public class SujuController {
 		}
 
 		SujuRepository.saveAll(sujuList);
-
+		broadcaster.sendEvent("refresh", "update");
 
 		result.success=true;
 		return result;
@@ -722,7 +727,7 @@ public class SujuController {
 		}
 
 		result.success=true;
-
+		broadcaster.sendEvent("refresh", "update");
 		if( error_items.size() > 0 ) {
 			result.success=false;
 			result.message="엑셀 상태만 전환할 수 있습니다.";
@@ -742,6 +747,7 @@ public class SujuController {
 
 		List<Integer> sujuPkList = (List<Integer>) payload.get("sujuPkList");
 		sujuRepository.forceCompleteSujuList(sujuPkList);
+		broadcaster.sendEvent("refresh", "update");
 		return result;
 	}
 

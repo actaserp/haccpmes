@@ -76,6 +76,30 @@
             }
         }
 
+        /* help 버튼 */
+        a.help {
+            background-color: #0056b3;
+            color: #fff;
+            border-radius: 5px;
+            padding: 5px 10px;
+            font-size: 13px;
+            text-decoration: none;
+            transition: 0.2s;
+        }
+
+        a.help:hover {
+            background-color: #0066cc;
+        }
+
+        .header-menu .menu-btn {
+            user-select: none;
+        }
+
+        .header-menu .menu-btn.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
     </style>
 </head>
 
@@ -127,44 +151,47 @@
                         </div>
                     </div>
                     <!-- 알람 -->
-                    <a href="#" class="alarm" title="알람">
-                        <img src="/images/icon/ico-bell.svg" alt="알람 아이콘">
-                        <span>알람</span>
-                        <span class="num">0</span>
-                    </a>
-                    <div class="alarm-box" style="width: 1000px;">
-                        <ul class="alarm-tab-links">
-                            <li class="active">
-                                <a href="#alarm-tab1" title="주문의뢰">주문의뢰(0)</a> <!-- 동적으로 업데이트 -->
-                            </li>
-                        </ul>
-                        <div class="alarm-tab-contents">
-                            <div class="alarm-tab-item" id="alarm-tab1">
-                                <div class="table-wrap">
-                                    <table>
-                                        <caption>알람 테이블</caption>
-                                        <colgroup>
-                                            <col class="wp30"> <!-- 날짜 -->
-                                            <col class="wp45"> <!-- 업체 이름 -->
-                                            <col class="wp25"> <!-- 주문 상태 -->
-                                        </colgroup>
-                                        <thead>
-                                        <tr>
-                                            <th>날 짜</th>
-                                            <th>업체 이름</th>
-                                            <th>주문 상태</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody>
-                                        <!-- 알림 데이터가 여기 동적으로 추가됨 -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <a href="#" title="확인" class="btn-gray" id="AlarmOk" onclick="AlarmOk()">확인</a>
-                        </div>
-                    </div>
+<!--                    <a href="#" class="alarm" title="알람">-->
+<!--                        <img src="/images/icon/ico-bell.svg" alt="알람 아이콘">-->
+<!--                        <span>알람</span>-->
+<!--                        <span class="num">0</span>-->
+<!--                    </a>-->
+<!--                    <div class="alarm-box" style="width: 1000px;">-->
+<!--                        <ul class="alarm-tab-links">-->
+<!--                            <li class="active">-->
+<!--                                <a href="#alarm-tab1" title="주문의뢰">주문의뢰(0)</a> &lt;!&ndash; 동적으로 업데이트 &ndash;&gt;-->
+<!--                            </li>-->
+<!--                        </ul>-->
+<!--                        <div class="alarm-tab-contents">-->
+<!--                            <div class="alarm-tab-item" id="alarm-tab1">-->
+<!--                                <div class="table-wrap">-->
+<!--                                    <table>-->
+<!--                                        <caption>알람 테이블</caption>-->
+<!--                                        <colgroup>-->
+<!--                                            <col class="wp30"> &lt;!&ndash; 날짜 &ndash;&gt;-->
+<!--                                            <col class="wp45"> &lt;!&ndash; 업체 이름 &ndash;&gt;-->
+<!--                                            <col class="wp25"> &lt;!&ndash; 주문 상태 &ndash;&gt;-->
+<!--                                        </colgroup>-->
+<!--                                        <thead>-->
+<!--                                        <tr>-->
+<!--                                            <th>날 짜</th>-->
+<!--                                            <th>업체 이름</th>-->
+<!--                                            <th>주문 상태</th>-->
+<!--                                        </tr>-->
+<!--                                        </thead>-->
+<!--                                        <tbody>-->
+<!--                                        &lt;!&ndash; 알림 데이터가 여기 동적으로 추가됨 &ndash;&gt;-->
+<!--                                        </tbody>-->
+<!--                                    </table>-->
+<!--                                </div>-->
+<!--                            </div>-->
+<!--                            <a href="#" title="확인" class="btn-gray" id="AlarmOk" onclick="AlarmOk()">확인</a>-->
+<!--                        </div>-->
+<!--                    </div>-->
                     <!-- 알람 -->
+                    <a class="help" title="원격접속" href="https://939.co.kr/onit" target="_blank" rel="noopener noreferrer">
+                        원격접속
+                    </a>
                     <!-- 사용자 로그인 상태-->
                     <div id="spjangSelectWrapper">
                         <!-- 사업장 리스트 -->
