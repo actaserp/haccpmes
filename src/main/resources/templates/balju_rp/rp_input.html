@@ -684,7 +684,13 @@
                                     <label for="Company_id">업체</label>
                                 </th>
                                 <td>
-                                    <select class="form-control2" id="Company_id" name="Company_id"  ></select>
+                                    <input id="Company_id" name="Company_id" type="hidden">
+                                    <input style="width:240px;" class="form-control2" type="text" id="CompanyName" name="CompanyName" placeholder="검색버튼을 클릭하여 구매처를 검색하세요" readonly="">
+                                    &nbsp;
+                                    <a class="btn btn-delete" title="검색" id="btnCompanySearch">
+                                        <img src="/images/icon/btn-srch.svg" alt="검색 아이콘">
+
+                                    </a>
                                 </td>
                             </tr>
                             <tr>
@@ -1126,6 +1132,7 @@
     <script type="text/javascript" src="/resource/jsBarcode/JsBarcode.all.min.js"></script>
     <th:block th:replace="/common/popup_material :: popup_material"></th:block>
     <th:block th:replace="/common/popup_company :: popup_company"></th:block>
+    <th:block th:replace="/common/popup_company_purchase :: popup_company_Purchase"></th:block>
 
     <script type="text/javascript">
         class materialStorehouse {
@@ -1400,7 +1407,7 @@
                 });
 
                 $content.find('#btnCompanySearch').click(function () {
-                    let poppage = new PopCompComponent();
+                    let poppage = new PopCompComponentPurchase();
                     let $poppage = $(poppage);
                     let searchcallback = function (items) {
                         console.log('btnCompanySearch', items);
@@ -1627,7 +1634,7 @@
                 });
 
                 $content.find('#btnCompanySearch').click(function () {
-                    let poppage = new PopCompComponent();
+                    let poppage = new PopCompComponentPurchase();
                     let $poppage = $(poppage);
                     let searchcallback = function (items) {
                         console.log('btnCompanySearch', items);
@@ -1774,7 +1781,7 @@
 
                         const keyword = $content.find('#btnCompanySearchB').val().trim();
 
-                        let poppage = new PopCompComponent();
+                        let poppage = new PopCompComponentPurchase();
 
                         // 콜백 공통 처리
                         const callback = function (item) {
@@ -2657,6 +2664,18 @@
                 });
                 new FlexGridContextMenu(this.grid);
                 this.grid.downloadFileName = '다중 입고 내역';
+
+                $content.find('#btnCompanySearch').click(function () {
+                    let poppage = new PopCompComponentPurchase();
+                    let $poppage = $(poppage);
+                    let searchcallback = function (items) {
+                        console.log('btnCompanySearch', items);
+                        $content.find('#Company_id').val(items.id);
+                        $content.find('#CompanyName').val(items.compname);
+                    };
+
+                    poppage.show(searchcallback);
+                });
 
                 AjaxUtil.fillSelectOptions($content.find('#StoreHouse_id'), 'store_house', 'choose', 3);    // 3:자재창고
                 $content.find('#dialog_title').innerHTML = '품목입고 등록';
