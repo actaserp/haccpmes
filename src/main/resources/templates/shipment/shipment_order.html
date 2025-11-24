@@ -441,7 +441,7 @@
 
 
                 $('#div_product').hide();
-                AjaxUtil.fillSelectOptions($('#company_id'), 'company', 'choose', '', 'sale');
+
             }
 
             searchMain() {
@@ -929,8 +929,7 @@
             });
 
             page.searchMain();
-
-
+            AjaxUtil.fillSelectOptions($('#company_id'), 'company', 'choose', '', 'sale,sale-purchase');
         })
     </script>
 
