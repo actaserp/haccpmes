@@ -1,5 +1,6 @@
 package mes.app.util;
 
+import lombok.extern.slf4j.Slf4j;
 import mes.Encryption.EncryptionKeyProvider;
 import mes.Encryption.EncryptionUtil;
 import mes.domain.model.AjaxResult;
@@ -16,6 +17,7 @@ import java.util.Map;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 public class UtilClass {
 
     public static Integer getInt(Map<String, Object> map, String key) {
@@ -70,6 +72,27 @@ public class UtilClass {
 
         }catch (DateTimeParseException e){
             throw new IllegalArgumentException("날짜/시간 형식이 올바르지 않습니다.");
+        }
+    }
+
+    /**
+     * 20250901 요따구로 들어오묜 2025-09-01 로 반환해주는 헬퍼 메서드
+     * @Return : yyyy-MM-dd (String)
+     * **/
+    public static String toContainsHyphenDateString(String yyyymmdd){
+        try{
+            if(yyyymmdd == null || yyyymmdd.length() != 8){
+                log.info("올바르지 않은 형식이 들어옴");
+                return "";
+            }
+
+            return yyyymmdd.substring(0, 4) + "-" +
+                    yyyymmdd.substring(4, 6) + "-" +
+                    yyyymmdd.substring(6, 8);
+
+        }catch(Exception e){
+            log.info("올바르지 않은 형식이 들어옴");
+            return "";
         }
     }
 
