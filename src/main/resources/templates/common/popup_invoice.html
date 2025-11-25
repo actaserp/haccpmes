@@ -1341,16 +1341,15 @@
 
                 if (writeType === '부가세 포함' && taxMode === '과세') {
                     const total = qty * unitCost;
-                    const supply = total / 1.1;
-                    supplyCost = Math.floor(supply);
+                    supplyCost = total / 1.1;
                     tax = total - supplyCost;
                 } else {
                     supplyCost = qty * unitCost;
-                    tax = (taxMode === '과세') ? Math.floor(supplyCost * 0.1) : 0;
+                    tax = (taxMode === '과세') ? supplyCost * 0.1 : 0;
                 }
 
-                $supplyCost.val(supplyCost.toLocaleString());
-                $tax.val(tax.toLocaleString());
+                $supplyCost.val(Math.round(supplyCost).toLocaleString());
+                $tax.val(Math.round(tax).toLocaleString());
             }
         }
 
@@ -1457,7 +1456,7 @@
             const $tax = $row.find('input[id$="Tax"]');
 
             let supplyCost = parseFloat($supplyCost.val().replace(/,/g, '').trim()) || 0;
-            let tax = taxMode === '과세' ? Math.floor(supplyCost * 0.1) : 0;
+            let tax = taxMode === '과세' ? Math.round(supplyCost * 0.1) : 0;
 
             $tax.val(tax.toLocaleString());
             updateTotals();
