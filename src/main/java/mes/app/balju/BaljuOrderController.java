@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import mes.app.MailService;
 import mes.app.balju.service.BaljuOrderService;
 import mes.app.common.SseBroadcaster;
+import mes.app.definition.service.material.UnitPriceService;
 import mes.domain.entity.Balju;
 import mes.domain.entity.BaljuHead;
 import mes.domain.entity.User;
@@ -43,6 +44,9 @@ public class BaljuOrderController {
 
   @Autowired
   BaljuOrderService baljuOrderService;
+
+  @Autowired
+  UnitPriceService unitPriceService;
 
   @Autowired
   BujuRepository bujuRepository;
@@ -309,7 +313,7 @@ public class BaljuOrderController {
       User user = (User) auth.getPrincipal();
       data.put("user_id", user.getId());
 
-      int saveCount = this.baljuOrderService.saveCompanyUnitPrice(data);
+      int saveCount = this.unitPriceService.saveCompanyUnitPrice(data);
 
       if (saveCount > 0) {
         result.success = true;

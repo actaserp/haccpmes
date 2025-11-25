@@ -214,11 +214,11 @@ public class MaterialController {
 	 * @return
 	 */
 	@PostMapping("/savePrice")
-	public AjaxResult savePriceByMat(@RequestBody MultiValueMap<String,Object> data) {
+	public AjaxResult savePriceByMat(@RequestBody Map<String, Object> data) {
 		SecurityContext sc = SecurityContextHolder.getContext();
-        Authentication auth = sc.getAuthentication();         
+        Authentication auth = sc.getAuthentication();
         User user = (User)auth.getPrincipal();
-        data.set("user_id", user.getId());
+        data.put("user_id", user.getId());
         
         AjaxResult result = new AjaxResult();
 
@@ -248,21 +248,25 @@ public class MaterialController {
 	@PostMapping("/updatePrice")
 	public AjaxResult updatePriceByMat(@RequestBody MultiValueMap<String,Object> data) {
 		SecurityContext sc = SecurityContextHolder.getContext();
-        Authentication auth = sc.getAuthentication();         
-        User user = (User)auth.getPrincipal();
-        data.set("user_id", user.getId());
-        
-        AjaxResult result = new AjaxResult();
-		
-        if (this.unitPriceService.updateCompanyUnitPrice(data) > 0) {
-        	
-        } else {
-        	result.success = false;
-        }; 
-        
+		Authentication auth = sc.getAuthentication();
+		User user = (User)auth.getPrincipal();
+		data.set("user_id", user.getId());
+
+		AjaxResult result = new AjaxResult();
+
+		int updated = this.unitPriceService.updateCompanyUnitPrice(data);
+
+		if (updated > 0) {
+			result.success = true;
+		} else {
+			result.success = false;
+			result.message = "단가 업데이트에 실패했습니다.";
+		}
+
 		return result;
 	}
-	
+
+
 	/**
 	 * @apiNote 단가삭제
 	 * 

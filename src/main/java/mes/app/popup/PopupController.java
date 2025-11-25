@@ -550,6 +550,19 @@ public class PopupController {
 		return result;
 	}
 
+	@RequestMapping("/search_Comp_Custom_Purchase")
+	//@DecryptField(columns = "item2", masks = 0)
+	public AjaxResult getSearchCompCustomPurchase(@RequestParam String spjangcd,
+										  @RequestParam(required = false) String item,
+										  @RequestParam(required = false) String item2){
+
+		AjaxResult result = new AjaxResult();
+
+		result.data = popupService.getCltCombinePurchaseList(spjangcd, item, item2);
+
+		return result;
+	}
+
 	@RequestMapping("/search_depart")
 	public AjaxResult getSearchDepart(
 			@RequestParam(value = "srchCode", required = false) String srchCode,

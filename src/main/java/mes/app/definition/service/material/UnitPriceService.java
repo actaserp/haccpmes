@@ -1,5 +1,7 @@
 package mes.app.definition.service.material;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -38,9 +40,10 @@ public class UnitPriceService {
             , mcu."ChangeDate"
             , mcu."ChangerName"
             , mcu."Material_id"
-            , row_number() over (partition by mcu."Company_id" order by mcu."ApplyStartDate" desc) as g_idx
+            , row_number() over (partition by mcu."Company_id", mcu."Type" order by mcu."ApplyStartDate" desc) as g_idx
             , now() between mcu."ApplyStartDate" and mcu."ApplyEndDate" as current_check
             , now() < mcu."ApplyStartDate" as future_check
+            , mcu."Type" as type
             from mat_comp_uprice mcu 
             where mcu."Material_id" = :mat_pk
             )
@@ -54,6 +57,7 @@ public class UnitPriceService {
             , A."ChangeDate"::date 
             , A."Material_id"
             , A."ChangerName" 
+            , A.type
             from A 
             inner join company c on c.id = A."Company_id"
             where ( A.current_check = true or A.future_check = true or A.g_idx = 1)
@@ -102,7 +106,6 @@ public class UnitPriceService {
 			select mcu.id as price_id
             , m."MaterialGroup_id"
             , mg."MaterialType"
-            , m."UnitPrice" as "UnitPrice"
             , mcu."Material_id" 
             , mcu."Company_id" 
             , mcu."UnitPrice" as "UnitPrices"
@@ -124,212 +127,356 @@ public class UnitPriceService {
         return item;
 	}
 
-	public int saveCompanyUnitPrice(MultiValueMap<String, Object> data) {
-		Integer materialId = CommonUtil.tryIntNull(data.getFirst("Material_id"));
-		Integer companyId = CommonUtil.tryIntNull(data.getFirst("Company_id"));
+	public int saveCompanyUnitPrice(Map<String, Object> data) {
 
-		/*// applyStartDate가 '2025-04-15T13:34'와 같은 형식으로 들어올 때 처리
-		String applyStartDateStr = CommonUtil.tryString(data.getFirst("ApplyStartDate"));
-		LocalDateTime applyStartDateLocal = LocalDateTime.parse(applyStartDateStr, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-		Timestamp applyStartDate = Timestamp.valueOf(applyStartDateLocal);*/
-		// ApplyStartDate 처리
-		String applyStartDateStr = CommonUtil.tryString(data.getFirst("ApplyStartDate"));
-		LocalDateTime applyStartDateLocal = LocalDateTime.parse(applyStartDateStr, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-		Timestamp applyStartDate = Timestamp.valueOf(applyStartDateLocal);
+		// ---------------------------
+		// 1. 기본 파라미터 파싱
+		// ---------------------------
+		Integer materialId = CommonUtil.tryIntNull(data.get("Material_id"));
+		Integer companyId  = CommonUtil.tryIntNull(data.get("Company_id"));
+		String type        = CommonUtil.tryString(data.get("type"));
 
-		// 현재 날짜와 비교하여 ApplyEndDate 설정
-		LocalDate applyStartDateDate = applyStartDateLocal.toLocalDate();
-		LocalDate today = LocalDate.now();
+		// UnitPrice / UnitPrices 중 있는 값 우선 사용
+		BigDecimal buyUnitPrice  = toBD2(data.get("UnitPrice"));
+		BigDecimal sellUnitPrice = toBD2(data.get("UnitPrices"));
 
-		Timestamp applyEndDate;
-		if (!applyStartDateDate.equals(today)) {
-			// 날짜가 다르면 하루 전 날짜로 설정 (시간은 00:00:00)
-			applyEndDate = Timestamp.valueOf(applyStartDateDate.minusDays(1).atStartOfDay());
-		} else {
-			// 날짜가 같으면 ApplyStartDate 그대로 사용
-			applyEndDate = applyStartDate;
+		BigDecimal unitPrice = null;
+
+		// 첫 번째 우선순위: UnitPrices → UnitPrice
+		if (sellUnitPrice != null) {
+			unitPrice = sellUnitPrice;
+		} else if (buyUnitPrice != null) {
+			unitPrice = buyUnitPrice;
 		}
 
-		// applyEndDate는 기존대로 설정
-		Timestamp applyEndDate2 = CommonUtil.tryTimestamp("2100-12-31");
-
-
-		Float unitPrice = CommonUtil.tryFloatNull(data.getFirst("UnitPrices")); // 납품단가
-		Float partPrices = CommonUtil.tryFloatNull(data.getFirst("partPrices")); // 부품단가
-		Float procPrices = CommonUtil.tryFloatNull(data.getFirst("procPrices")); // 가공비
-		Float matUnitPrice = CommonUtil.tryFloatNull(data.getFirst("UnitPrice")); // 입고단가
-		String changerName = CommonUtil.tryString(data.getFirst("ChangerName"));
-		String type = CommonUtil.tryString(data.getFirst("type"));
-		Integer userId = CommonUtil.tryIntNull(data.getFirst("user_id").toString());
-
-		MapSqlParameterSource dicParam = new MapSqlParameterSource();
-		dicParam.addValue("materialId", materialId);
-		dicParam.addValue("companyId", companyId);
-		dicParam.addValue("applyStartDate", applyStartDate, java.sql.Types.TIMESTAMP);
-		dicParam.addValue("applyEndDate", applyEndDate, java.sql.Types.TIMESTAMP);
-
-		dicParam.addValue("applyEndDate2", applyEndDate2, java.sql.Types.TIMESTAMP);
-
-		dicParam.addValue("unitPrice", unitPrice);
-		dicParam.addValue("partPrices", partPrices);
-		dicParam.addValue("procPrices", procPrices);
-		dicParam.addValue("matUnitPrice", matUnitPrice);
-		dicParam.addValue("changerName", changerName);
-		dicParam.addValue("userId", userId);
-		dicParam.addValue("type", type);
-		dicParam.addValue("formerUnitPrice", null);
-
-		String sql = """
-            select id, "UnitPrice"
-            from mat_comp_uprice
-            where "Material_id" = :materialId
-            and "Company_id" = :companyId
-            and :applyStartDate between "ApplyStartDate" and "ApplyEndDate"
-            """;
-
-		Map<String, Object> item = this.sqlRunner.getRow(sql, dicParam);
-
-		if(!MapUtils.isEmpty(item)) {
-			dicParam.addValue("formerUnitPrice", CommonUtil.tryFloatNull(item.get("UnitPrice")));
+		// fallback: type 기반
+		if (unitPrice == null) {
+			if ("01".equals(type)) unitPrice = buyUnitPrice;
+			else if ("02".equals(type)) unitPrice = sellUnitPrice;
 		}
 
-		sql = """
-        update mat_comp_uprice
-        set "ApplyEndDate" = :applyEndDate
+		if (unitPrice == null) {
+			throw new IllegalArgumentException("단가(UnitPrice, UnitPrices)가 없습니다.");
+		}
+
+		BigDecimal partPrices  = toBD2(data.get("partPrices"));
+		BigDecimal procPrices  = toBD2(data.get("procPrices"));
+
+		// 시작일: yyyy-MM-ddTHH:mm:ss
+		String applyStartDateStr = CommonUtil.tryString(data.get("ApplyStartDate"));
+		LocalDateTime startLdt = LocalDateTime.parse(applyStartDateStr, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+		Timestamp applyStartDate = Timestamp.valueOf(startLdt);
+
+		Integer userId = CommonUtil.tryIntNull(data.get("user_id"));
+		String changerName = CommonUtil.tryString(data.get("ChangerName"));
+
+		MapSqlParameterSource dic = new MapSqlParameterSource()
+				.addValue("materialId", materialId)
+				.addValue("companyId", companyId)
+				.addValue("type", type)
+				.addValue("applyStartDate", applyStartDate)
+				.addValue("unitPrice", unitPrice)
+				.addValue("partPrices", partPrices)
+				.addValue("procPrices", procPrices)
+				.addValue("changerName", changerName)
+				.addValue("userId", userId);
+
+
+		// -----------------------------------------------------
+		// 2. 기존 적용 구간(rowA) 찾기: applyStartDate가 포함된 row
+		// -----------------------------------------------------
+		String findOldSql = """
+        select id, "UnitPrice", "ApplyStartDate", "ApplyEndDate"
+        from mat_comp_uprice
         where "Material_id" = :materialId
-        and "Company_id" = :companyId
-        and :applyStartDate between "ApplyStartDate" and "ApplyEndDate"
-        """;
+          and "Company_id" = :companyId
+          and "Type" = :type
+          and :applyStartDate between "ApplyStartDate" and "ApplyEndDate"
+        limit 1
+    """;
 
-		this.sqlRunner.execute(sql, dicParam);
+		Map<String, Object> oldRow = sqlRunner.getRow(findOldSql, dic);
 
-		sql = """
-        update material
-        set "UnitPrice" = :matUnitPrice
-        where "id" = :materialId
-        """;
 
-		this.sqlRunner.execute(sql, dicParam);
+		// -----------------------------------------------------
+		// 3. 마지막 row(rowB) 찾기: ApplyEndDate = 2100-12-31
+		// -----------------------------------------------------
+		String lastRowSql = """
+        select id, "ApplyStartDate"
+        from mat_comp_uprice
+        where "Material_id" = :materialId
+          and "Company_id" = :companyId
+          and "Type" = :type
+          and "ApplyEndDate" = '2100-12-31'
+        limit 1
+    """;
 
-		sql = """
-            INSERT INTO public.mat_comp_uprice
-            ("_created"
-            , "_creater_id"
-            , "Material_id"
-            , "Company_id"
-            , "ApplyStartDate"
-            , "ApplyEndDate"
-            , "UnitPrice"
-            , "FormerUnitPrice"
-            , "ChangeDate"
-            , "ChangerName"
-            , "Type"
-            , "PartPrices"
-            , "ProcPrices"
-            )
-            VALUES(
-            now()
-            , :userId
-            , :materialId 
-            , :companyId
-            , :applyStartDate
-            , :applyEndDate2
-            , :unitPrice
-            , :formerUnitPrice
-            , now()
-            , :changerName 
-            , :type
-            , :partPrices
-            , :procPrices
-            )
-            """;
-		return this.sqlRunner.execute(sql, dicParam);
+		Map<String, Object> lastRow = sqlRunner.getRow(lastRowSql, dic);
+
+		Timestamp lastStart = lastRow != null
+				? (Timestamp) lastRow.get("ApplyStartDate")
+				: null;
+
+
+		// -----------------------------------------------------
+		// 4. formerUnitPrice 설정
+		// -----------------------------------------------------
+		BigDecimal formerUnitPrice = oldRow != null
+				? toBD2(oldRow.get("UnitPrice"))
+				: null;
+
+
+		// -----------------------------------------------------
+		// 5. 기존 row 종료일 변경
+		// -----------------------------------------------------
+		if (oldRow != null) {
+			Timestamp oldEndDate = Timestamp.valueOf(startLdt.minusDays(1));
+
+			dic.addValue("oldId", oldRow.get("id"));
+			dic.addValue("oldEndDate", oldEndDate);
+
+			sqlRunner.execute("""
+            update mat_comp_uprice
+            set "ApplyEndDate" = :oldEndDate
+            where id = :oldId
+        """, dic);
+		}
+
+
+		// -----------------------------------------------------
+		// 6. 신규 row는 항상 2100-12-31로 삽입
+		// -----------------------------------------------------
+		Timestamp applyEndDate2 =
+				Timestamp.valueOf(LocalDateTime.of(2100, 12, 31, 0, 0));
+
+		dic.addValue("applyEndDate2", applyEndDate2);
+		dic.addValue("formerUnitPrice", formerUnitPrice);
+
+
+		// -----------------------------------------------------
+		// 7. 신규 단가 INSERT (_created / _creater_id 포함)
+		// -----------------------------------------------------
+		String insertSql = """
+        INSERT INTO mat_comp_uprice
+        ("_created", "_creater_id",
+         "Material_id", "Company_id",
+         "ApplyStartDate", "ApplyEndDate",
+         "UnitPrice", "FormerUnitPrice",
+         "ChangeDate", "ChangerName",
+         "Type", "PartPrices", "ProcPrices")
+        VALUES (
+         now(), :userId,
+         :materialId, :companyId,
+         :applyStartDate, :applyEndDate2,
+         :unitPrice, :formerUnitPrice,
+         now(), :changerName,
+         :type, :partPrices, :procPrices
+        )
+    """;
+
+		return sqlRunner.execute(insertSql, dic);
 	}
-	
+
+
+	// BigDecimal 소수 둘째자리 반올림
+	private BigDecimal toBD2(Object v) {
+		if (v == null) return null;
+		try {
+			return new BigDecimal(v.toString()).setScale(2, RoundingMode.HALF_UP);
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
 	public int updateCompanyUnitPrice(MultiValueMap<String, Object> data){
 		Integer priceId = CommonUtil.tryIntNull(data.getFirst("price_id"));
 		Timestamp applyStartDate = CommonUtil.tryTimestamp(data.getFirst("ApplyStartDate"));
-		Float unitPrice = CommonUtil.tryFloatNull(data.getFirst("UnitPrices"));
-		Float partPrices = CommonUtil.tryFloatNull(data.getFirst("partPrices"));
-		Float procPrices = CommonUtil.tryFloatNull(data.getFirst("procPrices"));
-		Float matUnitPrice = CommonUtil.tryFloatNull(data.getFirst("UnitPrice"));
+
+		// 화면 Form에서 구분:
+		// 매입 → UnitPrice
+		// 매출 → UnitPrices
+		BigDecimal buyUnitPrice   = round2BD(data.getFirst("UnitPrice"));   // 매입
+		BigDecimal sellUnitPrice  = round2BD(data.getFirst("UnitPrices"));  // 매출
+
+		BigDecimal partPrices = round2BD(data.getFirst("partPrices"));
+		BigDecimal procPrices = round2BD(data.getFirst("procPrices"));
+		String type = CommonUtil.tryString(data.getFirst("type"));
 		String changerName = CommonUtil.tryString(data.getFirst("ChangerName"));
 		Integer userId = CommonUtil.tryIntNull(data.getFirst("user_id").toString());
-		
+
+		// type 에 맞게 DB에 들어갈 최종 단가 결정
+		BigDecimal finalUnitPrice = null;
+
+		if ("01".equals(type)) {
+			// 매입 → UnitPrice 필드 사용
+			finalUnitPrice = buyUnitPrice;
+		} else {
+			// 매출 → UnitPrices 필드 사용
+			finalUnitPrice = sellUnitPrice;
+		}
+
 		MapSqlParameterSource dicParam = new MapSqlParameterSource();
 		dicParam.addValue("priceId", priceId);
 		dicParam.addValue("applyStartDate", applyStartDate, java.sql.Types.TIMESTAMP);
-		dicParam.addValue("unitPrice", unitPrice);
+		dicParam.addValue("unitPrice", finalUnitPrice);
 		dicParam.addValue("partPrices", partPrices);
 		dicParam.addValue("procPrices", procPrices);
-		dicParam.addValue("matUnitPrice", matUnitPrice);
 		dicParam.addValue("changerName", changerName);
 		dicParam.addValue("userId", userId);
 
-		String sql = """
-				UPDATE material m
-				SET "UnitPrice" = :matUnitPrice
-				WHERE m."id" = (
-				    SELECT u."Material_id"
-				    FROM mat_comp_uprice u
-				    WHERE u."id" = :priceId
-				);
+		String sql;
+
+		if ("01".equals(type)) {
+			sql = """
+            update mat_comp_uprice
+            set
+                "UnitPrice" = :unitPrice,
+                "PartPrices" = null,
+                "ProcPrices" = null,
+                "ApplyStartDate" = :applyStartDate,
+                "ChangeDate" = now(),
+                "ChangerName" = :changerName
+            where id = :priceId
         """;
-
-		this.sqlRunner.execute(sql, dicParam);
-
-		sql = """
-			update mat_comp_uprice
-			set "FormerUnitPrice" = "UnitPrice"
-			, "UnitPrice" = :unitPrice
-			, "PartPrices" = :unitPrice
-			, "ProcPrices" = :unitPrice
-			, "ApplyStartDate" = :applyStartDate
-			, "ChangeDate" = now()
-			, "ChangerName" = :changerName
-			where id = :priceId
+		} else { // "02" 매출
+			sql = """
+            update mat_comp_uprice
+            set
+                "UnitPrice" = :unitPrice,
+                "PartPrices" = :partPrices,
+                "ProcPrices" = :procPrices,
+                "ApplyStartDate" = :applyStartDate,
+                "ChangeDate" = now(),
+                "ChangerName" = :changerName
+            where id = :priceId
         """;
-
+		}
 
 		return this.sqlRunner.execute(sql, dicParam);
 	}
-	
-	public int deleteCompanyUnitPrice(int priceId){
-		
-		MapSqlParameterSource dicParam = new MapSqlParameterSource();        
-		dicParam.addValue("priceId", priceId);
-        
-        String sql = """
-				select id, "Material_id", "Company_id", to_char("ApplyStartDate",'yyyy-mm-dd') as "ApplyStartDate"
-	            from mat_comp_uprice
-	            where id = :priceId
-				""";
-		
-		Map<String, Object> item = this.sqlRunner.getRow(sql, dicParam);
-		
-    	sql = " delete from mat_comp_uprice where id = :priceId";
-    	this.sqlRunner.execute(sql, dicParam);
-    	
-    	dicParam.addValue("materialId", CommonUtil.tryIntNull(item.get("Material_id")));
-    	dicParam.addValue("companyId", CommonUtil.tryIntNull(item.get("Company_id")));
-    	dicParam.addValue("applyStartDate", CommonUtil.tryTimestamp(item.get("ApplyStartDate")), java.sql.Types.TIMESTAMP);
 
-		sql = """
-    			UPDATE material m
-				SET "UnitPrice" = null
-				WHERE m."id" = :materialId
-    			""";
-
-		this.sqlRunner.execute(sql, dicParam);
-    	
-    	sql = """
-    			update mat_comp_uprice
-	            set "ApplyEndDate" = '2100-12-31'
-	            where "Material_id" = :materialId
-	            and "Company_id" = :companyId
-	            and "ApplyEndDate" = (:applyStartDate)::timestamp - interval '1 days'
-    			""";
-    	
-    	return this.sqlRunner.execute(sql, dicParam);
+	private BigDecimal round2BD(Object value) {
+		if (value == null) return null;
+		try {
+			return new BigDecimal(value.toString())
+					.setScale(2, RoundingMode.HALF_UP);
+		} catch (Exception e) {
+			return null;
+		}
 	}
+
+
+	public int deleteCompanyUnitPrice(int priceId) {
+
+		// 1️⃣ 삭제 대상 row 조회
+		MapSqlParameterSource dic = new MapSqlParameterSource()
+				.addValue("priceId", priceId);
+
+		String sql = """
+        select id,
+               "Material_id",
+               "Company_id",
+               "Type",
+               "ApplyStartDate",
+               "ApplyEndDate"
+        from mat_comp_uprice
+        where id = :priceId
+    """;
+
+		Map<String, Object> del = sqlRunner.getRow(sql, dic);
+		if (del == null) return 0;
+
+		Integer materialId = CommonUtil.tryIntNull(del.get("Material_id"));
+		Integer companyId  = CommonUtil.tryIntNull(del.get("Company_id"));
+		String type        = CommonUtil.tryString(del.get("Type"));
+		Timestamp delStart = (Timestamp) del.get("ApplyStartDate");
+		Timestamp delEnd   = (Timestamp) del.get("ApplyEndDate");
+
+		dic.addValue("materialId", materialId);
+		dic.addValue("companyId",  companyId);
+		dic.addValue("type",       type);
+		dic.addValue("delStart",   delStart);
+
+		// ---------------------------------------------
+		// 🔥 2️⃣ 먼저 이전/다음 row 조회 (type 포함!)
+		// ---------------------------------------------
+
+		// 이전 row (삭제된 row보다 시작일이 작은 것 중 가장 최신)
+		sql = """
+        select id, "ApplyStartDate", "ApplyEndDate"
+        from mat_comp_uprice
+        where "Material_id" = :materialId
+          and "Company_id"  = :companyId
+          and "Type"        = :type
+          and "ApplyStartDate" < :delStart
+        order by "ApplyStartDate" desc
+        limit 1
+    """;
+		Map<String, Object> prev = sqlRunner.getRow(sql, dic);
+
+		// 다음 row (삭제된 row보다 시작일이 큰 것 중 가장 빠른 것)
+		sql = """
+        select id, "ApplyStartDate", "ApplyEndDate"
+        from mat_comp_uprice
+        where "Material_id" = :materialId
+          and "Company_id"  = :companyId
+          and "Type"        = :type
+          and "ApplyStartDate" > :delStart
+        order by "ApplyStartDate" asc
+        limit 1
+    """;
+		Map<String, Object> next = sqlRunner.getRow(sql, dic);
+
+		// "마지막 row" 여부는 → next 가 없으면 마지막
+		boolean isLastRow = (next == null);
+
+		// 3️⃣ 삭제
+		sqlRunner.execute("delete from mat_comp_uprice where id = :priceId", dic);
+
+		// 4️⃣ material.UnitPrice 초기화 (필요 없다면 이 부분은 제거 가능)
+		sqlRunner.execute("""
+        update material
+        set "UnitPrice" = null
+        where id = :materialId
+    """, dic);
+
+		// ---------------------------------------------
+		// 🔥 5️⃣ 마지막 row 삭제 → 이전 row를 2100-12-31로 승격
+		// ---------------------------------------------
+		if (isLastRow) {
+			if (prev != null) {
+				dic.addValue("prevId", prev.get("id"));
+				sqlRunner.execute("""
+                update mat_comp_uprice
+                set "ApplyEndDate" = '2100-12-31'
+                where id = :prevId
+            """, dic);
+			}
+			return 1;
+		}
+
+		// ---------------------------------------------
+		// 🔥 6️⃣ 중간 row 삭제 → 이전 row 종료일 = 다음 row 시작 -1
+		// ---------------------------------------------
+		if (prev != null && next != null) {
+			Timestamp nextStart = (Timestamp) next.get("ApplyStartDate");
+
+			LocalDateTime endLdt = nextStart.toLocalDateTime().minusDays(1);
+			Timestamp newEnd = Timestamp.valueOf(endLdt);
+
+			dic.addValue("prevId", prev.get("id"));
+			dic.addValue("newEnd", newEnd);
+
+			sqlRunner.execute("""
+            update mat_comp_uprice
+            set "ApplyEndDate" = :newEnd
+            where id = :prevId
+        """, dic);
+		}
+
+		// 7️⃣ 첫 row 삭제 등 나머지는 그냥 삭제만
+		return 1;
+	}
+
+
 }

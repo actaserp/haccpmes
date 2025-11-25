@@ -311,9 +311,9 @@
                 <th>품목코드</th>
                 <th>품목</th>
                 <th>수량</th>
-                <th>단가 (체크박스 선택시 부과세 포함)</th>
+                <th>단가 (체크박스 선택시 부가세 포함)</th>
                 <th>공급가액</th>
-                <th>부과세</th>
+                <th>부가세</th>
                 <th>합계</th>
                 <th>비고</th>
                 <th>상태</th>
@@ -341,7 +341,7 @@
               <td><input type="text" name="quantity" placeholder="수량" /></td>
               <td>
                 <div class="input-with-checkbox">
-                  <input type="text" name="BaljuUnitPrice" min="0" placeholder="단가" />
+                  <input type="text" name="BaljuUnitPrice" placeholder="단가" />
                   <input type="hidden" name="originalUnitPrice" value="" />
                   <input type="checkbox" id="VatIncluded" name="VatIncluded" checked />
                 </div>
@@ -497,10 +497,11 @@
       bind: function ({rowSelector, $content, tryShowBaljuPrice}) {
         const $row = $(rowSelector);
 
+
         // 숫자 포맷 적용 대상 필드들
         const formatFields = [
           'input[name^="quantity_"]',
-          'input[name^="BaljuUnitPrice_"]',
+          // 'input[name^="BaljuUnitPrice_"]', 소수점 허용
           'input[name^="BaljuPrice_"]',
           'input[name^="BaljuVat_"]',
           'input[name^="totalAmount_"]'
@@ -658,9 +659,9 @@
             {binding: 'product_name', header: '제품명', width: 210},
             {binding: 'unit', header: '단위', width: 60, align: 'center'},
             {binding: 'SujuQty', header: '수량', width: 100, align: 'right', format: 'n0'},
-            {binding: 'BaljuUnitPrice', header: '단가', width: 100, align: 'right'},
+            {binding: 'BaljuUnitPrice', header: '단가', width: 100, align: 'right', format: 'n2'},
             {binding: 'BaljuPrice', header: '공급가', width: 100, align: 'right'},
-            {binding: 'BaljuVat', header: '부과세', width: 100, align: 'right'},
+            {binding: 'BaljuVat', header: '부가세', width: 100, align: 'right'},
             {binding: 'BaljuTotalPrice', header: '발주액', width: 100, align: 'right'},
             {binding: 'bh_StateName', header: '상태', width: 80, align: 'center'},
             {binding: 'SujuQty2', header: '기입고수량', width: 100, align: 'right'},
@@ -1585,56 +1586,70 @@
 
       if (isSupplyEdited || isVatEdited) {
         const sVal = parseFloat($supply.val().replace(/,/g, '') || '0');
-        let vVal = $vat.val() === '면세' ? 0 : parseFloat($vat.val().replace(/,/g, '') || '0');
+
+        // 면세면 VAT=0, 아니면 숫자로 파싱
+        let vVal = ($vat.val() === '면세')
+                ? 0
+                : round0(parseFloat($vat.val().replace(/,/g, '') || '0'));
 
         if (!isVatExempt && isVatIncluded && !isVatEdited) {
-          // 공급가만 입력했는데 부가세 포함이면 자동 계산
-          vat = Math.round(sVal * 0.1);
-          supplyPrice = sVal;
-          totalPrice = supplyPrice + vat;
+          // 공급가만 입력 + VAT 포함 → 자동 계산
+          vat = sVal * 0.1;
+          supplyPrice = round0(sVal);
+          totalPrice = round0(supplyPrice + vat);
+
         } else if (!isVatExempt && !isVatIncluded && !isVatEdited) {
-          // 공급가만 입력, 부가세 별도 계산
-          vat = Math.round(sVal * 0.1);
-          supplyPrice = sVal;
-          totalPrice = supplyPrice + vat;
+          // 공급가만 입력 + VAT 별도 → 자동 계산
+          vat = sVal * 0.1;
+          supplyPrice = round0(sVal);
+          totalPrice = round0(supplyPrice + vat);
+
         } else {
-          // 수동 입력 우선 처리
-          supplyPrice = sVal;
+          // 수동 입력
+          supplyPrice = round0(sVal);
           vat = vVal;
-          totalPrice = supplyPrice + vat;
+          totalPrice = round0(supplyPrice + vat);
         }
+
       } else {
         // 자동 계산
         if (isVatExempt) {
-          supplyPrice = unitPrice * qty;
+          supplyPrice = round0(unitPrice * qty);
           vat = 0;
           totalPrice = supplyPrice;
+
         } else if (isVatIncluded) {
-          totalPrice = unitPrice * qty;
-          supplyPrice = Math.round(totalPrice * 10 / 11);
+          totalPrice = round0(unitPrice * qty);
+          supplyPrice = round0(totalPrice * 10 / 11);
           vat = totalPrice - supplyPrice;
+
         } else {
-          supplyPrice = unitPrice * qty;
-          vat = Math.round(supplyPrice * 0.1);
-          totalPrice = supplyPrice + vat;
+          supplyPrice = round0(unitPrice * qty);
+          vat = supplyPrice * 0.1;
+          totalPrice = round0(supplyPrice + vat);
         }
       }
 
+
       // 값 반영 및 포맷
-      $unitPrice.val(unitPrice);
-      formatNumberInput(unitPrice.toString(), $unitPrice);
+      // $unitPrice.val(unitPrice);
+      // formatNumberInput(unitPrice.toString(), $unitPrice);
 
       $supply.val(supplyPrice);
-      formatNumberInput(supplyPrice.toString(), $supply);
+      // formatNumberInput(supplyPrice.toString(), $supply);
 
       $vat.val(vat === 0 && isVatExempt ? '면세' : vat);
-      if (!isVatExempt) formatNumberInput(vat.toString(), $vat);
+      // if (!isVatExempt) formatNumberInput(vat.toString(), $vat);
 
       if ($row.data('totalEdited') !== true) {
         $total.val(totalPrice);
-        formatNumberInput(totalPrice.toString(), $total);
+        // formatNumberInput(totalPrice.toString(), $total);
       }
 
+    }
+
+    function round0(val) {
+      return Math.round(val); // 원 단위 반올림
     }
 
     function updateBaljuTotalPrice($content) {

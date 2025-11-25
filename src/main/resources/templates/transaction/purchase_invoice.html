@@ -561,7 +561,7 @@
                 $content.find('#btnSelectInvoicer').click(function () {
 
                     let poppage = new PopCompComponentCustom();
-                    let result = AjaxUtil.getSyncData('/api/popup/search_Comp_Custom', {spjangcd : getSpjangcdFromSession() });
+                    let result = AjaxUtil.getSyncData('/api/popup/search_Comp_Custom_Purchase', {spjangcd : getSpjangcdFromSession() });
 
                     let searchcallback = function (items) {
 
@@ -584,7 +584,7 @@
                 // 검색 버튼(지급 거래처 조회)
                 $content.find('#btnSelectPaymentCorp').click(function () {
                     let poppage = new PopCompComponentCustom();
-                    let result = AjaxUtil.getSyncData('/api/popup/search_Comp_Custom', { spjangcd : getSpjangcdFromSession() });
+                    let result = AjaxUtil.getSyncData('/api/popup/search_Comp_Custom_Purchase', { spjangcd : getSpjangcdFromSession() });
 
                     let searchcallback = function (items) {
                         $content.find('#PaymentCorpID').val(items.id);
@@ -608,7 +608,7 @@
 
                     const value = $content.find('#InvoicerCorpName').val();
                     let poppage = new PopCompComponentCustom(value);
-                    let result = AjaxUtil.getSyncData('/api/popup/search_Comp_Custom', { item2 : value, spjangcd : getSpjangcdFromSession() });
+                    let result = AjaxUtil.getSyncData('/api/popup/search_Comp_Custom_Purchase', { item2 : value, spjangcd : getSpjangcdFromSession() });
 
                     let searchcallback = function (items) {
 
@@ -636,7 +636,7 @@
 
                     const value = $content.find('#PaymentCorpName').val();
                     let poppage = new PopCompComponentCustom(value);
-                    let result = AjaxUtil.getSyncData('/api/popup/search_Comp_Custom', { item2 : value, spjangcd : getSpjangcdFromSession() });
+                    let result = AjaxUtil.getSyncData('/api/popup/search_Comp_Custom_Purchase', { item2 : value, spjangcd : getSpjangcdFromSession() });
 
                     let searchcallback = function (items) {
 
@@ -870,7 +870,7 @@
 
             let poppage = new PopCompComponentCustom(value);
 
-            let result = AjaxUtil.getSyncData('/api/popup/search_Comp_Custom', { item2 : value, spjangcd : getSpjangcdFromSession() });
+            let result = AjaxUtil.getSyncData('/api/popup/search_Comp_Custom_Purchase', { item2 : value, spjangcd : getSpjangcdFromSession() });
 
             let searchcallback = function (items) {
 

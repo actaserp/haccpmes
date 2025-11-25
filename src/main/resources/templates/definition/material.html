@@ -776,8 +776,6 @@
                                                 <select id="type" name="type" class="wp100">
                                                     <option value="01">매입</option>
                                                     <option value="02">매출</option>
-                                                    <option value="03">단가정보</option>
-                                                    <option value="04">가공비</option>
                                                 </select>
                                             </td>
                                             <th>
@@ -1130,7 +1128,7 @@
                         }
                     },
                     columns: [
-                        {binding: 'CompanyName', header: '업체명', width: '*', align: 'left',},
+                        {binding: 'CompanyName', header: '업체', width: 120, align: 'center',},
                         {binding: 'type', header: '구분', width: 120, align: 'center',},
                         {binding: 'UnitPrice', header: '단가', width: 120, align: 'right',},
                         {binding: 'FormerUnitPrice', header: '이전단가', width: 120, align: 'right',},
@@ -1414,6 +1412,7 @@
                     $('#btnPriceUpdate').prop('disabled', true);
                     $('#btnPriceDelete').prop('disabled', true);
                 }
+                this.setTypeFields();
 
             }
 
@@ -1674,6 +1673,8 @@
 
                     $('#companyPriceForm')[0].reset();
                     $('#companyPriceForm').find('#price_id').val('');
+
+                    _this.setTypeFields();   // ← 추가 (type별 필드 활성/비활성)
                     $('#companyPriceForm').find('input, select').each(function () {
                         if (!$(this).is(':disabled')) {
                             $(this).attr('disabled', 'disabled');
@@ -1713,53 +1714,70 @@
             showPriceDetail(idx) {
                 let param = {'price_id': idx};
                 let result = AjaxUtil.getSyncData(this.url + '/detailPrice', param);
+
                 if (result != null) {
-                    console.log(result.data);
+                    let data = result.data;
 
-                    // 소수점 2자리 고정 처리
-                    if (result.data.UnitPrice != null) {
-                        result.data.UnitPrice = parseFloat(result.data.UnitPrice).toFixed(2);
+                    // 숫자값 소수점 처리
+                    ["UnitPrice", "partPrices", "procPrices", "UnitPrices"].forEach(key => {
+                        if (data[key] != null) data[key] = parseFloat(data[key]).toFixed(2);
+                    });
+
+                    // ★ 먼저 모든 입력 초기화 (기존 값 남지 않게)
+                    $("#UnitPrice").val("").prop("disabled", true);
+                    $("#partPrices").val("").prop("disabled", true);
+                    $("#procPrices").val("").prop("disabled", true);
+                    $("#UnitPrices").val("").prop("disabled", true);
+                    $("#ApplyStartDate").prop("disabled", false);
+                    $("#Company_id").prop("disabled", false);
+                    $("#type").prop("disabled", false);
+
+                    // ★ type 구분
+                    let type = data.type; // "01" 또는 "02"
+
+                    if (type === "01") {  // 매입
+                        $('#UnitPrice').prop("disabled", false).val(data.UnitPrices ?? "");
+                        $('#partPrices').prop("disabled", true).val("");
+                        $('#procPrices').prop("disabled", true).val("");
+                        $('#UnitPrices').prop("disabled", true).val("");
                     }
-                    if (result.data.partPrices != null) {
-                        result.data.partPrices = parseFloat(result.data.partPrices).toFixed(2);
-                    }
-                    if (result.data.procPrices != null) {
-                        result.data.procPrices = parseFloat(result.data.procPrices).toFixed(2);
-                    }
-                    if (result.data.UnitPrices != null) {
-                        result.data.UnitPrices = parseFloat(result.data.UnitPrices).toFixed(2);
+                    else if (type === "02") { // 매출
+                        $('#UnitPrice').prop("disabled", true).val("");
+                        $('#partPrices').prop("disabled", false).val(data.partPrices ?? "");
+                        $('#procPrices').prop("disabled", false).val(data.procPrices ?? "");
+                        $('#UnitPrices').prop("disabled", false).val(data.UnitPrices ?? "");
                     }
 
-                    // 품목구분 제품, 자재에 따라서 input disabled 특정값 활성화
-                    if(result.data.MaterialType === 'product'){
-                        delete result.data.UnitPrice;
-                    }else if(result.data.MaterialType === 'jajae'){
-                        delete result.data.partPrices;
-                        delete result.data.procPrices;
-                    }
-                    FormUtil.BindDataForm(result.data, $('#companyPriceForm'));
-
-                    // ApplyStartDate를 UTC에서 한국시간(KST)으로 변환하여 datetime-local 포맷으로 설정
-                    let applyStartDate = result.data.ApplyStartDate;
-                    if (applyStartDate) {
-                        let date = new Date(applyStartDate);
+                    // 날짜 처리
+                    if (data.ApplyStartDate) {
+                        let date = new Date(data.ApplyStartDate);
                         date.setHours(date.getHours() + 9);
-
-                        // YYYY-MM-DD 형식으로 변환
-                        let formattedDate = date.toISOString().substring(0, 10);
-
-                        $('#ApplyStartDate').val(formattedDate);
+                        $('#ApplyStartDate').val(date.toISOString().substring(0, 10));
                     }
 
+                    $('#price_id').val(data.price_id).prop("disabled", false);
+
+                    // Company_id
+                    $('#Company_id').val(data.Company_id);
+
+                    // type
+                    $('#type').val(data.type);
+
+                    // ApplyStartDate (KST 변환된 값 이미 반영)
+                    if (data.ApplyStartDate) {
+                        let date = new Date(data.ApplyStartDate);
+                        date.setHours(date.getHours() + 9);
+                        $('#ApplyStartDate').val(date.toISOString().substring(0, 10));
+                    }
                 }
 
                 this.setPriceButtonState();
             }
 
+
             // 단가 정보 등록/변경
             savePriceData() {
                 let _this = this;
-                let validate = true;
                 let $target = null;
                 let mat_id = $('#matBasicForm').find('#id').val();
                 let url = this.url + '/savePrice';
@@ -1789,23 +1807,23 @@
                     }
                 };
 
-                $('#companyPriceForm').find('input, select').each(function () {
-                    if ($(this).is(':required')) {
-                        if (!$(this).val()) {
-                            validate = false;
-                            $target = $(this);
-                            return false;
-                        }
-                    }
-                });
+                let companyId = data.Company_id;
+                let buyUnit = parseFloat(data.UnitPrice || '0');
+                let sellUnit = parseFloat(data.UnitPrices || '0');
 
-                if (validate) {
-                    AjaxUtil.postAsyncData(url, data, fnSuccess);
-                } else {
-                    Alert.alert('', '필수 항목을 입력해주세요.', function () {
-                        $target.focus();
-                    });
+                // ▷ 1) 업체 선택됐는지 확인
+                if (!companyId || companyId === '0') {
+                    Alert.alert('', '업체를 선택해주세요.');
+                    return;
                 }
+
+                // ▷ 2) 단가가 입력되지 않은 경우
+                if ((isNaN(buyUnit) || buyUnit === 0) && (isNaN(sellUnit) || sellUnit === 0)) {
+                    Alert.alert('', '단가를 입력해주세요.');
+                    return;
+                }
+                AjaxUtil.postJsonData(url, data, fnSuccess);
+
             }
 
             // 단가 정보 수정
@@ -2095,7 +2113,24 @@
                             let item = s.rows[e.row].dataItem;
 
                             if (col.binding === "type") {
-                                e.cell.textContent = (item.type === '01') ? '매입' : '매출';
+                                let text = '';
+                                switch (item.type) {
+                                    case '01':
+                                        text = '매입';
+                                        break;
+                                    case '02':
+                                        text = '매출';
+                                        break;
+                                    case '03':
+                                        text = '단가정보';
+                                        break;
+                                    case '04':
+                                        text = '가공비';
+                                        break;
+                                    default:
+                                        text = '';
+                                }
+                                e.cell.textContent = text;
                             }
                         }
                     });
@@ -2107,8 +2142,30 @@
                 }, 0);
             }
 
+            setTypeFields() {
+                let type = $("#type").val();
+
+                // 모든 필드 초기화(기본 활성화 후 필요한 것만 disable)
+                $("#UnitPrice").prop("disabled", false);
+                $("#partPrices").prop("disabled", false);
+                $("#procPrices").prop("disabled", false);
+                $("#UnitPrices").prop("disabled", false);
+
+                if (type === "01") {
+                    // 매입
+                    $("#partPrices").prop("disabled", true);
+                    $("#procPrices").prop("disabled", true);
+                    $("#UnitPrices").prop("disabled", true);
+                }
+                else if (type === "02") {
+                    // 매출
+                    $("#UnitPrice").prop("disabled", true);
+                }
+            }
+
 
         }
+
 
         let page = null;
 
@@ -2129,6 +2186,9 @@
                 }
             });
 
+            $("#type").on("change", function () {
+                page.setTypeFields();
+            });
 
             $('.tab_links .tab').click(function (e) {
                 let target = e.currentTarget.name;

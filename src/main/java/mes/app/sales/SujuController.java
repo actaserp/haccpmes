@@ -229,14 +229,14 @@ public class SujuController {
 			// 단가 변경 시 처리
 			Boolean unitPriceChanged = (Boolean) item.get("unitPriceChanged");
 			if (unitPriceChanged != null && unitPriceChanged) {
-				MultiValueMap<String, Object> priceData = new LinkedMultiValueMap<>();
-				priceData.add("Material_id", suju.getMaterialId());
-				priceData.add("Company_id", companyId);
-				priceData.add("UnitPrices", suju.getUnitPrice());
-				priceData.add("ApplyStartDate", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-				priceData.add("type", "02");
-				priceData.add("ChangerName", user.getUsername());
-				priceData.add("user_id", user.getId());
+				Map<String, Object> priceData = new HashMap<>();
+				priceData.put("Material_id", suju.getMaterialId());
+				priceData.put("Company_id", companyId);
+				priceData.put("UnitPrices", suju.getUnitPrice());
+				priceData.put("ApplyStartDate", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+				priceData.put("type", "02");
+				priceData.put("ChangerName", user.getUsername());
+				priceData.put("user_id", user.getId());
 
 				unitPriceService.saveCompanyUnitPrice(priceData);
 			}
@@ -523,13 +523,13 @@ public class SujuController {
 					String hhmmss = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
 					String applyStartDate = jumun_date + "T" + hhmmss;
 
-					MultiValueMap<String, Object> priceData = new LinkedMultiValueMap<>();
-					priceData.set("Material_id", material.getId());
-					priceData.set("Company_id", company.getId());
-					priceData.set("UnitPrice", unit_price.intValue()); // DB 정수형이면
-					priceData.set("ApplyStartDate", applyStartDate);
-					priceData.set("type", "02");
-					priceData.set("user_id", user.getId());
+					Map<String, Object> priceData = new HashMap<>();
+					priceData.put("Material_id", material.getId());
+					priceData.put("Company_id", company.getId());
+					priceData.put("UnitPrice", unit_price.intValue()); // DB 정수형이면
+					priceData.put("ApplyStartDate", applyStartDate);
+					priceData.put("type", "02");
+					priceData.put("user_id", user.getId());
 
 					unitPriceService.saveCompanyUnitPrice(priceData);
 				}
