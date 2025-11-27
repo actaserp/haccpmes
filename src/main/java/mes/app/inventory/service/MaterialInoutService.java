@@ -614,7 +614,13 @@ public class MaterialInoutService {
 		return itmes;
 	}
 
-	public List<Map<String, Object>> getBaljuInList(Timestamp start, Timestamp end, String spjangcd, Integer choComp, String keyword) {
+	public List<Map<String, Object>> getBaljuInList(
+			Timestamp start,
+			Timestamp end,
+			String spjangcd,
+			Integer choComp,
+			String keyword
+	) {
 
 		MapSqlParameterSource dicParam = new MapSqlParameterSource();
 		dicParam.addValue("start", start);
@@ -623,10 +629,12 @@ public class MaterialInoutService {
 		dicParam.addValue("choComp", choComp);
 		dicParam.addValue("keyword", keyword);
 
-		String sql = """
+		// 1️⃣ 발주(balju) 데이터
+		StringBuilder baljuSql = new StringBuilder("""
         select b.id
           , b."JumunNumber"
           , b."Material_id" as "Material_id"
+          , mi."inout_type" as "inout_type"
           , mg."Name" as "MaterialGroupName"
           , mg.id as "MaterialGroup_id"
           , fn_code_name('mat_type', mg."MaterialType") as "MaterialTypeName"
@@ -652,52 +660,125 @@ public class MaterialInoutService {
           , fn_code_name('shipment_state', b."ShipmentState") as "ShipmentStateName"
           , b."State"
           , to_char(b."_created", 'yyyy-mm-dd') as create_date
-          , case b."PlanTableName" when 'prod_week_term' then '주간계획' when 'bundle_head' then '임의계획' else b."PlanTableName" end as plan_state
-          from balju b
+          , case b."PlanTableName"
+              when 'prod_week_term' then '주간계획'
+              when 'bundle_head' then '임의계획'
+              else b."PlanTableName"
+            end as plan_state
+        from balju b
           inner join material m on m.id = b."Material_id"
           inner join mat_grp mg on mg.id = m."MaterialGroup_id"
           left join unit u on m."Unit_id" = u.id
-          left join company c on c.id= b."Company_id"
-          LEFT JOIN (
-			   SELECT
-				   "SourceDataPk",
-				   SUM("InputQty") AS "SujuQty2"
-			   FROM mat_inout
-			   WHERE "SourceTableName" = 'balju'
-				 AND COALESCE("_status", 'a') = 'a'
-				 AND "InOut" = 'in'
-			   GROUP BY "SourceDataPk"
-		   ) mi ON mi."SourceDataPk" = b.id
-		  LEFT JOIN (
-			 SELECT
-				 "SourceDataPk",
-				 SUM("InputQty") AS "ReturnQty"
-			 FROM mat_inout
-			 WHERE "SourceTableName" = 'balju'
-			   AND COALESCE("_status", 'a') = 'a'
-			   AND "InOut" = 'return'
-			 GROUP BY "SourceDataPk"
-		 ) mi_return ON mi_return."SourceDataPk" = b.id
-          where 1 = 1
-          and b."JumunDate" between :start and :end 
-          AND COALESCE(mi."SujuQty2", 0) > 0
+          left join company c on c.id = b."Company_id"
+          left join (
+            select
+              "SourceDataPk",
+              sum("InputQty") as "SujuQty2",
+              fn_code_name('input_type', "InputType") as inout_type
+            from mat_inout
+            where "SourceTableName" = 'balju'
+              and coalesce("_status", 'a') = 'a'
+              and "InOut" = 'in'
+            group by "SourceDataPk", "InputType"
+          ) mi on mi."SourceDataPk" = b.id
+          left join (
+            select
+              "SourceDataPk",
+              sum("InputQty") as "ReturnQty"
+            from mat_inout
+            where "SourceTableName" = 'balju'
+              and coalesce("_status", 'a') = 'a'
+              and "InOut" = 'return'
+            group by "SourceDataPk"
+          ) mi_return on mi_return."SourceDataPk" = b.id
+        where 1 = 1
+          and b."JumunDate" between :start and :end
           and b.spjangcd = :spjangcd
-         """;
+    """);
 
-		if (StringUtils.isEmpty(keyword)==false) sql +=" and upper(m.\"Name\") like concat('%%',upper(:keyword),'%%') ";
-		if(choComp != null) {
-			sql += """ 
-					and b."Company_id" = :choComp
-					""";
+		if (!StringUtils.isEmpty(keyword)) {
+			baljuSql.append(" and upper(m.\"Name\") like concat('%%', upper(:keyword), '%%') ");
+		}
+		if (choComp != null) {
+			baljuSql.append("""
+            and b."Company_id" = :choComp
+        """);
 		}
 
-		sql += " order by b.\"JumunDate\" desc,  m.\"Name\" ";
+		// 2️⃣ 미발주(입고 in) 데이터 — getMaterialInoutReceipt()와 유사하게 확장
+		StringBuilder orderInSql = new StringBuilder("""
+			select 
+				cast(mi.id as bigint) as id,
+				cast(null as varchar) as "JumunNumber",
+				cast(mi."Material_id" as bigint) as "Material_id",
+				fn_code_name('input_type', mi."InputType") as "inout_type",
+				mg."Name" as "MaterialGroupName",
+				mg.id as "MaterialGroup_id",
+				fn_code_name('mat_type', mg."MaterialType") as "MaterialTypeName",
+				m.id as "Material_id",
+				m."Code" as product_code,
+				m."Name" as product_name,
+				u."Name" as unit,
+				coalesce(mi."InputQty", mi."PotentialInputQty", 0)::numeric as "SujuQty",
+				to_char(mi."InoutDate", 'yyyy-mm-dd') as "JumunDate",
+				to_char(mi."InoutDate", 'yyyy-mm-dd') as "DueDate",
+				c."Name" as "CompanyName",
+				cast(mi."Company_id" as integer) as "Company_id",
+				mi."InputType" as "SujuType",
+				fn_code_name('input_type', mi."InputType") as "BaljuTypeName",
+				cast(null as varchar) as production_plan_date,
+				cast(null as varchar) as shiment_plan_date,
+				mi."Description",
+				cast(null as numeric) as "AvailableStock",
+				cast(null as numeric) as "ReservationStock",
+				coalesce(mi."InputQty", mi."PotentialInputQty", 0)::numeric as "SujuQty2",
+				0::numeric as "ReturnQty",
+				fn_code_name('inout_state', mi."State") as "StateName",
+				cast(null as varchar) as "ShipmentStateName",
+				mi."State",
+				to_char(mi."_created", 'yyyy-mm-dd') as create_date,
+				'미발주입고' as plan_state
+			from mat_inout mi
+				inner join material m on m.id = mi."Material_id"
+				inner join mat_grp mg on mg.id = m."MaterialGroup_id"
+				left join unit u on m."Unit_id" = u.id
+				left join company c on c.id = mi."Company_id"
+			where 1 = 1
+				and mi."InOut" in ('in', 'return')  -- ✅ getMaterialInoutReceipt()처럼 변경
+				and coalesce(lower(mi."_status"), 'a') = 'a'  -- ✅ 활성 상태만
+				and m."Useyn" = '0'                           -- ✅ 활성 자재만
+				and mi."InoutDate" between cast(:start as date) and cast(:end as date)
+				and lower(mi.spjangcd) = lower(:spjangcd)
+		""");
 
-//    log.info("발주 read SQL: {}", sql);
-//    log.info("SQL Parameters: {}", dicParam.getValues());
-		List<Map<String, Object>> itmes = this.sqlRunner.getRows(sql, dicParam);
+				if (!StringUtils.isEmpty(keyword)) {
+					orderInSql.append(" and upper(m.\"Name\") like concat('%%', upper(:keyword), '%%') ");
+				}
+				if (choComp != null) {
+					orderInSql.append("""
+				and mi."Company_id" = :choComp
+			""");
+		}
 
-		return itmes;
+		// ✅ 발주건과 미발주건(모든 in/return) 통합 조회
+				String sql = """
+			with balju_data as (
+			""" + baljuSql + """
+			), order_in_data as (
+			""" + orderInSql + """
+			)
+			select * from (
+			  select * from balju_data
+			  union all
+			  select * from order_in_data
+			) all_data
+			order by "JumunDate" desc, product_name
+		""";
+
+		List<Map<String, Object>> items = this.sqlRunner.getRows(sql, dicParam);
+		return items;
+
 	}
+
 
 }

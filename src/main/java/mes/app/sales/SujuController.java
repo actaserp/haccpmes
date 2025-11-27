@@ -288,11 +288,11 @@ public class SujuController {
 			@RequestParam("id") Integer id,
 			@RequestParam("State") String State,
 			@RequestParam("ShipmentStateName") String ShipmentStateName) {
-		
+
 		AjaxResult result = new AjaxResult();
-		
-		if (State.equals("received")==false) {
-			//received 아닌것만
+
+		if (State.equals("received")==false && State.equals("force_completion")==false) {
+			//received(수주상태) 아닌것 또는 force_completion(강제완료상태)가 아닌것 은 삭제할 수 없도록
 			result.success = false;
 			result.message = "수주상태만 삭제할 수 있습니다";
 			return result;
@@ -306,7 +306,7 @@ public class SujuController {
 		SujuRepository.deleteBySujuHeadId(id);
 		sujuHeadRepository.deleteById(id);
 		broadcaster.sendEvent("refresh", "update");
-		
+
 		return result;
 	}
 

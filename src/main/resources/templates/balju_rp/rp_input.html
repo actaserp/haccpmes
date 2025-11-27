@@ -1834,18 +1834,53 @@
                 });
 
                 $content.find('#btnBaljuReturnSave').on('click', function () {
-
-                    let url = _this.url + '/save_balju_return';
                     let items = _this.baljuReturnGrid.rows
                         .filter(row => row.isSelected)
                         .map(row => row.dataItem);
-
-                    console.log(items);
 
                     if (!items || items.length === 0) {
                         Alert.alert('', '반품할 항목을 선택하세요.');
                         return;
                     }
+
+                    const row = items[0]; // 한 건만 처리
+                    console.log('선택된 데이터:', row);
+
+                    // ✅ 미발주입고(구매입고)인 경우
+                    if (row.inout_type === '구매입고') {
+
+                        // 1️⃣ tab2의 폼 요소 채우기
+                        $('#mio_pk').val(row.mio_pk || '');
+                        $('#inoutDate').val(new Date().toISOString().slice(0, 16)); // 현재시간
+                        $('#InoutType').val(row.inout_type || '구매입고');
+                        $('#InoutType_hidden').val(row.inout_type || '구매입고');
+
+                        $('#cboCompany').val(row.Company_id || '');
+                        $('#CompanyName').val(row.CompanyName || '');
+
+                        $('#cboMaterialType').val(row.MaterialType || '');
+                        $('#cboMaterialTypeName').val(row.MaterialTypeName || '');
+                        $('#cboMaterialGroup').val(row.MaterialGroup_id || '');
+                        $('#cboMaterialGroupName').val(row.MaterialGroupName || '');
+
+                        $('#Material_id').val(row.Material_id || '');
+                        $('#Material_name').val(row.product_name || row.material_name || '');
+
+                        $('#InoutQty').val(Math.abs(row.returnQty || 0)); // 절대값으로 표시
+                        $('#StoreHouse_id').val(row.StoreHouse_id || '');
+                        $('#Description').val(row.Description || '');
+
+                        // 2️⃣ 탭 전환
+                        $('.tab-links a[href="#tab2"]').trigger('click');
+
+                        // 3️⃣ 반품 사유 입력칸 포커스
+                        $('#Description').focus();
+
+                        return; // ✅ Ajax 저장 호출은 안 하고 바로 종료
+                    }
+
+                    // 🔹 구매입고 외의 경우는 기존 반품 저장 로직 수행
+                    let url = _this.url + '/save_balju_return';
 
                     for (let i = 0; i < items.length; i++) {
                         const row = items[i];
@@ -1860,7 +1895,6 @@
                             return;
                         }
 
-                        // 수정: 음수만 허용되도록 체크
                         if (isNaN(row.returnQty) || Number(row.returnQty) >= 0) {
                             Alert.alert('', '반품 수량은 0보다 작은 숫자여야 합니다.');
                             return;
@@ -1879,6 +1913,7 @@
 
                     AjaxUtil.postJsonAsyncData(url, items, fnSuccess);
                 });
+
 
             }
 
