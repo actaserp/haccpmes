@@ -2033,7 +2033,8 @@ public class SalesInvoiceService {
                 	m.iverbizclass,
                 	m.supplycost,
                     m.taxtotal,
-                 	m.totalamt
+                 	m.totalamt,
+                 	TO_CHAR(TO_DATE(m.misdate, 'YYYYMMDD'), 'YYYY-MM-DD') AS misdate_fmt
                 FROM tb_salesment m
                 WHERE m.misnum = :misnum
                 """;

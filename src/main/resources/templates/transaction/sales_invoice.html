@@ -686,12 +686,13 @@
               <th style="border: none; padding: 0; width: 7%;"></th>
               <th style="border: none; padding: 0; width: 12%;"></th>
             </tr>
-
-
             <tr>
-                <td colspan="10" style="text-align: center; font-weight: bold; height: 35px;">
+                <td colspan="8" style="text-align: center; font-weight: bold; height: 35px;">
                    <span style="font-size: 16px;">거래 명세서</span>
                    <span style="font-size: 12px;">(공급받는자용)</span>
+                </td>
+                <td colspan="2"  style="text-align: left;">
+                   <span>날짜 : ${misdate_fmt} </span>
                 </td>
               </tr>
 
@@ -726,9 +727,9 @@
           <!-- 열 너비 고정용 헤더 -->
           <tr style="height: 0; font-size: 0; line-height: 0; border: none;">
             <th style="border: none; padding: 0; width: 5%;"></th>   <!-- No -->
-            <th style="border: none; padding: 0; width: 6%;"></th>   <!-- 월 -->
-            <th style="border: none; padding: 0; width: 6%;"></th>   <!-- 일 -->
-            <th style="border: none; padding: 0; width: 23%;"></th>  <!-- 품목 -->
+<!--            <th style="border: none; padding: 0; width: 6%;"></th>   &lt;!&ndash; 월 &ndash;&gt;-->
+<!--            <th style="border: none; padding: 0; width: 6%;"></th>   &lt;!&ndash; 일 &ndash;&gt;-->
+            <th style="border: none; padding: 0; width: 35%;"></th>  <!-- 품목 -->
             <th style="border: none; padding: 0; width: 8%;"></th>   <!-- 수량 -->
             <th style="border: none; padding: 0; width: 10%;"></th>  <!-- 단가 -->
             <th style="border: none; padding: 0; width: 12%;"></th>  <!-- 공급가액 -->
@@ -741,8 +742,8 @@
             </tr>
             <tr style="background-color: #EDEFF5;">
                 <th>No</th>
-                <th>월</th>
-                <th>일</th>
+<!--                <th>월</th>-->
+<!--                <th>일</th>-->
                 <th>품목</th>
                 <th>수량</th>
                 <th>단가</th>
@@ -1149,7 +1150,7 @@
                     printWindow.onload = function () {
                         printWindow.focus();
                         printWindow.print();
-                        setTimeout(() => printWindow.close(), 300);
+                        // setTimeout(() => printWindow.close(), 300);
                     };
                 });
 
@@ -1165,7 +1166,7 @@
 
                 function renderInvoiceHtml(data) {
                     let template = document.getElementById('writPrint_Template').innerHTML;
-
+                    console.log('renderInvoiceHtml(data)', data);
                     function formatNumber(value) {
                         if (value == null || value === '') return '';
                         return Number(value).toLocaleString();
@@ -1198,8 +1199,6 @@
                             const tr = document.createElement('tr');
                             tr.innerHTML = `
                                     <td>${i + 1}</td>
-                                    <td>${item.month || ''}</td>
-                                    <td>${item.day || ''}</td>
                                     <td class="text-left">${item.name || ''}</td>
                                     <td>${formatNumber(item.qty)}</td>
                                     <td class="text-right">${formatNumber(item.unitcost)}</td>
@@ -1211,19 +1210,27 @@
                         }
                     }
 
-                    const tfoot = tempDiv.querySelector('tfoot tr');
+                    const tfoot = tempDiv.querySelector('tfoot');
                     if (tfoot) {
                         tfoot.innerHTML = `
-                          <td colspan="4" style="text-align: center; font-weight: bold;">합계</td>
-                          <td style="text-align: center;">${formatNumber(totalQty)}</td>
-                          <td> </td>
-                          <td style="text-align: right;">${formatNumber(data.supplycost)}</td>
-                          <td style="text-align: right;">${formatNumber(data.taxtotal)}</td>
-                          <td colspan="2" style="text-align: right;">${formatNumber(data.totalamt)}</td>
-                        `;
-                                    }
+                        <tr>
+                            <td colspan="2" style="text-align: center; font-weight: bold;">합계</td>
+                            <td style="text-align: center;">${formatNumber(totalQty)}</td>
+                            <td></td>
+                            <td style="text-align: right;">${formatNumber(data.supplycost)}</td>
+                            <td style="text-align: right;">${formatNumber(data.taxtotal)}</td>
+                            <td colspan="2" style="text-align: right;">${formatNumber(data.totalamt)}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="8" style="text-align:right; padding-top:10px; font-weight:bold;">
+                                인수자: _________________________________
+                            </td>
+                        </tr>
+                    `;
+                    }
 
                     return tempDiv.innerHTML;
+
                 }
 
                 // 수정 클릭
