@@ -1371,6 +1371,14 @@
                 }
 
                 let fnSuccess = function (res) {
+                    if (res.message === 'duplicate_business_number') {
+                        Alert.alert('', '이미 등록된 사업자번호입니다.');
+                        return;
+                    } else if (res.message !== 'success') {
+                        Alert.alert('', '저장 중 오류가 발생했습니다.');
+                        return;
+                    }
+
                     Alert.alert('','저장되었습니다');
                     _this.searchMainData1();
                     setTimeout(() => {

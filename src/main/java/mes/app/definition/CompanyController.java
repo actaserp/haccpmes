@@ -10,6 +10,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.groovy.parser.antlr4.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -118,56 +119,70 @@ public class CompanyController {
 			HttpServletRequest request,
 			Authentication auth ) {
 		User user = (User)auth.getPrincipal();
-		
-		Company company = null;
-		
-		if (id==null) {
-			company = new Company();
-		}else {
-			company = this.companyRepository.getCompnayById(id);
-		}
-		//기본정보
-		company.setName(name);
-		company.setCompanyType(CompanyType);
-		company.setEngName(EngName);
-		company.setCode(compCode);
-		company.setCode2(compCode2);
-		company.setBusinessNumber(businessNumber);
-		company.setTelNumber(telNumber);
-		company.setFaxNumber(faxNumber);
-		company.setBusinessType(businessType);
-		company.setCEOName(ceoName);
-		company.setEmail(email);
-		company.setHomePage(homepage);
-		company.setBusinessItem(businessItem);
-		company.setGroupName(groupName);
-		company.setZipCode(zipCode);
-		company.setAddress(address);
-		company.setDescription(description);
-		company.setRelyn(String.valueOf("1".equals(relyn) ? 1 : 0));
-		//관리정보
-		company.setOurManager(ourManager);
-		company.setSalesManager(salesManager);
-		company.setFirstTradingDay(!StringUtils.isEmpty(firstTradingDay) ? Date.valueOf(firstTradingDay) : null);
-		company.setPurchaseSalesDeadline(purchaseSalesDeadline);
-		company.setAccountManager(accountManager);
-		company.setAccountManagerPhone(accountManagerPhone);
-		company.setLastTradingDay(!StringUtils.isEmpty(lastTradingDay) ?Date.valueOf(lastTradingDay) : null);
-		company.setReceivableAmount(!StringUtils.isEmpty(receivableAmount) ? Float.valueOf(receivableAmount) : null);
-		company.setUnpaidAmount(!StringUtils.isEmpty(unpaidAmount) ? Float.valueOf(unpaidAmount) : null);
-		/*company.setCreditLimitAmount(!StringUtils.isEmpty(creditLimitAmount) ? Float.valueOf(creditLimitAmount) : null);*/
-		company.setTrandingBank(trandingBank);
-		company.setAccountHolder(accountHolder);
-		company.setAccountNumber(accountNumber);
-		company.setPaymentCondition(paymentCondition);
-		company.setManageRemark(manageRemark);
-		company.set_audit(user);
-		company.setSpjangcd(spjangcd);
-
-		company = this.companyRepository.save(company);
-		
 		AjaxResult result = new AjaxResult();
-        result.data=company;
+
+		try {
+
+			Company company = null;
+
+			if (id==null) {
+				company = new Company();
+			}else {
+				company = this.companyRepository.getCompnayById(id);
+			}
+			//기본정보
+			company.setName(name);
+			company.setCompanyType(CompanyType);
+			company.setEngName(EngName);
+			company.setCode(compCode);
+			company.setCode2(compCode2);
+			company.setBusinessNumber(businessNumber);
+			company.setTelNumber(telNumber);
+			company.setFaxNumber(faxNumber);
+			company.setBusinessType(businessType);
+			company.setCEOName(ceoName);
+			company.setEmail(email);
+			company.setHomePage(homepage);
+			company.setBusinessItem(businessItem);
+			company.setGroupName(groupName);
+			company.setZipCode(zipCode);
+			company.setAddress(address);
+			company.setDescription(description);
+			company.setRelyn(String.valueOf("1".equals(relyn) ? 1 : 0));
+			//관리정보
+			company.setOurManager(ourManager);
+			company.setSalesManager(salesManager);
+			company.setFirstTradingDay(!StringUtils.isEmpty(firstTradingDay) ? Date.valueOf(firstTradingDay) : null);
+			company.setPurchaseSalesDeadline(purchaseSalesDeadline);
+			company.setAccountManager(accountManager);
+			company.setAccountManagerPhone(accountManagerPhone);
+			company.setLastTradingDay(!StringUtils.isEmpty(lastTradingDay) ?Date.valueOf(lastTradingDay) : null);
+			company.setReceivableAmount(!StringUtils.isEmpty(receivableAmount) ? Float.valueOf(receivableAmount) : null);
+			company.setUnpaidAmount(!StringUtils.isEmpty(unpaidAmount) ? Float.valueOf(unpaidAmount) : null);
+			/*company.setCreditLimitAmount(!StringUtils.isEmpty(creditLimitAmount) ? Float.valueOf(creditLimitAmount) : null);*/
+			company.setTrandingBank(trandingBank);
+			company.setAccountHolder(accountHolder);
+			company.setAccountNumber(accountNumber);
+			company.setPaymentCondition(paymentCondition);
+			company.setManageRemark(manageRemark);
+			company.set_audit(user);
+			company.setSpjangcd(spjangcd);
+
+			company = this.companyRepository.save(company);
+
+
+			result.data=company;
+		} catch (DataIntegrityViolationException e) {
+			// PostgreSQL 고유 제약 조건 위반 시
+			Throwable root = e.getRootCause();
+			if (root != null && root.getMessage() != null && root.getMessage().contains("company_BusinessNumber")) {
+				result.message = "duplicate_business_number";
+			} else {
+				result.message = "data_integrity_violation";
+			}
+		} catch (Exception e) {
+			result.message = "error";
+		}
 		return result;
 	}
 	
