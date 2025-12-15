@@ -303,6 +303,7 @@
                         { binding: 'mat_name', header: '품목 명', width: '*', align: 'left' },
                         { binding: 'unit_name', header: '단위', width: 80, align: 'center' },
                         { binding: 'requ_qty', header: '소요량', width: 70, align: 'right' },
+                        { binding: 'requ_qty_loss', header: '로스포함', width: 70, align: 'right' },
                         { binding: 'cur_stock', header: '창고 재고', width: 120, align: 'right' },
                         { binding: 'process_stock', header: '공정창고 재고', width: 150, align: 'right', isReadOnly: true, visible: false },
                         { binding: 'proc_safety_stock', header: '공정안전재고', width: 150, align: 'right', isReadOnly: true, visible: false },
@@ -312,6 +313,16 @@
                         if (panel.cellType === wijmo.grid.CellType.Cell) {
                             let column = panel.columns[col];
                             let item = panel.rows[row].dataItem;
+
+                            // 로스포함
+                            if (column.binding === 'requ_qty_loss') {
+                                if (item && item.requ_qty != null) {
+                                    let lossQty = Math.ceil(item.requ_qty * 1.03);
+                                    cell.textContent = wijmo.Globalize.format(lossQty, 'n0');
+                                    cell.style.textAlign = 'right';
+                                }
+                                return;
+                            }
 
                             if (item && column.binding === 'cur_stock') {
                                 // 'cur_stock'이 'requ_qty'보다 작으면 배경색 변경
