@@ -2615,8 +2615,11 @@
                         });
                         return;
                     }
-                    if (!data.TotalAmount || data.TotalAmount === '0') {
-
+                    if (
+                        data.TotalAmount === null ||
+                        data.TotalAmount === undefined ||
+                        data.TotalAmount === ''
+                    ) {
                         Alert.alert('', '금액이 없습니다.');
                         return;
                     }
