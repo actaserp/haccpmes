@@ -233,6 +233,22 @@
                                     </ul>
                                 </dd>
                             </dl>
+                            <dl>
+                                <dt>
+                                    <label for="cboInout">
+                                        입출<span class="eq"></span>
+                                    </label>
+                                </dt>
+                                <dd>
+                                    <div class="srch-box">
+                                        <select id="cboInout" name="cboInout" style="width:130px;">
+                                            <option value>전체</option>
+                                            <option value="in">입고</option>
+                                            <option value="return">반품</option>
+                                        </select>
+                                    </div>
+                                </dd>
+                            </dl>
 
                             <dl>
                                 <dt>
@@ -242,7 +258,7 @@
                                 </dt>
                                 <dd>
                                     <div class="srch-box">
-                                        <select id="cboHouse" name="cboHouse">
+                                        <select id="cboHouse" name="cboHouse" style="width:130px;">
                                         </select>
                                     </div>
                                 </dd>
@@ -256,7 +272,7 @@
                                 </dt>
                                 <dd>
                                     <div class="srch-box">
-                                        <select id="cboMatType" name="cboMatType">
+                                        <select id="cboMatType" name="cboMatType" style="width:130px;">
                                         </select>
                                     </div>
                                 </dd>
@@ -270,7 +286,7 @@
                                 </dt>
                                 <dd>
                                     <div class="srch-box">
-                                        <select id="cboMatGroup" name="cboMatGroup">
+                                        <select id="cboMatGroup" name="cboMatGroup" style="width:130px;">
                                         </select>
                                     </div>
                                 </dd>
@@ -348,6 +364,14 @@
                         <li>
                             <a class="btn" title="로트 입고 등록" id="btnLotInput">
                                 로트 입고 등록
+                            </a>
+                        </li>
+                        <li>
+                            <a class="btn"
+                               id="btnReturnPrint"
+                               title="반품명세서 출력"
+                               style="pointer-events:none; opacity:0.4; cursor:not-allowed;">
+                                반품명세서 출력
                             </a>
                         </li>
                     </ul>
@@ -1125,6 +1149,8 @@
         <div style="width:auto;height;0px;page-break-before:always;line-height:5px;">&nbsp;</div>
 
     </script>
+
+
 </th:block>
 
 
@@ -1161,7 +1187,7 @@
                         }
                     },
                     columns: [
-                        // {binding: 'mio_pk', header: '입고번호', width: 80, align: 'center'},
+                        {binding: 'mio_pk', header: '입고번호', width: 80, align: 'center', visible: false},
                         {binding: 'store_house_name', header: '창고', width: 80, align: 'center'},
                         {binding: 'inout', header: '입출', width: 60, align: 'center'},
                         {binding: 'material_type', header: '품목유형', width: 80, align: 'center'},
@@ -1219,6 +1245,26 @@
                     }
                 });
 
+                this.grid.selectionChanged.addHandler((s, e) => {
+                    const row = s.selection.row;
+
+                    // 선택 안 된 경우
+                    if (row < 0) {
+                        _this.disableReturnPrintButton();
+                        return;
+                    }
+
+                    const item = s.rows[row].dataItem;
+
+                    // inout 값 기준 (서버에서 내려온 값 확인)
+                    // 예: '입고' / '반품'  또는  'in' / 'return'
+                    if (item.inout === '반품' || item.inout === 'return') {
+                        _this.enableReturnPrintButton();
+                    } else {
+                        _this.disableReturnPrintButton();
+                    }
+                });
+
 
                 // 로트입고 버튼 클릭
                 document.getElementById('btnLotInput').addEventListener('click', () => {
@@ -1229,6 +1275,206 @@
                 document.getElementById('btnInputTest').addEventListener('click', () => {
                     this.showInputTestPopup();
                 });
+
+                document.getElementById('btnReturnPrint').addEventListener('click', () => {
+                    const row = this.grid.selection.row;
+                    if (row < 0) {
+                        alert('반품 내역을 선택하세요.');
+                        return;
+                    }
+
+                    const item = this.grid.rows[row].dataItem;
+                    const mioPk = item.mio_pk;
+
+                    AjaxUtil.getAsyncData('/api/inventory/material_inout/matinout_detail', { mio_pk: mioPk }, (res) => {
+                        if (!res || !res.data || res.data.length === 0) {
+                            alert('상세 정보를 불러올 수 없습니다.');
+                            return;
+                        }
+
+                        const detail = res.data[0]; // 단건
+                        console.log('detail', detail);
+
+                        const printWindow = window.open('', '_blank', 'width=850,height=1000');
+                        printWindow.document.open();
+                        printWindow.document.write(_this.buildReturnPrintHtml(detail));
+                        printWindow.document.close();
+
+                        printWindow.onload = function () {
+                            printWindow.focus();
+                            printWindow.print();
+                            setTimeout(() => printWindow.close(), 300);
+                        };
+                    });
+                });
+
+            }
+
+            enableReturnPrintButton() {
+                const btn = document.getElementById('btnReturnPrint');
+                btn.style.pointerEvents = 'auto';
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            }
+
+            disableReturnPrintButton() {
+                const btn = document.getElementById('btnReturnPrint');
+                btn.style.pointerEvents = 'none';
+                btn.style.opacity = '0.4';
+                btn.style.cursor = 'not-allowed';
+            }
+
+            buildReturnSlip(d) {
+                return `
+                <div class="slip">
+                    <h2>반 품 명 세 서</h2>
+
+                    <table>
+                        <tr>
+                            <th>입출구분</th>
+                            <td>${d.inout ?? ''}</td>
+                            <th>반품일자</th>
+                            <td>${d.Inout_Date ?? ''} ${d.InoutTime ?? ''}</td>
+                        </tr>
+                        <tr>
+                            <th>창고</th>
+                            <td>${d.store_house_name ?? ''}</td>
+                            <th>거래처</th>
+                            <td>${d.CompanyName ?? ''}</td>
+                        </tr>
+                    </table>
+
+                    <table>
+                        <tr>
+                            <th>품목코드</th>
+                            <td>${d.Material_code ?? ''}</td>
+                            <th>품목명</th>
+                            <td>${d.Material_name ?? ''}</td>
+                        </tr>
+                        <tr>
+                            <th>반품수량</th>
+                            <td class="tar">
+                              ${Math.abs(Number(d.InputQty ?? 0)).toLocaleString()}
+                            </td>
+                            <th>단위</th>
+                            <td>${d.unit_name ?? ''}</td>
+                        </tr>
+                        <tr>
+                            <th>비고</th>
+                            <td colspan="3">${d.Description ?? ''}</td>
+                        </tr>
+                    </table>
+
+                    <div class="sign">
+                        인수자 : ______________________ (서명)
+                    </div>
+                </div>
+                `;
+            }
+
+            buildReturnPrintHtml(d) {
+                const _this = this;
+                const slipHtml = _this.buildReturnSlip(d);
+
+                return `
+                <!DOCTYPE html>
+                <html lang="ko">
+                <head>
+                <meta charset="UTF-8">
+                <title>반품 명세서</title>
+
+                <style>
+                @page {
+                    size: A4;
+                    margin: 12mm;
+                }
+
+                body {
+                    margin: 0;
+                    font-family: "Malgun Gothic", sans-serif;
+                    font-size: 12px;
+                    color: #000;
+                }
+
+                .print-a4 {
+                    width: 210mm;
+                    height: 297mm;
+                    box-sizing: border-box;
+                }
+
+                .slip {
+                    height: 146mm;
+                    padding: 8mm 10mm;   /* ✅ 좌우 여백 */
+                    box-sizing: border-box;
+                }
+
+                h2 {
+                    text-align: center;
+                    margin: 0 0 12px 0;
+                    font-size: 18px;
+                    letter-spacing: 2px;
+                }
+
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 8px;
+                }
+
+                th, td {
+                    border: 1px solid #333;
+                    padding: 6px;
+                }
+
+                th {
+                    background: #f2f2f2;
+                    text-align: center;
+                    width: 15%;
+                }
+
+                .tar {
+                    text-align: right;
+                }
+
+                .sign {
+                    margin-top: 15px;
+                    font-size: 13px;
+                }
+
+                .cut-line {
+                    border-top: 2px dashed #666;
+                    margin: 0;
+                    text-align: center;
+                    font-size: 11px;
+                    color: #666;
+                    position: relative;
+                }
+
+                .cut-line span {
+                    background: #fff;
+                    padding: 0 8px;
+                    position: relative;
+                    top: -9px;
+                }
+
+                </style>
+                </head>
+
+                <body>
+                <div class="print-a4">
+
+                    ${slipHtml}
+
+                    <div class="cut-line">
+                        <span>절 취 선</span>
+                    </div>
+
+                    ${slipHtml}
+
+                </div>
+                </body>
+                </html>
+                `;
             }
 
             modify(selectedItem) {
@@ -1259,12 +1505,14 @@
                 let _this = this;
                 let srchStartDt = $('#searchForm').find("#srchStartDt").val();
                 let srchEndDt = $('#searchForm').find("#srchEndDt").val();
+                let inout = $('#searchForm').find('#cboInout').val();
                 let house_pk = $('#searchForm').find('#cboHouse').val();
                 let mat_type = $('#searchForm').find('#cboMatType').val();
                 let mat_grp_pk = $('#searchForm').find('#cboMatGroup').val();
                 let txtMatName = $('#searchForm').find('#txtMatName').val();
                 let data = {
                     'action': 'read',
+                    'inout': inout,
                     'srchStartDt': srchStartDt,
                     'srchEndDt': srchEndDt,
                     'house_pk': house_pk,
@@ -3071,6 +3319,10 @@
                 page.searchDataBind();
             });
             $('#searchForm').find('#cboHouse').change(function (e) {
+                page.searchDataBind();
+            });
+
+            $('#searchForm').find('#cboInout').change(function (e) {
                 page.searchDataBind();
             });
             // 미발주 입고

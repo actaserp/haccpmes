@@ -101,12 +101,13 @@ public class MaterialInoutService {
         return items;
 	}
 
-	public List<Map<String, Object>> getMaterialInoutReceipt(String srchStartDt, String srchEndDt, String housePk,
+	public List<Map<String, Object>> getMaterialInoutReceipt(String srchStartDt, String srchEndDt, String inout, String housePk,
 													  String matType, String matGrpPk, String keyword, String spjangcd) {
 
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		param.addValue("srchStartDt", srchStartDt);
 		param.addValue("srchEndDt", srchEndDt);
+		param.addValue("inout", inout);
 		param.addValue("housePk", housePk);
 		param.addValue("matType", matType);
 		param.addValue("matGrpPk", matGrpPk);
@@ -167,7 +168,12 @@ public class MaterialInoutService {
                     where 1 = 1
                     and m."Useyn" = '0'
                     AND mi."InOut" IN ('in', 'return')
-                    --and sh."HouseType" = 'material'
+						AND (
+							:inout IS NULL
+							OR :inout = ''
+							OR mi."InOut" = :inout
+						)
+					--and sh."HouseType" = 'material'
                     and mi."InoutDate" between cast(:srchStartDt as date) and cast(:srchEndDt as date)
                     and mi.spjangcd = :spjangcd
 				""";
@@ -375,7 +381,7 @@ public class MaterialInoutService {
 	                    when mi."InOut" = 'recall' then fn_code_name('recall_type', mi."OutputType")
 	                    when mi."InOut" = 'return' then fn_code_name('return_type', mi."InputType")
 	                    end as inout_type
-                    , to_char(mi."InoutDate",'yyyy-mm-dd ') as "InoutDate"
+                    , to_char(mi."InoutDate",'yyyy-mm-dd ') as "Inout_Date"
                     , to_char(mi."InoutTime", 'hh24:mi') as "InoutTime"
                     , sh."Name" as "store_house_name"
                     , m."Code" as "Material_code"

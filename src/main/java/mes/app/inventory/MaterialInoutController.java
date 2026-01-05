@@ -91,13 +91,14 @@ public class MaterialInoutController {
 	public AjaxResult getMaterialInout_receipt(
 			@RequestParam(value = "srchStartDt", required=false) String srchStartDt,
 			@RequestParam(value = "srchEndDt", required=false) String srchEndDt,
+			@RequestParam(value = "inout", required=false) String inout,
 			@RequestParam(value = "house_pk", required=false) String housePk,
 			@RequestParam(value = "mat_type", required=false) String matType,
 			@RequestParam(value = "mat_grp_pk", required=false) String matGrpPk,
 			@RequestParam(value = "spjangcd", required=false) String spjangcd,
 			@RequestParam(value = "keyword", required=false) String keyword) {
 
-		List<Map<String, Object>> items = this.materialInoutService.getMaterialInoutReceipt(srchStartDt,srchEndDt,housePk,matType,matGrpPk,keyword,spjangcd);
+		List<Map<String, Object>> items = this.materialInoutService.getMaterialInoutReceipt(srchStartDt,srchEndDt,inout,housePk,matType,matGrpPk,keyword,spjangcd);
 
 		AjaxResult result = new AjaxResult();
 		result.data = items;
