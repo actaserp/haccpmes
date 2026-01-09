@@ -182,6 +182,9 @@
                                     const result = AjaxUtil.postSyncData(url, param);
                                     if (result.data?.id) {
                                         Alert.alert('', '저장했습니다.');
+                                        item.real_stock = null;
+                                        item.gap = null;
+                                        item.gap_description = '';
                                         item.last_take_date = result.data.takeTime;
                                         s.invalidate(); // 그리드 다시 그리기
                                     }
@@ -200,14 +203,24 @@
                         }
                     }
                 },
-                cellEditEnded: (s, e) => { // cellEditEnding -> cellEditEnded
+                cellEditEnded: (s, e) => {
                     const column = s.columns[e.col];
                     const item = s.rows[e.row].dataItem;
 
                     if (column.binding === 'real_stock') {
-                        if (item.real_stock != null && item.account_stock != null) {
-                            item.gap = item.real_stock - item.account_stock;
+                        const account = item.account_stock ?? 0; // ⭐ null → 0
+                        const real = item.real_stock;
+
+                        if (real != null) {
+                            item.gap = real - account;
+
+                            // ⭐ 초기재고 자동 처리
+                            if (item.account_stock == null) {
+                                item.gap_description = '초기재고';
+                            }
                         }
+
+                        s.invalidate(); // 화면 갱신
                     }
                 },
                 columns: [
@@ -218,6 +231,7 @@
                     { binding: 'mat_name', header: '품목명', width: 200, align: 'left', isReadOnly: true },
                     { binding: 'manage_level', header: '관리등급', width: 100, align: 'center', isReadOnly: true },
                     { binding: 'unit_name', header: '단위', width: 100, align: 'center', isReadOnly: true },
+                    { binding: 'house_nm', header: '창고', width: 100, align: 'center', isReadOnly: true },
                     { binding: 'account_stock', header: '장부재고', width: 100, align: 'right', isReadOnly: true },
                     { binding: 'real_stock', header: '실사재고', width: 100, align: 'right', isReadOnly: false, },
                     { binding: 'gap', header: '차이', width: 80, align: 'right', isReadOnly: true },
@@ -241,6 +255,7 @@
             };
             let result = AjaxUtil.getSyncData(gUrl + '/read', data);
             if (result.data) {
+                console.log('result.data', result.data);
                 _this.grid.itemsSource.sourceCollection = result.data;
             }
         }
@@ -253,7 +268,7 @@
         AjaxUtil.fillSelectOptions($('#cboMaterialType'), 'system_code', 'all', false, 'mat_type');
         AjaxUtil.fillSelectOptions($('#cboManageLevel'), 'user_code', 'all', false, 'mat_manage_level');
         AjaxUtil.fillSelectOptions($('#cboMaterialGroup'), 'material_group', 'all', false);
-        AjaxUtil.fillSelectOptions($('#cboStoreHouse'), 'store_house', '', false);
+        AjaxUtil.fillSelectOptions($('#cboStoreHouse'), 'store_house', 'all', false);
         $('#cboMaterialType').on('change', function (e) {
             let mat_type = $('#cboMaterialType').val();
             AjaxUtil.fillSelectOptions($('#cboMaterialGroup'), 'material_group', 'all', false, mat_type);

@@ -151,6 +151,7 @@ public class MaterialInoutService {
                     , var."StateName" as "state_name"
                     , tir."JudgeCode" as judge_code
                     , m."LotUseYN" as lot_use
+                    , c."Name" as "CompanyName"
                     from mat_inout mi 
                     inner join material m on mi."Material_id" = m.id
                     left join mat_grp mg on mg.id = m."MaterialGroup_id"
@@ -165,6 +166,7 @@ public class MaterialInoutService {
                     left join v_appr_result var on var."SourceDataPk" = bh.id and var."SourceTableName" ='bundle_head'
                     left join test_result tr on tr."SourceDataPk"  = mi.id and tr."SourceTableName" = 'mat_inout'
                     left join test_item_result tir on tr.id = tir."TestResult_id"
+                    left join company c on c.id= mi."Company_id"
                     where 1 = 1
                     and m."Useyn" = '0'
                     AND mi."InOut" IN ('in', 'return')

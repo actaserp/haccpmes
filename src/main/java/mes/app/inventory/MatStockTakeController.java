@@ -62,9 +62,9 @@ public class MatStockTakeController {
 	public AjaxResult saveMatStockTake(
 			@RequestParam(value="mat_pk", required=false) Integer mat_pk,
 			@RequestParam(value="house_pk", required=false) Integer house_pk,
-			@RequestParam(value="account_stock", required=false) float account_stock,
-			@RequestParam(value="real_stock", required=false) float real_stock,
-			@RequestParam(value="gap", required=false) float gap,
+			@RequestParam(value="account_stock", required=false) Float account_stock,
+			@RequestParam(value="real_stock", required=false) Float real_stock,
+			@RequestParam(value="gap", required=false) Float gap,
 			@RequestParam(value="description", required=false) String description,
 			@RequestParam("spjangcd") String spjangcd,
 			HttpServletRequest request,

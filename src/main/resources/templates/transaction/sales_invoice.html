@@ -2524,13 +2524,15 @@
                         $row.find('textarea[id$=".ItemName"]').val(item.Name || '');
                         $row.find('textarea[id$=".Spec"]').val(item.Spec || '');
 
-                        const company_id = $('#InvoiceeID').val();
-                        const today = new Date().getFullYear().toString();
-                        const month = $row.find('input[id$=".PurchaseDT1"]').val() || '01';
-                        const day = $row.find('input[id$=".PurchaseDT2"]').val() || '01';
-                        const JumunDate = `${today}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                        setTimeout(() => {
+                            const company_id = $('#InvoiceeID').val();
+                            const today = new Date().getFullYear().toString();
+                            const month = $row.find('input[id$=".PurchaseDT1"]').val() || '01';
+                            const day = $row.find('input[id$=".PurchaseDT2"]').val() || '01';
+                            const JumunDate = `${today}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 
-                        tryShowPrice(item.id, company_id, $row, JumunDate);
+                            tryShowPrice(item.id, company_id, $row, JumunDate);
+                        }, 0);
                     };
 
                     if (!keyword) {
@@ -2562,20 +2564,31 @@
                 $(document).off('click', 'a[id^="btnViewItem_"]').on('click', 'a[id^="btnViewItem_"]', function (e) {
                     e.preventDefault();
 
-                    const $btn = $(this);
-                    const $row = $btn.closest('tr');
+                    const $row = $(this).closest('tr');
 
                     const pop = new PopMatComponent();
                     pop.material_type = 'product,sangpum';
 
-                    pop.show(function (item) {
+                    const callback = function (item) {
                         $row.find('input[id$=".ItemId"]').val(item.id || '');
                         $row.find('textarea[id$=".ItemName"]').val(item.Name || '');
                         $row.find('textarea[id$=".Spec"]').val(item.Spec || '');
-                    });
 
+                        setTimeout(() => {
+                            const company_id = $('#InvoiceeID').val();
+                            const today = new Date().getFullYear().toString();
+                            const month = $row.find('input[id$=".PurchaseDT1"]').val() || '01';
+                            const day = $row.find('input[id$=".PurchaseDT2"]').val() || '01';
+                            const JumunDate = `${today}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+
+                            tryShowPrice(item.id, company_id, $row, JumunDate);
+                        }, 0);
+                    };
+
+                    pop.show(callback);
                     pop.searchDataBind();
                 });
+
 
                 if (data.shipids) {
                     if (Array.isArray(data.shipids)) {

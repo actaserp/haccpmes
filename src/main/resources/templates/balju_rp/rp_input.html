@@ -370,7 +370,7 @@
                             <a class="btn"
                                id="btnReturnPrint"
                                title="반품명세서 출력"
-                               style="pointer-events:none; opacity:0.4; cursor:not-allowed;">
+                               >
                                 반품명세서 출력
                             </a>
                         </li>
@@ -1165,6 +1165,8 @@
             constructor() {
                 this.url = '/api/inventory/material_inout';
                 this.grid = null;
+                this.isReturnPrintMode = false;
+                this.chkCol = null;
                 this.init();
             }
 
@@ -1177,7 +1179,47 @@
                     headersVisibility: wijmo.grid.HeadersVisibility.All,
                     isReadOnly: true,
                     showMarquee: true,
-                    formatItem: (sender, e) => {
+                    formatItem: (s, e) => {
+                        // 🔹 체크박스 셀
+                        // 🔹 체크박스 셀
+                        if (e.panel === s.cells && s.columns[e.col].binding === '_checked') {
+                            const item = s.rows[e.row].dataItem;
+                            e.cell.innerHTML = `<input type="checkbox" ${item._checked ? 'checked' : ''}>`;
+
+                            const cb = e.cell.querySelector('input');
+                            cb.addEventListener('click', ev => ev.stopPropagation());
+                            cb.addEventListener('change', ev => {
+
+                                // ✅ 출력 선택 모드에서만 제어
+                                if (this.isReturnPrintMode) {
+
+                                    // ❌ 반품이 아닌 경우 (입고 / in)
+                                    if (item.inout !== '반품' && item.inout !== 'return') {
+                                        ev.target.checked = false;   // 체크 원복
+                                        item._checked = false;
+
+                                        Alert.alert('', '반품 항목만 선택할 수 있습니다.');
+                                        return;
+                                    }
+                                }
+
+                                // ✅ 정상 반품 항목
+                                item._checked = ev.target.checked;
+                            });
+                            return;
+                        }
+
+                        // 🔹 체크박스 컬럼 헤더 아이콘
+                        if (
+                            e.panel === s.columnHeaders &&
+                            s.columns[e.col].binding === '_checked'
+                        ) {
+                            e.cell.innerHTML = '✓';   // ← 체크 아이콘
+                            e.cell.style.textAlign = 'center';
+                            e.cell.style.cursor = 'default';
+                            return;
+                        }
+
                         if (e.panel.cellType === wijmo.grid.CellType.RowHeader) {
                             // 헤더에 순번
                             e.cell.textContent = (e.row + 1).toString();
@@ -1235,6 +1277,17 @@
                 new FlexGridContextMenu(this.grid);
                 this.grid.downloadFileName = '자재 입출고 내역';
 
+                this.chkCol = new wijmo.grid.Column({
+                    binding: '_checked',
+                    header: '',
+                    width: 40,
+                    align: 'center',
+                    visible: false
+                });
+
+                // ✅ 3. grid 생성 후 삽입 (이게 핵심)
+                this.grid.columns.insert(0, this.chkCol);
+
                 this.grid.hostElement.addEventListener('dblclick', function (e) {
                     let ht = _this.grid.hitTest(e); // 마우스 위치 기반 셀 hit test
                     if (ht.cellType === wijmo.grid.CellType.Cell) {
@@ -1244,27 +1297,6 @@
                         _this.modify([item]); // 배열로 넘기는 걸 유지하려면 이렇게
                     }
                 });
-
-                this.grid.selectionChanged.addHandler((s, e) => {
-                    const row = s.selection.row;
-
-                    // 선택 안 된 경우
-                    if (row < 0) {
-                        _this.disableReturnPrintButton();
-                        return;
-                    }
-
-                    const item = s.rows[row].dataItem;
-
-                    // inout 값 기준 (서버에서 내려온 값 확인)
-                    // 예: '입고' / '반품'  또는  'in' / 'return'
-                    if (item.inout === '반품' || item.inout === 'return') {
-                        _this.enableReturnPrintButton();
-                    } else {
-                        _this.disableReturnPrintButton();
-                    }
-                });
-
 
                 // 로트입고 버튼 클릭
                 document.getElementById('btnLotInput').addEventListener('click', () => {
@@ -1277,205 +1309,252 @@
                 });
 
                 document.getElementById('btnReturnPrint').addEventListener('click', () => {
-                    const row = this.grid.selection.row;
-                    if (row < 0) {
-                        alert('반품 내역을 선택하세요.');
+
+                    // 1️⃣ 선택 모드 진입
+                    if (!this.isReturnPrintMode) {
+                        this.enterReturnPrintMode();
                         return;
                     }
 
-                    const item = this.grid.rows[row].dataItem;
-                    const mioPk = item.mio_pk;
+                    // 2️⃣ 체크된 항목
+                    const cv = this.grid.itemsSource;
+                    const selected = cv && cv.sourceCollection
+                        ? cv.sourceCollection.filter(item => item._checked)
+                        : [];
 
-                    AjaxUtil.getAsyncData('/api/inventory/material_inout/matinout_detail', { mio_pk: mioPk }, (res) => {
-                        if (!res || !res.data || res.data.length === 0) {
-                            alert('상세 정보를 불러올 수 없습니다.');
-                            return;
-                        }
+                    if (selected.length === 0) {
+                        alert('출력할 반품 내역을 선택하세요.');
+                        return;
+                    }
 
-                        const detail = res.data[0]; // 단건
-                        console.log('detail', detail);
+                    // 3️⃣ 거래처 동일성 체크
+                    const company = selected[0].CompanyName;
+                    const invalid = selected.find(it => it.CompanyName !== company);
 
-                        const printWindow = window.open('', '_blank', 'width=850,height=1000');
-                        printWindow.document.open();
-                        printWindow.document.write(_this.buildReturnPrintHtml(detail));
-                        printWindow.document.close();
+                    if (invalid) {
+                        Alert.alert('','거래처가 다른 항목은 함께 출력할 수 없습니다.');
+                        return;
+                    }
 
-                        printWindow.onload = function () {
-                            printWindow.focus();
-                            printWindow.print();
-                            setTimeout(() => printWindow.close(), 300);
-                        };
-                    });
+                    // 4️⃣ 출력 (그리드 데이터 그대로)
+                    const win = window.open('', '_blank', 'width=850,height=1000');
+                    win.document.open();
+                    win.document.write(this.buildReturnPrintHtmlFromGrid(selected));
+                    win.document.close();
+
+                    win.onload = () => {
+                        win.focus();
+                        win.print();
+                        setTimeout(() => win.close(), 300);
+                    };
+
+                    // 5️⃣ 모드 종료
+                    this.exitReturnPrintMode();
+                });
+
+
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && this.isReturnPrintMode) {
+                        _this.exitReturnPrintMode();
+                    }
                 });
 
             }
 
-            enableReturnPrintButton() {
-                const btn = document.getElementById('btnReturnPrint');
-                btn.style.pointerEvents = 'auto';
-                btn.style.opacity = '1';
-                btn.style.cursor = 'pointer';
+            enterReturnPrintMode() {
+                this.isReturnPrintMode = true;
+
+                // 체크박스 표시
+                this.chkCol.visible = true;
+
+                // 기존 체크 초기화
+                this.grid.itemsSource.forEach(item => item._checked = false);
+
+                // 단건 선택 방지
+                this.grid.selectionMode = wijmo.grid.SelectionMode.None;
+                this.grid.clearSelection();
+
+                this.grid.invalidate();
+
+                alert('출력할 반품 내역을 체크하세요.\n(ESC: 취소)');
             }
 
-            disableReturnPrintButton() {
-                const btn = document.getElementById('btnReturnPrint');
-                btn.style.pointerEvents = 'none';
-                btn.style.opacity = '0.4';
-                btn.style.cursor = 'not-allowed';
+            exitReturnPrintMode() {
+                this.isReturnPrintMode = false;
+
+                // 체크박스 숨김
+                this.chkCol.visible = false;
+
+                // 체크값 제거
+                this.grid.itemsSource.forEach(item => delete item._checked);
+
+                // 단일 선택 복귀
+                this.grid.selectionMode = wijmo.grid.SelectionMode.Row;
+                this.grid.clearSelection();
+
+                this.grid.invalidate();
             }
 
-            buildReturnSlip(d) {
+            buildReturnSlipCommon(first, printDate, itemRowsHtml) {
                 return `
-                <div class="slip">
-                    <h2>반 품 명 세 서</h2>
+    <div class="slip">
+        <h2>반 품 명 세 서</h2>
 
-                    <table>
-                        <tr>
-                            <th>입출구분</th>
-                            <td>${d.inout ?? ''}</td>
-                            <th>반품일자</th>
-                            <td>${d.Inout_Date ?? ''} ${d.InoutTime ?? ''}</td>
-                        </tr>
-                        <tr>
-                            <th>창고</th>
-                            <td>${d.store_house_name ?? ''}</td>
-                            <th>거래처</th>
-                            <td>${d.CompanyName ?? ''}</td>
-                        </tr>
-                    </table>
+        <table>
+            <tr>
+                <th>거래처</th>
+                <td>${first.CompanyName ?? ''}</td>
+                <th>출력일자</th>
+                <td>${printDate}</td>
+            </tr>
+        </table>
 
-                    <table>
-                        <tr>
-                            <th>품목코드</th>
-                            <td>${d.Material_code ?? ''}</td>
-                            <th>품목명</th>
-                            <td>${d.Material_name ?? ''}</td>
-                        </tr>
-                        <tr>
-                            <th>반품수량</th>
-                            <td class="tar">
-                              ${Math.abs(Number(d.InputQty ?? 0)).toLocaleString()}
-                            </td>
-                            <th>단위</th>
-                            <td>${d.unit_name ?? ''}</td>
-                        </tr>
-                        <tr>
-                            <th>비고</th>
-                            <td colspan="3">${d.Description ?? ''}</td>
-                        </tr>
-                    </table>
+        <table>
+            <thead>
+            <tr>
+                <th style="width:40px">No</th>
+                <th>품목코드</th>
+                <th>품목명</th>
+                <th style="width:90px">반품수량</th>
+                <th style="width:60px">단위</th>
+                <th>비고</th>
+            </tr>
+            </thead>
+            <tbody>
+                ${itemRowsHtml}
+            </tbody>
+        </table>
 
-                    <div class="sign">
-                        인수자 : ______________________ (서명)
-                    </div>
-                </div>
-                `;
+        <div class="sign">
+            인수자 : ______________________ (서명)
+        </div>
+    </div>
+    `;
             }
 
-            buildReturnPrintHtml(d) {
-                const _this = this;
-                const slipHtml = _this.buildReturnSlip(d);
+            buildReturnPrintHtmlFromGrid(rows) {
+
+                const first = rows[0];
+                const now = new Date();
+                const printDate =
+                    now.getFullYear() + '-' +
+                    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(now.getDate()).padStart(2, '0') + ' ' +
+                    String(now.getHours()).padStart(2, '0') + ':' +
+                    String(now.getMinutes()).padStart(2, '0');
+
+                const itemRowsHtml = rows.map((d, idx) => `
+        <tr>
+            <td style="text-align:center">${idx + 1}</td>
+            <td>${d.material_code ?? ''}</td>
+            <td>${d.material_name ?? ''}</td>
+            <td class="tar">${Math.abs(Number(d.InputQty ?? 0)).toLocaleString()}</td>
+            <td style="text-align:center">${d.unit_name ?? ''}</td>
+            <td>${d.Description ?? ''}</td>
+        </tr>
+    `).join('');
+
+                const slipHtml = this.buildReturnSlipCommon(first, printDate, itemRowsHtml);
 
                 return `
-                <!DOCTYPE html>
-                <html lang="ko">
-                <head>
-                <meta charset="UTF-8">
-                <title>반품 명세서</title>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>반품 명세서</title>
 
-                <style>
-                @page {
-                    size: A4;
-                    margin: 12mm;
-                }
+<style>
+@page {
+    size: A4;
+    margin: 12mm;
+}
 
-                body {
-                    margin: 0;
-                    font-family: "Malgun Gothic", sans-serif;
-                    font-size: 12px;
-                    color: #000;
-                }
+body {
+    margin: 0;
+    font-family: "Malgun Gothic", sans-serif;
+    font-size: 12px;
+    color: #000;
+}
 
-                .print-a4 {
-                    width: 210mm;
-                    height: 297mm;
-                    box-sizing: border-box;
-                }
+.print-a4 {
+    width: 210mm;
+    padding: 0 10mm;   /* ✅ 좌우 여백 확보 */
+    box-sizing: border-box;
+}
 
-                .slip {
-                    height: 146mm;
-                    padding: 8mm 10mm;   /* ✅ 좌우 여백 */
-                    box-sizing: border-box;
-                }
+.slip {
+    height: 132mm;
+    padding: 6mm 0;
+    box-sizing: border-box;
+}
 
-                h2 {
-                    text-align: center;
-                    margin: 0 0 12px 0;
-                    font-size: 18px;
-                    letter-spacing: 2px;
-                }
+h2 {
+    text-align: center;
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    letter-spacing: 2px;
+}
 
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-bottom: 8px;
-                }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 8px;
+}
 
-                th, td {
-                    border: 1px solid #333;
-                    padding: 6px;
-                }
+th, td {
+    border: 1px solid #333;
+    padding: 6px;
+}
 
-                th {
-                    background: #f2f2f2;
-                    text-align: center;
-                    width: 15%;
-                }
+th {
+    background: #f2f2f2;
+    text-align: center;
+}
 
-                .tar {
-                    text-align: right;
-                }
+.tar {
+    text-align: right;
+}
 
-                .sign {
-                    margin-top: 15px;
-                    font-size: 13px;
-                }
+.sign {
+    margin-top: 12px;
+    font-size: 13px;
+}
 
-                .cut-line {
-                    border-top: 2px dashed #666;
-                    margin: 0;
-                    text-align: center;
-                    font-size: 11px;
-                    color: #666;
-                    position: relative;
-                }
+.cut-line {
+    border-top: 2px dashed #666;
+    margin: 4mm 0;
+    text-align: center;
+    font-size: 11px;
+    color: #666;
+    position: relative;
+}
 
-                .cut-line span {
-                    background: #fff;
-                    padding: 0 8px;
-                    position: relative;
-                    top: -9px;
-                }
+.cut-line span {
+    background: #fff;
+    padding: 0 8px;
+    position: relative;
+    top: -9px;
+}
+</style>
+</head>
 
-                </style>
-                </head>
+<body>
+<div class="print-a4">
 
-                <body>
-                <div class="print-a4">
+    ${slipHtml}
 
-                    ${slipHtml}
+    <div class="cut-line">
+        <span>절 취 선</span>
+    </div>
 
-                    <div class="cut-line">
-                        <span>절 취 선</span>
-                    </div>
+    ${slipHtml}
 
-                    ${slipHtml}
-
-                </div>
-                </body>
-                </html>
-                `;
+</div>
+</body>
+</html>
+`;
             }
+
 
             modify(selectedItem) {
                 let _this = this;

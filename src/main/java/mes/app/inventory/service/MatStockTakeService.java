@@ -28,26 +28,45 @@ public class MatStockTakeService {
 		paramMap.addValue("manage_level", manage_level);
 		
         String sql = """
-        		with A as (
-                    select m.id as id
-                        , fn_code_name('mat_type', mg."MaterialType") as mat_type
-                        , m."ManagementLevel" as manage_level
-                        , mg."Name" as mat_grp_name
-                        , m."Code" as mat_code, m."Name" as mat_name, u."Name" as unit_name
-                        , mih."CurrentStock" as account_stock
-                        , mih."StoreHouse_id" as house_pk
-                    from material m 
-                    left join unit u on u.id = m."Unit_id" 
-                    left join mat_grp mg on mg.id = m."MaterialGroup_id" 
-                    left join mat_in_house mih on mih."Material_id" = m.id 
-                    where 1 = 1
-                    and mih."StoreHouse_id" = :house_pk
-                    and (m."LotUseYN" = 'N' or m."LotUseYN" is null)
-                    and m."Useyn" = '0'
-                    and m.spjangcd = :spjangcd
+				with A as (
+				    select
+				        m.id as id
+				        , fn_code_name('mat_type', mg."MaterialType") as mat_type
+				        , m."ManagementLevel" as manage_level
+				        , mg."Name" as mat_grp_name
+				        , m."Code" as mat_code
+				        , m."Name" as mat_name
+				        , u."Name" as unit_name
+				        , mih."CurrentStock" as account_stock
+				    
+				        -- ⭐ 창고 결정 로직
+				        , coalesce(mih."StoreHouse_id", m."StoreHouse_id") as house_pk
+				        , coalesce(si."Name", sm."Name") as house_nm
+				    
+				    from material m
+				    left join unit u on u.id = m."Unit_id"
+				    left join mat_grp mg on mg.id = m."MaterialGroup_id"
+				    
+				    left join mat_in_house mih
+				      on mih."Material_id" = m.id
+				    
+				    left join store_house si on si.id = mih."StoreHouse_id"
+				    left join store_house sm on sm.id = m."StoreHouse_id"
+				    
+				    where 1=1
+				      and (m."LotUseYN" = 'N' or m."LotUseYN" is null)
+				      and m."Useyn" = '0'
+				      and m.spjangcd = :spjangcd
+				    
+				      -- 필터는 여기서!
+				      and (
+				          cast(:house_pk as integer) is null
+				          or coalesce(mih."StoreHouse_id", m."StoreHouse_id") = :house_pk
+				      )
 	            """;
-        
-        if (StringUtils.isEmpty(mat_type) == false) {
+
+
+		if (StringUtils.isEmpty(mat_type) == false) {
         	sql += " and mg.\"MaterialType\" = :mat_type ";
         }
 
@@ -76,6 +95,7 @@ public class MatStockTakeService {
                 , A.unit_name, A.account_stock, A.house_pk
                 , substring( B.last_take,1,14) as last_take_date
                 , substring( B.last_take,15,10) as state
+                , A.house_nm
                 from A 
                 left join B on B.id = A.id
 	            order by A.mat_type, A.mat_name
