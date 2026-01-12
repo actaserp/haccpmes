@@ -172,6 +172,7 @@ public class CompanyController {
 
 
 			result.data=company;
+			result.message = "success";
 		} catch (DataIntegrityViolationException e) {
 			// PostgreSQL 고유 제약 조건 위반 시
 			Throwable root = e.getRootCause();
