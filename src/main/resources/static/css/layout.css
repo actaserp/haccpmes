@@ -1617,8 +1617,9 @@ table tr .btn table, table tr .btn-blue, table tr .btn-lightnavy {
 .card-wrap section dl dd {
     display: flex;
     align-items: center;
-    font-size: 30px;
-    font-weight: 500;
+    font-size: 20px;
+   /* font-size: 30px;
+    font-weight: 500;*/
 }
 
 .card-wrap section dl:nth-child(2) {
@@ -1630,7 +1631,8 @@ table tr .btn table, table tr .btn-blue, table tr .btn-lightnavy {
 }
 
 .card-wrap section dl:last-child dd {
-    font-size: 24px;
+    font-size: 20px;
+    /*font-size: 24px;*/
 }
 
 .card-wrap section .unit {

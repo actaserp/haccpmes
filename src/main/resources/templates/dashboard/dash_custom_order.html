@@ -1,153 +1,1456 @@
-<html layout:decorate="~{layout_page}">
+<html layout:decorate="~{layout_page}" xmlns:layout="http://www.w3.org/1999/xhtml">
+<style>
+    #chartModal .modal-content {
+        width: 80vw;
+        height: 80vh;
+        max-width: 800px;
+        max-height: 600px;
+    }
 
-<head>
-    <style>
-        .greenText span {
-            color: #66DA26;
-        }
+    #modalChartHolder {
+        width: 100%;
+        height: 100%;
+    }
 
-        .redText span {
-            color: #FF0000;
-        }
+    /* KPI wrapper */
+    .kpi-cardwrap{
+        width:100%;
+        display:flex;
+        gap:12px;
+        flex-wrap:wrap;
+        padding:0;
+    }
 
-        .grayText span {
-            color: #8C8C8C;
-        }
+    /* KPI 카드 공통 */
+    .kpi-cardwrap section{
+        flex:1;
+        min-width:240px;
+        background:#fff;
+        border:1px solid #E5E7EC;     /* 공통처럼 보더는 얇게 */
+        border-radius:14px;
+        padding:14px 18px;
+        box-shadow:none;
+        transition:none;              /* hover 확대 같은 거 제거 */
+    }
 
-        .blueText span {
-            color: #4374D9;
-        }
+    .kpi-cardwrap section:hover{
+        transform:none;
+    }
 
-        .yellowText span {
-            color: #FFE400;
-        }
+    /* 타이틀 */
+    .kpi-cardwrap section .title{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:10px;
+    }
+    .kpi-cardwrap section .title h3{
+        font-size:16px;
+        font-weight:800;
+        margin:0;
+    }
 
-        [data-ax5grid] [data-ax5grid-container="root"] [data-ax5grid-container="body"] [data-ax5grid-panel] table tr td [data-ax5grid-cellHolder] {
-            font-size: 14px;
-        }
-    </style>
-</head>
+    /* dl 한 줄 레이아웃 */
+    .kpi-cardwrap section dl{
+        display:flex;
+        justify-content:space-between;
+        align-items:baseline;
+        margin:6px 0;
+    }
+    .kpi-cardwrap section dl dt{
+        font-size:12px;
+        color:#666;
+        font-weight:600;
+        white-space:nowrap;
+    }
+    .kpi-cardwrap section dl dd{
+        display:flex;
+        align-items:center;
+        justify-content:flex-end;
+        font-size:20px;     /* ✅ 값 크기 */
+        font-weight:800;
+        margin:0;
+        white-space:nowrap;
+    }
+
+    /* 마지막 줄만 따로 쓰고 싶으면 */
+    .kpi-cardwrap section dl:last-child dd{
+        font-size:20px;
+    }
+    /* KPI 카드 공통: 내부를 위/중간/아래로 쪼갤 수 있게 */
+    .kpi-cardwrap section{
+        display:flex;
+        flex-direction:column;
+        min-height:0;       /* ✅ 내부 스크롤 위해 필요 */
+    }
+    /* 타임라인 카드 내부 스크롤 */
+    .kpi-cardwrap .timeline-section{
+        display:flex;
+        flex-direction:column;
+    }
+
+    .kpi-cardwrap .timeline-section #eventTimeline{
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;      /* ✅ 이력 많아도 카드 안에서 스크롤 */
+        max-height: 130px;   /* 카드 높이에 맞게 조절 */
+    }
+
+    /* 안내문은 바닥에 고정 */
+    .kpi-cardwrap .timeline-section .timeline-note{
+        flex:0 0 auto;
+        margin-top:6px;
+        font-size:12px;
+        color:#888;
+    }
+</style>
 <th:block layout:fragment="content">
-    <div class="layout-contents">
-        <div class="page-title-wrap">
-            <div class="left">
-                <h2>수주 진행 현황</h2>
-                <a title="북마크" class="bookmark toggle">
-                    내 메뉴
-                </a>
-            </div>
-            <ul class="page-navi">
-                <li><img src="/images/icon/ico-nav-home.svg" alt="홈아이콘"></li>
-                <li>대시보드</li>
-                <li>수주 진행 현황</li>
-            </ul>
-        </div>
-        <div class="tab-wrap" style="height: 100%;">
-            <div class="tab-contents" style="height: 100%;">
-                <!-- Section -->
-                <div class="row" style="margin-bottom: 0; height: 100%;">
-                    <section class="wp100" style="margin-right: 10px; border-radius:15px; display: flex; flex-direction: column; height: 100%;">
-                        <div class="title-wrap">
-                            <h3>수주현황</h3>
-                        </div>
-                        <div class="content-wrap" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
-                            <p class="card-text">금년 수주액 크기순으로 10개 표시합니다.</p>
+  <div class="layout-contents">
 
-                            <div style="flex: 3; min-height: 0;">
-                                <div id="suju-grid" class="wj-flexgrid" style="height: 100%;"></div>
-                            </div>
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>공정 진행 현황</h2>
+        <a class="bookmark toggle" title="북마크">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" src="/images/icon/ico-nav-home.svg"></li>
+        <li>대시보드</li>
+        <li>공정 진행 현황</li>
+      </ul>
+    </div>
+    <div class="dashboard-wrap">
+      <!-- (1) Header Bar (이미지 상단 큰 바 느낌) -->
+      <section class="wp100" style="margin-bottom:10px; border-radius:12px; padding:14px 18px; min-height: 50px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+          <div style="font-weight:700; font-size:16px;">
+            <span class="greenText" id="hdr-run"><span>RUNNING</span></span> |
+            <span id="hdr-mode">자동</span> |
+            <span id="hdr-time"></span>
+          </div>
 
-                            <div style="flex: 2; margin-top: 10px;">
-                                <canvas id="suju-chart" class="chart-canvas" style="width: 100%; height: 100%;"></canvas>
-                            </div>
-                        </div>
-                    </section>
+          <div style="font-weight:600; color:#666;">
+            현재 레시피 이름(기판): <span id="hdr-job">temp.tsm</span>
+          </div>
+
+          <!-- 우측 컨트롤: 알림 + 시간 -->
+          <!--<div style="display:flex; align-items:center; gap:10px; position:relative;">
+            &lt;!&ndash; 알림 버튼 &ndash;&gt;
+            <button class="btn btn-popup" id="btnAlarmBell" style="position:relative;" type="button">
+              🔔 알림
+              <span class="alarm-badge" id="alarmBadge" style="display:none;">0</span>
+            </button>
+
+            &lt;!&ndash; 알림 패널(드롭다운) &ndash;&gt;
+            <div class="alarm-panel" id="alarmPanel" style="display:none;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <div style="font-weight:700;">알림</div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <select id="alarmFilter" style="height:28px;">
+                    <option value="ALL">전체</option>
+                    <option value="DANGER">위험</option>
+                    <option value="WARN">주의</option>
+                    <option value="INFO">정보</option>
+                  </select>
+                  <button class="btn btn-popup" id="btnAlarmClear" type="button">읽음 처리</button>
                 </div>
+              </div>
+
+              <div class="alarm-list" id="alarmList">
+                &lt;!&ndash; JS로 채움 &ndash;&gt;
+                <div style="color:#888; padding:10px;">알림이 없습니다.</div>
+              </div>
             </div>
+          </div>-->
+
         </div>
+      </section>
+
+      <!-- (2) KPI 카드 -->
+      <div class="row row-1" style="margin-bottom:10px;">
+        <div class="card-wrap kpi-cardwrap"
+             style="display:flex; gap:12px; width:100%; flex-wrap:wrap; padding:0;">
+          <!-- 2) 생산 KPI -->
+          <section class="request" style="flex:1; min-width:240px; border-radius:14px;">
+            <div class="title"><h3>생산 KPI</h3></div>
+            <dl><dt>PPH</dt><dd id="kpi-pph">-</dd></dl>
+            <dl><dt>Yield</dt><dd id="kpi-yield">-</dd></dl>
+            <dl><dt>투입/생산</dt><dd id="kpi-inout">-</dd></dl>
+            <dl><dt>기판 정지</dt><dd id="kpi-stop">-</dd></dl>
+          </section>
+
+          <!-- 3) HZ -->
+          <section class="check" style="flex:1; min-width:240px; border-radius:14px;">
+            <div class="title"><h3>HZ</h3></div>
+            <dl><dt>Heat 1-6</dt><dd id="kpi-heat16">-</dd></dl>
+            <dl><dt>Heat 7-10</dt><dd id="kpi-heat710">-</dd></dl>
+            <dl><dt>Cool</dt><dd id="kpi-coolhz">-</dd></dl>
+          </section>
+
+          <!-- CM + PPM 통합 카드 -->
+          <section class="check" style="flex:1; min-width:240px; border-radius:14px;">
+            <div class="title" style="display:flex; align-items:center; justify-content:space-between;">
+              <h3>CM / PPM</h3>
+              <!-- 필요하면 상태 뱃지 같은 것도 가능 -->
+              <!-- <span class="mini-badge">LIVE</span> -->
+            </div>
+
+            <div class="kpi-pair">
+              <!-- CM -->
+              <div class="kpi-box">
+                <div class="kpi-subtitle">CM</div>
+
+                <dl>
+                  <dt>C/V Speed</dt>
+                  <dd id="kpi-cvspeed">-</dd>
+                </dl>
+
+                <dl>
+                  <dt>C/V WIDTH</dt>
+                  <dd id="kpi-cvwidth">-</dd>
+                </dl>
+              </div>
+
+              <!-- PPM -->
+              <div class="kpi-box">
+                <div class="kpi-subtitle">PPM</div>
+
+                <dl>
+                  <dt>N2 MODE</dt>
+                  <dd>
+                    <div class="kpi-n2pv">
+                      <span class="pv" id="kpi-n2-pv">-</span>
+                      <!-- <span class="mode" id="kpi-n2-mode">-</span> -->
+                    </div>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </section>
+
+
+          <!-- 6) 알람 타임라인 -->
+          <section class="timeline-section"
+                   style="flex:1; min-width:240px; border-radius:14px; max-height:190px;">
+            <h5 style="margin-bottom:2px;">알람 / 이상 조짐 타임라인</h5>
+            <div class="timeline-note" style="margin-bottom:2px;">
+              * 이벤트 클릭 시 해당 시점으로 Zone/Profile/생산 그래프 동기화
+            </div>
+            <div id="eventTimeline"><!-- JS로 채움 --></div>
+          </section>
+
+        </div>
+      </div>
+
+      <!-- (3) 본문 2열 그리드 -->
+      <div class="tab-row" style="display:flex; width:100%; gap:20px; margin-bottom:12px;">
+
+        <!-- 좌: 온도 리스크 모니터 -->
+        <section style="width:50%; min-height:260px; padding:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h5>온도 리스크 모니터</h5> <!--(핵심)-->
+            <span style="color:#888; font-size:12px;">ΔT Max / ZT-ZB / 상태</span>
+          </div>
+
+          <!-- 리스크 테이블(상위 3개만) -->
+          <div style="margin-top:8px;">
+            <table class="write-table" style="width:100%;">
+              <thead>
+              <tr>
+                <th style="width:70px;">Zone</th>
+                <th>ΔT Max</th>
+                <th>ZT-ZB</th>
+                <th style="width:90px;">상태</th>
+              </tr>
+              </thead>
+              <tbody id="riskTableBody">
+              <!-- JS로 채움 -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Zone ΔT 바 차트 -->
+          <div class="chart-wrap" style="justify-content: normal; position: relative; height: 140px; margin-top:10px;">
+            <canvas id="zoneDtBarChart"></canvas>
+            <span class="material-symbols-outlined"
+                  onclick="openModal('zoneDtBarChart')"
+                  style="position:absolute; top: 10px; right: 6px; cursor:pointer; z-index:10; color:#b3b3b3;">zoom_out_map</span>
+          </div>
+        </section>
+
+        <!-- 우: Reflow Profile -->
+        <section style="width:50%; min-height:260px; padding:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h5>Reflow 온도 추이 (최근 30분)</h5><!--(그래프)-->
+            <span id="profileText" style="color:#888; font-size:12px;"></span>
+          </div>
+
+          <div class="chart-wrap" style="justify-content: normal; position: relative; height: 100%; margin-top:10px;">
+            <canvas id="profileLineChart"></canvas>
+            <span class="material-symbols-outlined"
+                  onclick="openModal('profileLineChart')"
+                  style="position:absolute; top: 10px; right: 6px; cursor:pointer; z-index:10; color:#b3b3b3;">zoom_out_map</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- (4) 2번째 줄 -->
+      <div class="tab-row" style="display:flex; width:100%; gap:20px; margin-bottom:12px;">
+
+        <!-- 좌: Zone 설정/평균/편차 -->
+        <section style="width:50%; min-height:240px; padding:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h5>Zone 설정 / 평균 / 편차</h5>
+            <!--                    <button type="button" class="btn btn-popup" id="btnExpandZones">Z1~Z10 펼치기</button>-->
+          </div>
+
+          <div style="margin-top:8px; max-height:180px; overflow:auto;">
+            <table class="write-table" style="width:100%;">
+              <thead>
+              <tr>
+                <th style="width:70px;">Zone</th>
+                <th style="text-align: center;">설정</th>
+                <th style="text-align: center;">평균(현재)</th>
+                <th style="text-align: center;">편차(Δ)</th>
+              </tr>
+              </thead>
+              <tbody id="zoneTableBody">
+              <!-- JS로 채움 -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 우: 생산 흐름/정지 + 최근30분 -->
+        <section style="width:50%; min-height:240px; padding:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h5>최근 30분 생산 추이 & 정지 이벤트</h5> <!--생산 흐름 & 정지 감시-->
+            <span id="stopCountText" style="color:#888; font-size:12px;"></span>
+          </div>
+
+          <div style="display:flex; gap:16px; margin-top:8px; align-items:flex-start; flex-wrap:wrap;">
+            <div style="width:100%;">
+              <div style="font-weight:700;"></div>
+              <div style="margin-top:6px; font-size:14px;">
+                투입 ▶▶▶▶▶▶ 생산
+                <span id="flow-in" style="display:inline-block; min-width:60px; text-align:right; font-weight:700;">-</span>
+                <span style="display:inline-block; width:30px;"></span>
+                <span id="flow-out" style="display:inline-block; min-width:60px; text-align:right; font-weight:700;">-</span>
+              </div>
+            </div>
+
+            <div class="chart-wrap"
+                 style="flex:1; min-width:260px; justify-content: normal; position: relative; height: 170px;">
+              <canvas id="prodTrendChart"></canvas>
+              <span class="material-symbols-outlined"
+                    onclick="openModal('prodTrendChart')"
+                    style="position:absolute; top: 10px; right: 6px; cursor:pointer; z-index:10; color:#b3b3b3;">zoom_out_map</span>
+            </div>
+          </div>
+        </section>
+      </div>
 
     </div>
+
+  </div>
+
+  <!-- 기존 모달(줌) 재사용 가능 -->
+  <div class="modal" id="chartModal" style="opacity:100">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <canvas id="modalChartHolder" style="width: 1292px; height: 474px;"></canvas>
+    </div>
+  </div>
+
 </th:block>
+
 <th:block layout:fragment="scripts">
-    <script src="/resource/apexcharts/apexcharts.3.26.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="text/javascript">
-        class CustomOrderPage {
-            constructor() {
-                this.init();
-                this.setData();
-            }
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="/js/nth-tabs.js"></script>
+  <script type="text/javascript">
+   class DashPage {
+    constructor() {
+     this.timer = null;
+     this.url = '/api/dashboard/reflow';
+     this.prevKpiSnapshot = null;
 
-            init() {
-                this.initGrids();
-                this.initCharts();
-            }
+    }
 
-            initGrids() {
-                this.sujuGrid = new wijmo.grid.FlexGrid('#suju-grid', {
-                    autoGenerateColumns: false,
-                    headersVisibility: wijmo.grid.HeadersVisibility.Column,
-                    isReadOnly: true,
-                    formatItem: (s, e) => {
-                        if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
-                            e.cell.style.textAlign = 'center';
-                        }
-                    },
-                    columns: [
-                        { header: '제품그룹', binding: 'prod_grp', width: 200, align: 'center' },
-                        { header: '품목구분', binding: 'mat_type_name', width: 200, align: 'center' },
-                        { header: '품목코드', binding: 'prod_code', width: 200, align: 'center' },
-                        { header: '제품', binding: 'prod', width: 500, align: 'center' },
-                        { header: '수주액', binding: 'sujup', width: '*', align: 'right', format: 'n0' }
-                    ]
-                });
-            }
+    init() {
+     this.bindHeaderTime();
+     this.searchReflowLog();     // 최초 1회
+     this.startPolling();        // 30초 폴링
+     this.startChartTicker();    //
+    }//init
 
-            initCharts() {
-                this.sujuChart = new Chart(document.getElementById('suju-chart'), {
-                    type: 'bar',
-                    data: { labels: [], datasets: [{ label: '수주액', data: [], backgroundColor: '#36A2EB' }] },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: { ticks: { autoSkip: false } },
-                            y: { title: { display: true, text: '₩' } }
-                        },
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    label: function (tooltipItem) {
-                                        return tooltipItem.raw.toLocaleString() + " 원";
-                                    }
-                                }
-                            },
-                            legend: { display: false }
-                        }
-                    }
-                });
-            }
+    bindHeaderTime() {
+     const $hdrTime = $('#hdr-time');
+     if ($hdrTime.length === 0) return;
 
-            setData(_pageNo) {
-                let sujuData = AjaxUtil.getSyncData('/api/dashboard/custom_order');
-                this.sujuGrid.itemsSource = sujuData.data;
-                this.updateChart(this.sujuChart, sujuData.data, 'prod', 'sujup');
-            }
+     const pad2 = (n) => String(n).padStart(2, '0');
 
-            updateChart(chart, data, labelKey, valueKey) {
-                let labels = data.map(item => item[labelKey]);
-                let values = data.map(item => item[valueKey]);
-                chart.data.labels = labels;
-                chart.data.datasets[0].data = values;
-                chart.update();
-            }
+     const formatNow = () => {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = pad2(d.getMonth() + 1);
+      const dd = pad2(d.getDate());
+      const hh = pad2(d.getHours());
+      const mi = pad2(d.getMinutes());
+      return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+     };
+
+     const render = () => {
+      $hdrTime.text(formatNow());
+     };
+
+     render(); // 처음 1회
+     clearInterval(this.timer);
+     this.timer = setInterval(render, 1000); // 1초마다 갱신 (표시는 분까지만)
+    }//bindHeaderTime
+
+    startPolling() {
+     clearInterval(this.pollTimer);
+     this.pollTimer = setInterval(() => {
+      // 탭 비활성이면 스킵
+      if (document.hidden) return;
+      this.searchReflowLog();
+     }, 15 * 1000);
+    }
+
+    startChartTicker() {
+     clearInterval(this.chartTimer);
+
+     const pad2 = (n) => String(n).padStart(2, '0');
+
+     const tick = () => {
+      if (document.hidden) return;
+      if (!this._lastRows || !this._lastRows.length) return;
+
+      const now = new Date();
+      const minuteKey =
+       `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())} ` +
+       `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+
+      const minuteChanged = (this._lastChartMinuteKey !== minuteKey);
+      this._lastChartMinuteKey = minuteKey;
+
+      const nowMs = now.getTime();
+      const due = (!this._lastChartUpdateAt || (nowMs - this._lastChartUpdateAt >= 15 * 1000));
+
+      if (minuteChanged || due) {
+       this._lastChartUpdateAt = nowMs;
+
+       // ✅ now 기준 rolling 차트 갱신
+       this.bindProfileChartRolling(this._lastRows);
+      }
+     };
+
+     tick();
+     this.chartTimer = setInterval(tick, 15 * 1000);
+    }//startChartTicker
+
+    bindProfileChartRolling(rows) {
+     if (!rows || !rows.length) return;
+
+     // ✅ 현재시간 기준 (끝 라벨 = now)
+     const now = new Date();
+     now.setSeconds(0, 0);                 // ✅ 분 정각
+
+     const stepMs = 60 * 1000;             // 1분 버킷
+     const windowMs = 30 * 60 * 1000;      // 30분
+     const start = new Date(now.getTime() - windowMs);
+     start.setSeconds(0, 0);               // ✅ 분 정각
+
+     const bucketCount = Math.floor((now.getTime() - start.getTime()) / stepMs) + 1;
+
+     const buckets = Array.from({ length: bucketCount }, (_, i) => ({
+      t: new Date(start.getTime() + i * stepMs),
+      value: null
+     }));
+
+     // rows → 버킷 매핑
+     for (const row of rows) {
+      const tRaw = this.parseKpiTime(row["날 짜"]);
+      if (!tRaw) continue;
+
+      const t = new Date(tRaw);
+      t.setSeconds(0, 0);                 // ✅ row도 분 정각
+
+      const ms = t.getTime();
+      if (ms < start.getTime() || ms > now.getTime()) continue;
+
+      const zs = this.extractZones(row);
+      if (!zs || !zs.length) continue;
+
+      const avgArr = zs.map(z => z.avgCur).filter(v => v != null);
+      if (!avgArr.length) continue;
+
+      const avgTemp = avgArr.reduce((a, b) => a + b, 0) / avgArr.length;
+
+      // ✅ idx는 floor (round 금지)
+      const idx = Math.floor((ms - start.getTime()) / stepMs);
+      if (idx >= 0 && idx < buckets.length) {
+       buckets[idx].value = Number(avgTemp.toFixed(2));
+      }
+     }
+
+     // labels/data
+     const lbl2 = buckets.map(b => {
+      const hh = String(b.t.getHours()).padStart(2, '0');
+      const mm = String(b.t.getMinutes()).padStart(2, '0');
+      return `${hh}:${mm}`;
+     });
+     const data2 = buckets.map(b => b.value);
+
+     // profileText
+     const validVals = data2.filter(v => v != null);
+     if (validVals.length) {
+      const mean = validVals.reduce((a, b) => a + b, 0) / validVals.length;
+      const minv = Math.min(...validVals);
+      const maxv = Math.max(...validVals);
+      $('#profileText').text(`최근30분 평균 ${mean.toFixed(1)}℃ (min ${minv.toFixed(1)} / max ${maxv.toFixed(1)})`);
+     } else {
+      $('#profileText').text('최근30분 데이터 없음');
+     }
+
+     // chart
+     const ctx2 = document.getElementById('profileLineChart');
+     if (!ctx2 || !window.Chart) return;
+
+     if (!this._chartProfile) {
+      this._chartProfile = new Chart(ctx2, {
+       type: 'line',
+       data: {
+        labels: lbl2,
+        datasets: [{
+         label: 'Zone 평균온도(실측)',
+         data: data2,
+         spanGaps: false,
+         pointRadius: 0,
+         tension: 0.25
+        }]
+       },
+       options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+       }
+      });
+     } else {
+      // ✅ destroy 하지 말고 데이터만 갱신 (가벼움)
+      this._chartProfile.data.labels = lbl2;
+      this._chartProfile.data.datasets[0].data = data2;
+      this._chartProfile.update('none');
+     }
+    }
+
+    // ✅ 오늘 날짜(mm-dd) + 현재 분(minute) 기준으로 로그 조회
+    searchReflowLog() {
+     let _this = this;
+
+     if (_this.loading) return;
+     _this.loading = true;
+
+     const now = new Date();
+     const mm = String(now.getMonth() + 1).padStart(2, '0');
+     const dd = String(now.getDate()).padStart(2, '0');
+     const mmdd = `${mm}-${dd}`;
+
+     const minute = _this.toKoreanMinute(now);
+
+     let url = _this.url;
+     let data = { mmdd, minute, action: 'read' };
+
+     let fnsuccess = function (result) {
+      _this.loading = false;
+
+      if (!result || result.ok !== true) {
+       console.warn(result?.message || 'reflow log not found');
+
+       // ✅ 실패해도 마지막 데이터로 rolling 차트는 갱신 가능
+       const rows = _this._lastRows || [];
+       const current = _this._lastCurrent || {};
+       _this.bindProfileChartRolling(rows, current);
+       return;
+      }
+
+      const rows = Array.isArray(result.data) ? result.data : [];
+      const current = result.current || null;
+
+      if (!current) {
+       console.warn('current row not found');
+
+       // ✅ current 없으면 마지막 스냅샷으로 rolling 차트 갱신
+       const rows2 = _this._lastRows || rows || [];
+       const cur2 = _this._lastCurrent || {};
+       _this.bindProfileChartRolling(rows2, cur2);
+       return;
+      }
+
+      // ✅ 항상 최신 rows/current 저장 (차트 ticker/rolling용)
+      _this._lastRows = rows;
+      _this._lastCurrent = current;
+
+      // ✅ 변경 감지 기준
+      const curKey = current["날 짜"] || JSON.stringify(current);
+      const changed = !(_this.lastRowKey && _this.lastRowKey === curKey);
+
+      if (changed) {
+       _this.lastRowKey = curKey;
+
+       // ✅ 변경 있을 때만 KPI/헤더 갱신
+       _this.bindHeader(current);
+       _this.bindKpi(current);
+      }
+
+      // ✅ 차트/리스크는 "항상" 갱신 (rolling 때문에)
+      _this.bindRiskAndCharts(rows, current);
+
+      _this.bindSecondRow(rows, current);
+      _this.bindTimeline(rows, current);
+
+      // console.log('Reflow updated:', rows.length);
+      // console.table(rows.slice(-5));
+     };
+
+     let fnerror = function (err) {
+      _this.loading = false;
+      console.error('reflow api error', err);
+
+      // ✅ 에러여도 마지막 데이터로 rolling 차트 갱신
+      const rows = _this._lastRows || [];
+      const current = _this._lastCurrent || {};
+      _this.bindProfileChartRolling(rows, current);
+     };
+
+     AjaxUtil.getAsyncData(url, data, fnsuccess, fnerror);
+    }
+
+    toKoreanMinute(d) {
+     const pad2 = (n) => String(n).padStart(2, '0');
+     let h = d.getHours();
+     const ampm = (h < 12) ? '오전' : '오후';
+     let hh = h % 12;
+     if (hh === 0) hh = 12;
+     return `${ampm} ${pad2(hh)}:${pad2(d.getMinutes())}`;
+    }
+
+    bindHeader(current) {
+     if (!current) return;
+
+     const userLevel = current["사용자 레벨"] || "";
+     const userId = current["사용자 ID"] || "";
+     const jobPath = current["파일 이름"] || "";
+     const mode = current["가동 상태"] || "";
+
+     $('#hdr-user').text(`${userLevel}(${userId})`);
+     $('#hdr-job').text(jobPath.split(/[/\\]/).pop());
+     $('#hdr-mode').text(mode);
+
+     const $run = $('#hdr-run');
+     if (String(mode).includes('정지')) {
+      $run.removeClass('greenText').addClass('redText').html('<span>STOP</span>');
+     } else {
+      $run.removeClass('redText').addClass('greenText').html('<span>RUNNING</span>');
+     }
+    }
+
+    bindKpi(current) {
+     if (!current) return;
+
+     // =========================
+     // 1) 설비상태 카드
+     // =========================
+     this.setText('#kpi-state', current["가동 상태"]); // STOP/자동/수동 등
+
+     // (지금 HTML에는 job/user 표시 영역이 없음)
+     // 필요하면 설비상태 카드에 id를 추가한 뒤 아래 주석을 해제하세요.
+     // const jobPath = current["파일 이름"];
+     // const jobName = jobPath ? String(jobPath).split(/[/\\]/).pop() : null;
+     // this.setText('#kpi-job', jobName ?? jobPath);
+     //
+     // const level = (current["사용자 레벨"] ?? '').toString().trim();
+     // const userId = (current["사용자 ID"] ?? '').toString().trim();
+     // this.setText('#kpi-user', (level || userId) ? `${level}${userId ? ` (${userId})` : ''}` : '로그아웃');
+
+     // =========================
+     // 2) 생산 KPI 카드
+     // =========================
+     const inQtyRaw  = current["투입 수량"];
+     const outQtyRaw = current["생산 수량"];
+     const inQty  = this.toNum(inQtyRaw);
+     const outQty = this.toNum(outQtyRaw);
+
+     // 투입/생산
+     this.setText(
+      '#kpi-inout',
+      (inQtyRaw != null && outQtyRaw != null) ? `${inQtyRaw} / ${outQtyRaw}` : '-'
+     );
+
+     // 기판 정지
+     this.setText('#kpi-stop', current["기판 정지"]);
+
+     // Yield = 생산/투입 * 100
+     if (inQty != null && inQty > 0 && outQty != null) {
+      this.setText('#kpi-yield', `${this.fmt((outQty / inQty) * 100, 1)}%`);
+     } else {
+      this.setText('#kpi-yield', '-');
+     }
+
+     // PPH (이전 스냅샷과 시간차로 계산)
+     let pph = null;
+     const nowT = this.parseKpiTime(current["날 짜"]);
+     if (this.prevKpiSnapshot && nowT && outQty != null) {
+      const prevT = this.parseKpiTime(this.prevKpiSnapshot["날 짜"]);
+      const prevOut = this.toNum(this.prevKpiSnapshot["생산 수량"]);
+      if (prevT && prevOut != null) {
+       const dtSec = (nowT - prevT) / 1000;
+       if (dtSec > 0) {
+        const delta = outQty - prevOut;
+        if (delta >= 0) pph = (delta / dtSec) * 3600;
+       }
+      }
+     }
+     this.setText('#kpi-pph', pph == null ? '-' : this.fmt(pph, 1));
+
+     // =========================
+     // 3) HZ 카드 (현재값)
+     // =========================
+     this.setText('#kpi-heat16',  current["Heat 1-6"]);
+     this.setText('#kpi-heat710', current["Heat 7-10"]);
+     this.setText('#kpi-coolhz',  current["Cool"]);
+
+     // =========================
+     // 4) CM 카드 (컨베이어)
+     // =========================
+     this.setText('#kpi-cvspeed', current["C/V Speed"]);
+     this.setText('#kpi-cvwidth', current["C/V WIDTH"]);
+
+     // =========================
+     // 5) PPM 카드 (N2 현재값)
+     //  - 네 데이터 구조: 단 위 + 에어(산소농도) + 질소/에어(모드)
+     // =========================
+     const unit = (current["단 위"] ?? '').toString().trim();      // 예: PPM
+     const val  = (current["에어"] ?? '').toString().trim();       // 예: 10500 (산소농도)
+     const mode = (current["질소/에어"] ?? '').toString().trim();   // 예: N2
+
+     // pv: "10500 PPM"
+     const pvText = (val && unit) ? `${val} ${unit}` : (val || unit || '-');
+     this.setText('#kpi-n2-pv', pvText);
+
+     // mode: "(N2)" 또는 "-"
+     this.setText('#kpi-n2-mode', mode ? `(${mode})` : '-');
+
+     // 전력(kW)
+     this.setText('#kpi-kw', current["순시 전력(kW)"]);
+
+     // =========================
+     // 마지막: prev 저장 (PPH 계산용)
+     // =========================
+     this.prevKpiSnapshot = current;
+    }
+
+    toNum(v) {
+     if (v == null) return null;
+     const s = String(v).replace(/,/g, '').trim();
+     const m = s.match(/-?\d+(\.\d+)?/);
+     return m ? Number(m[0]) : null;
+    }
+
+    fmt(n, digits = 1) {
+     if (n == null || Number.isNaN(n)) return '-';
+     return Number(n).toFixed(digits);
+    }
+
+    setText(sel, v) {
+     $(sel).text((v == null || v === '') ? '-' : v);
+    }
+
+    parseKpiTime(v) {
+     if (!v) return null;
+     const s = String(v).trim();
+     const m = s.match(/^(\d{4})-(\d{2})-(\d{2})\s*(오전|오후)\s*(\d{1,2}):(\d{2}):(\d{2})$/);
+     if (m) {
+      let [_, y, mo, d, ap, hh, mm, ss] = m;
+      hh = Number(hh);
+      if (ap === '오후' && hh < 12) hh += 12;
+      if (ap === '오전' && hh === 12) hh = 0;
+      return new Date(Number(y), Number(mo) - 1, Number(d), hh, Number(mm), Number(ss));
+     }
+     const dt = new Date(s);
+     return isNaN(dt.getTime()) ? null : dt;
+    }
+
+    extractZones(row) {
+     const zones = [];
+     for (let z = 1; z <= 10; z++) {
+      const ztSet = this.toNum(row[`ZT 설정값${z}`]);
+      const ztCur = this.toNum(row[`ZT 현재값${z}`]);
+      const zbSet = this.toNum(row[`ZB 설정값${z}`]);
+      const zbCur = this.toNum(row[`ZB 현재값${z}`]);
+
+      if (ztSet == null && ztCur == null && zbSet == null && zbCur == null) continue;
+
+      const dtTopAbs = (ztSet != null && ztCur != null) ? Math.abs(ztCur - ztSet) : null;
+      const dtBotAbs = (zbSet != null && zbCur != null) ? Math.abs(zbCur - zbSet) : null;
+
+      const dtMax = (dtTopAbs == null && dtBotAbs == null)
+       ? null
+       : Math.max(dtTopAbs ?? 0, dtBotAbs ?? 0);
+
+      const ztZb = (ztCur != null && zbCur != null) ? (ztCur - zbCur) : null;
+
+      zones.push({
+       zone: z,
+       ztSet, ztCur, zbSet, zbCur,
+       dtMax,
+       ztZb,
+       avgCur: (ztCur != null && zbCur != null) ? (ztCur + zbCur) / 2 : (ztCur ?? zbCur ?? null)
+      });
+     }
+     return zones;
+    }
+
+    riskLabel(dtMax) {
+     if (dtMax == null) return { text: '-', cls: 'risk-ok' };
+     if (dtMax >= 6) return { text: '위험', cls: 'risk-crit' };
+     if (dtMax >= 3) return { text: '주의', cls: 'risk-warn' };
+     return { text: '정상', cls: 'risk-ok' };
+    }
+
+    bindRiskAndCharts(rows, current) {
+     if (!current) return;
+
+     const zones = this.extractZones(current);
+
+     // 1) 리스크 테이블(상위 3개)
+     const riskRows = zones
+     .filter(z => z.dtMax != null)
+     .sort((a, b) => (b.dtMax ?? -1) - (a.dtMax ?? -1))
+     .slice(0, 3);
+
+     const $tb = $('#riskTableBody');
+     $tb.empty();
+
+     if (riskRows.length === 0) {
+      $tb.append(`<tr><td colspan="4" style="text-align:center; color:#888; padding:10px;">데이터 없음</td></tr>`);
+     } else {
+      for (const r of riskRows) {
+       const lab = this.riskLabel(r.dtMax);
+       const dtMaxTxt = `${r.dtMax.toFixed(1)}℃`;
+       const ztZbTxt = (r.ztZb == null) ? '-' : `${r.ztZb.toFixed(1)}℃`;
+       $tb.append(`
+        <tr>
+          <td>${r.zone}</td>
+          <td>${dtMaxTxt}</td>
+          <td>${ztZbTxt}</td>
+          <td><span class="risk-badge ${lab.cls}">${lab.text}</span></td>
+        </tr>
+      `);
+      }
+     }
+
+     // 2) Zone ΔT 바 차트
+     const labels = zones.map(z => `Z${z.zone}`);
+     const dataDt = zones.map(z => (z.dtMax == null ? 0 : Number(z.dtMax.toFixed(2))));
+
+     const ctx1 = document.getElementById('zoneDtBarChart');
+     if (ctx1 && window.Chart) {
+      if (this._chartZoneDt) this._chartZoneDt.destroy();
+
+      this._chartZoneDt = new Chart(ctx1, {
+       type: 'bar',
+       data: {
+        labels: labels.length ? labels : ['-'],
+        datasets: [{
+         label: 'ΔT Max',
+         data: dataDt.length ? dataDt : [0]
+        }]
+       },
+       options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {legend: {display: false}},
+        scales: {y: {beginAtZero: true}}
+       }
+      });
+     }
+
+
+     // 3) Profile 요약(최근 30분)  ✅ 현재시간(now) 기준 Rolling
+     const now = new Date();                 // ✅ 무조건 현재시간
+     const stepMs = 60 * 1000;               // 1분 버킷
+     const windowMs = 30 * 60 * 1000;        // 30분
+     const startMs = now.getTime() - windowMs;
+
+// 1) 최근 30분 타임버킷 생성 (라벨 끝 = now)
+     const buckets = [];
+     for (let ms = startMs; ms <= now.getTime(); ms += stepMs) {
+      buckets.push({ t: new Date(ms), value: null });
+     }
+
+// 2) rows를 버킷에 매핑
+     for (const row of rows) {
+      const t = this.parseKpiTime(row["날 짜"]);
+      if (!t) continue;
+
+      const ms = t.getTime();
+      if (ms < startMs || ms > now.getTime()) continue;
+
+      const zs = this.extractZones(row);
+      if (!zs.length) continue;
+
+      const avgArr = zs.map(z => z.avgCur).filter(v => v != null);
+      if (!avgArr.length) continue;
+
+      const avgTemp = avgArr.reduce((a, b) => a + b, 0) / avgArr.length;
+
+      // 가장 가까운 분 버킷 인덱스
+      const idx = Math.round((ms - startMs) / stepMs);
+      if (buckets[idx]) buckets[idx].value = Number(avgTemp.toFixed(2));
+     }
+
+// 3) labels/data 생성
+     const lbl2 = buckets.map(b => {
+      const hh = String(b.t.getHours()).padStart(2, '0');
+      const mm = String(b.t.getMinutes()).padStart(2, '0');
+      return `${hh}:${mm}`;
+     });
+     const data2 = buckets.map(b => b.value);
+
+// 4) profileText (유효값만으로 평균/최소/최대)
+     const validVals = data2.filter(v => v != null);
+     if (validVals.length) {
+      const mean = validVals.reduce((a, b) => a + b, 0) / validVals.length;
+      const minv = Math.min(...validVals);
+      const maxv = Math.max(...validVals);
+      $('#profileText').text(
+       `최근30분 평균 ${mean.toFixed(1)}℃ (min ${minv.toFixed(1)} / max ${maxv.toFixed(1)})`
+      );
+     } else {
+      $('#profileText').text('최근30분 데이터 없음');
+     }
+
+// 5) 라인 차트
+     const ctx2 = document.getElementById('profileLineChart');
+     if (ctx2 && window.Chart) {
+      if (this._chartProfile) this._chartProfile.destroy();
+
+      this._chartProfile = new Chart(ctx2, {
+       type: 'line',
+       data: {
+        labels: lbl2.length ? lbl2 : ['-'],
+        datasets: [{
+         label: 'Zone 평균온도(실측)',
+         data: data2.length ? data2 : [null], // ✅ null 허용
+         spanGaps: false,                     // ✅ null 구간 선 끊김
+         pointRadius: 0,
+         tension: 0.25
+        }]
+       },
+       options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+       }
+      });
+     }
+
+    }
+
+    // =========================
+    // (4) 2번째 줄 바인딩
+    // =========================
+    bindSecondRow(rows, current) {
+     const rws = Array.isArray(rows) ? rows : [];
+     if (!rws.length) {
+      this.renderZoneTable([]);
+      this.renderFlowSummary(null);
+      this.renderStopSummary(null);
+      this.renderProdTrendChart([], []);
+      return;
+     }
+
+     const nowTs = Date.now();                 // ✅ 브라우저 현재시간
+     const now = new Date(nowTs);
+     now.setSeconds(0, 0);
+
+     const start = new Date(now.getTime() - 30 * 60 * 1000);
+
+     // ✅ 1) 시간 파싱 + ✅ 2) 미래 row 제거 + ✅ 3) 30분 윈도우만
+     const winRows = rws
+     .map(row => ({ row, t: this.parseKpiTime(row["날 짜"]) }))
+     .filter(x => x.t)
+     .filter(x => new Date(x.t).getTime() <= nowTs) // ✅ 미래 제거
+     .sort((a,b) => new Date(a.t).getTime() - new Date(b.t).getTime())
+     .filter(x => {
+      const ms = new Date(x.t).getTime();
+      return ms >= start.getTime() && ms <= nowTs;
+     })
+     .map(x => x.row);
+
+     // ✅ 윈도우 안에 없으면 "표시할 데이터 없음" 처리
+     if (!winRows.length) {
+      this.renderZoneTable([]);
+      this.renderFlowSummary(null);
+      this.renderStopSummary(null);
+      this.renderProdTrendChart([], []);
+      $('#stopCountText').text('최근30분 데이터 없음');
+      return;
+     }
+
+     // 1) Zone 테이블
+     const zoneItems = this.calcZoneSetAvgDelta(winRows);
+     this.renderZoneTable(zoneItems);
+
+     // 2) 투입/생산: 최신 row(윈도우 내 마지막)
+     const latestRow = winRows[winRows.length - 1];
+     this.renderFlowSummary(latestRow);
+
+     // 3) 정지: 최근30분 증가분
+     const stopCnt = this.calcStopEvents(winRows);
+     this.renderStopSummary(stopCnt);
+
+     // 4) 생산량 그래프
+     const { labels, series } = this.calcProdDeltaSeries(winRows, start, now);
+     this.renderProdTrendChart(labels, series);
+    }
+
+// --- Zone 테이블 계산: ZT 설정값 vs ZT 현재값 평균
+    calcZoneSetAvgDelta(winRows) {
+     const stats = {}; // Z1..Z10
+     const add = (zone, setv, curv) => {
+      if (curv == null) return;
+      if (!stats[zone]) stats[zone] = { zone, set: setv, sum: 0, cnt: 0 };
+      if (stats[zone].set == null && setv != null) stats[zone].set = setv;
+      stats[zone].sum += curv;
+      stats[zone].cnt += 1;
+     };
+
+     for (const row of winRows) {
+      for (let i = 1; i <= 10; i++) {
+       add(
+        `Z${i}`,
+        this.toNum(row[`ZT 설정값${i}`]),
+        this.toNum(row[`ZT 현재값${i}`])
+       );
+      }
+     }
+
+     return Object.values(stats)
+     .sort((a,b) => parseInt(a.zone.slice(1),10) - parseInt(b.zone.slice(1),10))
+     .map(s => {
+      const avg = s.cnt ? (s.sum / s.cnt) : null;
+      const setv = s.set;
+      const delta = (avg != null && setv != null) ? (avg - setv) : null;
+      const absd = delta == null ? 0 : Math.abs(delta);
+      const level = absd >= 5 ? 'risk' : absd >= 3 ? 'warn' : 'ok';
+      return { zone: s.zone, set: setv, avg, delta, level };
+     });
+    }
+
+// --- Zone 테이블 렌더
+    renderZoneTable(items) {
+     const $tb = $('#zoneTableBody');
+     $tb.empty();
+
+     if (!items || !items.length) {
+      $tb.append(`<tr><td colspan="4" style="text-align:center; color:#888; padding:10px;">최근30분 데이터 없음</td></tr>`);
+      return;
+     }
+
+     for (const it of items) {
+      const setTxt = it.set == null ? '-' : it.set.toFixed(0);
+      const avgTxt = it.avg == null ? '-' : it.avg.toFixed(1);
+      const dTxt   = it.delta == null ? '-' : (it.delta >= 0 ? `+${it.delta.toFixed(1)}` : `${it.delta.toFixed(1)}`);
+
+      const color = it.level === 'risk' ? '#d9534f' : it.level === 'warn' ? '#f0ad4e' : '#2e7d32';
+      const icon  = it.level === 'risk' ? ' ⚠' : '';
+
+      $tb.append(`
+      <tr>
+        <td style="text-align:center;">${it.zone}</td>
+        <td style="text-align:right;">${setTxt}</td>
+        <td style="text-align:right;">${avgTxt}</td>
+        <td style="text-align:right; font-weight:700; color:${it.delta == null ? '#888' : color};">${dTxt}${icon}</td>
+      </tr>
+    `);
+     }
+    }
+
+// --- 투입/생산 표시
+    renderFlowSummary(latestRow) {
+     if (!latestRow) {
+      $('#flow-in').text('-');
+      $('#flow-out').text('-');
+      return;
+     }
+     const inCnt  = this.toNum(latestRow["투입 수량"]);
+     const outCnt = this.toNum(latestRow["생산 수량"]);
+
+     $('#flow-in').text(inCnt == null ? '-' : inCnt.toLocaleString());
+     $('#flow-out').text(outCnt == null ? '-' : outCnt.toLocaleString());
+    }
+
+// --- 정지 발생(최근30분): 기판 정지 누적 증가분 합
+    calcStopEvents(winRows) {
+     if (!winRows || winRows.length < 2) return 0;
+     let prev = null;
+     let cnt = 0;
+
+     for (const r of winRows) {
+      const cur = this.toNum(r["기판 정지"]);
+      if (cur == null) continue;
+
+      if (prev != null) {
+       const diff = cur - prev;
+       if (diff > 0) cnt += diff;
+      }
+      prev = cur;
+     }
+     return cnt;
+    }
+
+    renderStopSummary(stopCnt) {
+     if (stopCnt == null) {
+      $('#stopCountText').text('최근30분 정지 데이터 없음');
+     } else {
+      $('#stopCountText').text(`정지 발생: ${stopCnt}회`);
+     }
+    }
+
+// --- 최근30분 생산량(분당 생산 증가량) 시리즈 계산
+    calcProdDeltaSeries(winRows, start, now) {
+     const stepMs = 60 * 1000;
+     const bucketCount = Math.floor((now.getTime() - start.getTime()) / stepMs) + 1;
+
+     const buckets = Array.from({ length: bucketCount }, (_, i) => ({
+      t: new Date(start.getTime() + i * stepMs),
+      v: null
+     }));
+
+     // 시간순
+     const sorted = [...(winRows || [])].sort((a,b) => {
+      const ta = this.parseKpiTime(a["날 짜"]);
+      const tb = this.parseKpiTime(b["날 짜"]);
+      return new Date(ta).getTime() - new Date(tb).getTime();
+     });
+
+     let prevOut = null;
+     for (const r of sorted) {
+      const t0 = this.parseKpiTime(r["날 짜"]);
+      if (!t0) continue;
+
+      const t = new Date(t0);
+      t.setSeconds(0,0);
+
+      const idx = Math.floor((t.getTime() - start.getTime()) / stepMs);
+      if (idx < 0 || idx >= buckets.length) continue;
+
+      const outCum = this.toNum(r["생산 수량"]);
+      if (outCum == null) continue;
+
+      let delta = null;
+      if (prevOut != null) delta = Math.max(0, outCum - prevOut);
+      prevOut = outCum;
+
+      buckets[idx].v = delta;
+     }
+
+     const labels = buckets.map(b => {
+      const hh = String(b.t.getHours()).padStart(2,'0');
+      const mm = String(b.t.getMinutes()).padStart(2,'0');
+      return `${hh}:${mm}`;
+     });
+
+     const series = buckets.map(b => b.v);
+     return { labels, series };
+    }
+
+// --- 생산량 그래프 렌더 (Chart.js)
+    renderProdTrendChart(labels, series) {
+     const ctx = document.getElementById('prodTrendChart');
+     if (!ctx || !window.Chart) return;
+
+     if (!this._chartProdTrend) {
+      this._chartProdTrend = new Chart(ctx, {
+       type: 'line',
+       data: {
+        labels: labels || [],
+        datasets: [{
+         label: '분당 생산량',
+         data: series || [],
+         spanGaps: false,
+         pointRadius: 0,
+         tension: 0.25
+        }]
+       },
+       options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+       }
+      });
+     } else {
+      this._chartProdTrend.data.labels = labels || [];
+      this._chartProdTrend.data.datasets[0].data = series || [];
+      this._chartProdTrend.update('none');
+     }
+    }
+
+    // =========================
+    // (5) 알람/이상조짐 타임라인
+    // =========================
+    bindTimeline(rows, current) {
+     const rws = Array.isArray(rows) ? rows : [];
+     const $wrap = $('#eventTimeline');
+     $wrap.empty();
+
+     if (!rws.length) {
+      $wrap.html(`<div style="color:#888; padding:8px 0;">이벤트가 없습니다.</div>`);
+      return;
+     }
+
+     // ✅ 브라우저 시간 기준 (미래 제거용)
+     // 1분 정도 오차가 난다고 했으니, 약간의 허용치(예: 90초) 주면 "1분 미래"가 안 보이게 안정적
+     const nowTs = Date.now();
+     const skewMs = 90 * 1000; // 필요 없으면 0으로
+
+     const sorted = rws
+     .map(r => ({ r, t: this.parseKpiTime(r["날 짜"]) }))
+     .filter(x => x.t)
+     // ✅ 미래 row 제거 (허용치 적용)
+     .filter(x => new Date(x.t).getTime() <= nowTs + skewMs)
+     .sort((a, b) => new Date(a.t).getTime() - new Date(b.t).getTime())
+     .map(x => x.r);
+
+     if (!sorted.length) {
+      $wrap.html(`<div style="color:#888; padding:8px 0;">(현재 기준) 표시할 이벤트가 없습니다.</div>`);
+      return;
+     }
+
+     // ✅ 전체 이력으로 이벤트 생성
+     const events = this.buildEvents(sorted);
+     if (!events.length) {
+      $wrap.html(`<div style="color:#888; padding:8px 0;">이벤트가 없습니다.</div>`);
+      return;
+     }
+
+     // 최신이 위
+     events.sort((a, b) => b.ts - a.ts);
+
+     const html = events.map(ev => {
+      const tagCls = ev.level === 'DANGER' ? 'danger' : ev.level === 'WARN' ? 'warn' : 'info';
+
+      // ✅ 오전/오후 + HH:mm 만들기
+      const d = new Date(ev.ts);
+      const hh = d.getHours();                 // 0~23
+      const mm = String(d.getMinutes()).padStart(2,'0');
+      const ap = hh < 12 ? '오전' : '오후';
+      const hh12 = String((hh % 12) === 0 ? 12 : (hh % 12)).padStart(2,'0'); // 12시간제
+      const timeText = `${ap} ${hh12}:${mm}`;  // 예: "오전 08:55", "오후 01:05"
+
+      // 레벨별 색상
+      const bg  = ev.level === 'DANGER' ? '#ffecec' : ev.level === 'WARN' ? '#fff8e6' : '#f5f7ff';
+      const bd  = ev.level === 'DANGER' ? '#ffb5b5' : ev.level === 'WARN' ? '#ffe3a3' : '#dfe6ff';
+      const badgeBg = ev.level === 'DANGER' ? '#ff4d4f' : ev.level === 'WARN' ? '#ffbf3a' : '#5b7cff';
+      const badgeColor = ev.level === 'WARN' ? '#111' : '#fff';
+
+      return `
+    <div class="timeline-row ${tagCls}" data-ts="${ev.ts}"
+         style="
+           display:grid;
+           grid-template-columns: 88px 52px 1fr; /* ✅ 시간칸 조금 넓힘 */
+           align-items:center;
+           gap:10px;
+           padding:8px 10px;
+           border-radius:10px;
+           border:1px solid ${bd};
+           background:${bg};
+           cursor:pointer;
+           user-select:none;
+         ">
+      <div class="tl-time" style="color:#666; font-weight:700; font-variant-numeric:tabular-nums;">
+        ${timeText}
+      </div>
+      <div class="tl-badge" style="
+           font-size:12px;
+           font-weight:900;
+           text-align:center;
+           padding:4px 0;
+           border-radius:999px;
+           background:${badgeBg};
+           color:${badgeColor};
+         ">
+        ${ev.levelKorean}
+      </div>
+      <div class="tl-text" style="
+           font-weight:700;
+           color:#222;
+           overflow:hidden;
+           text-overflow:ellipsis;
+           white-space:nowrap;
+           min-width:0;
+         ">
+        ${ev.text}
+      </div>
+    </div>
+  `;
+     }).join('');
+
+     $wrap.html(html);
+
+     $wrap.off('click.timeline').on('click.timeline', '.timeline-row', (e) => {
+      const ts = Number($(e.currentTarget).data('ts'));
+      if (!ts) return;
+      this.syncToTime(rows, ts);
+     });
+    }
+
+    buildEvents(rowsInWindow) {
+     const events = [];
+
+     const zoneWarnOn = {};
+     const zoneDangerOn = {};
+     let prevModeStop = null;
+
+     const outDeltas = [];
+     let prevOutCum = null;
+
+     for (const row of rowsInWindow) {
+      const t = this.parseKpiTime(row["날 짜"]);
+      if (!t) continue;
+
+      const ts = new Date(t).getTime();
+      if (ts > Date.now()) continue;
+      const timeText = this.hhmm(ts);
+
+      // 1) 자동정지 발생
+      const mode = String(row["가동 상태"] ?? '');
+      const isStop = mode.includes('정지');
+      if (prevModeStop !== null && prevModeStop === false && isStop === true) {
+       events.push({ ts, timeText, level:'DANGER', levelKorean:'위험', text:'자동정지 발생' });
+      }
+      prevModeStop = isStop;
+
+      // 2) Zone ΔT 초과 (WARN/DANGER 중 하나만 발생)
+      const zones = this.extractZones(row) || [];
+      for (const z of zones) {
+       if (z.dtMax == null) continue;
+
+       const dt = Number(z.dtMax);
+       const zoneKey = String(z.zone);
+
+       // ✅ 현재 레벨을 하나로 결정 (danger가 warn을 덮어씀)
+       const level =
+        dt >= 6 ? 'DANGER' :
+         dt >= 5 ? 'WARN'   :
+          null;
+
+       // ✅ 존별 현재 ON 상태(레벨) 추적: null/WARN/DANGER
+       zoneWarnOn[zoneKey]   ??= false;
+       zoneDangerOn[zoneKey] ??= false;
+
+       // OFF 처리
+       if (level === null) {
+        zoneWarnOn[zoneKey] = false;
+        zoneDangerOn[zoneKey] = false;
+        continue;
+       }
+
+       // ✅ danger면 warn 이벤트는 만들지 않고 danger만 관리
+       if (level === 'DANGER') {
+        if (!zoneDangerOn[zoneKey]) {
+         zoneDangerOn[zoneKey] = true;
+         zoneWarnOn[zoneKey] = true; // danger면 warn도 “켜진 상태”로 취급(중복 방지)
+         events.push({
+          ts, timeText,
+          level: 'DANGER', levelKorean: '위험',
+          text: `Z${z.zone} ΔT ${dt.toFixed(1)}℃ 초과`
+         });
         }
+        continue;
+       }
 
-        let page = null;
-
-        $(document).ready(function (e) {
-            page = new CustomOrderPage();
+       // level === 'WARN'
+       if (!zoneWarnOn[zoneKey]) {
+        zoneWarnOn[zoneKey] = true;
+        events.push({
+         ts, timeText,
+         level: 'WARN', levelKorean: '주의',
+         text: `Z${z.zone} ΔT ${dt.toFixed(1)}℃ 초과`
         });
-    </script>
+       }
+      }
+
+      // 3) 생산량 급감
+      const outCum = this.toNum(row["생산 수량"]);
+      if (outCum != null) {
+       let delta = null;
+       if (prevOutCum != null) delta = Math.max(0, outCum - prevOutCum);
+       prevOutCum = outCum;
+
+       if (delta != null) {
+        outDeltas.push({ ts, delta });
+
+        const fiveMinAgo = ts - 5 * 60 * 1000;
+        const recent = outDeltas.filter(x => x.ts >= fiveMinAgo);
+        const avg = recent.length ? recent.reduce((a,b) => a + b.delta, 0) / recent.length : null;
+
+        if (avg != null && avg >= 1 && delta <= avg * 0.3) {
+         const dup = events.find(ev => ev.text === '생산량 급감' && Math.abs(ev.ts - ts) <= 3 * 60 * 1000);
+         if (!dup) {
+          events.push({ ts, timeText, level:'WARN', levelKorean:'주의', text:'생산량 급감' });
+         }
+        }
+       }
+      }
+     }
+
+     return events;
+    }
+
+    syncToTime(rows, ts) {
+     const rws = Array.isArray(rows) ? rows : [];
+     if (!rws.length) return;
+
+     let best = null;
+     let bestDiff = Infinity;
+
+     for (const r of rws) {
+      const t = this.parseKpiTime(r["날 짜"]);
+      if (!t) continue;
+      const ms = new Date(t).getTime();
+      const diff = Math.abs(ms - ts);
+      if (diff < bestDiff) {
+       bestDiff = diff;
+       best = r;
+      }
+     }
+
+     if (!best) return;
+
+     this.bindRiskAndCharts(rows, best);
+     this.bindSecondRow(rows, best);
+    }
+
+    hhmm(ts) {
+     const d = new Date(ts);
+     const hh = String(d.getHours()).padStart(2,'0');
+     const mm = String(d.getMinutes()).padStart(2,'0');
+     return `${hh}:${mm}`;
+    }
+
+   }//DashPage
+
+   let page = null;
+
+   $(document).ready(function (e) {
+    page = new DashPage();
+    page.init();
+
+   });
+  </script>
 </th:block>
+<input th:name="${_csrf.parameterName}" th:value="${_csrf.token}" type="hidden"/>
 </html>
