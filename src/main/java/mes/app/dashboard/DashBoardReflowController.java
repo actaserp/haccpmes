@@ -21,11 +21,10 @@ import java.util.stream.Stream;
 @RequestMapping("/api/dashboard/reflow")
 public class DashBoardReflowController {
 
-	// ✅ 로그 폴더 (UNC 경로는 \\ 를 두 번)
-	private static final String BASE_DIR =
-		"\\\\Actas_server\\공유폴더\\HaccpMes\\동영전자\\설비\\Reflow\\PV";
+	//  로그 폴더
+	private static final String BASE_DIR = "C:\\temp\\mes21\\Reflow\\PV";
 
-	// ✅ GET /api/dashboard/reflow?mmdd=01-09
+	//  GET /api/dashboard/reflow?mmdd=01-09
 	@GetMapping
 	public ResponseEntity<Map<String, Object>> read(
 		@RequestParam String mmdd,                          // "01-09"
@@ -37,6 +36,28 @@ public class DashBoardReflowController {
 		String expectedFileName = mmdd + "-" + year2 + ".Log";                 // 예: "01-09-26.Log"
 
 		Path dir = Paths.get(BASE_DIR);
+
+		//디렉토리 없으면 생성
+		try {
+			Files.createDirectories(dir);
+		} catch (Exception e) {
+			log.error("로그 디렉토리 생성 실패. path={}", dir.toAbsolutePath(), e);
+			return ResponseEntity.ok(Map.of(
+				"ok", false,
+				"message", "로그 디렉토리를 생성할 수 없습니다. (권한/경로 확인 필요)",
+				"path", dir.toAbsolutePath().toString()
+			));
+		}
+
+		//  생성 후에도 디렉토리가 아니면 오류
+		if (!Files.isDirectory(dir)) {
+			return ResponseEntity.ok(Map.of(
+				"ok", false,
+				"message", "로그 경로가 디렉토리가 아닙니다.",
+				"path", dir.toAbsolutePath().toString()
+			));
+		}
+
 		if (!Files.exists(dir) || !Files.isDirectory(dir)) {
 			return ResponseEntity.ok(Map.of(
 				"ok", false,
