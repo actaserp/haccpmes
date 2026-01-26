@@ -421,35 +421,45 @@
         }
 
         async function fetchHolidaysForYear(year) {
-            return new Promise((resolve, reject) => {
-                var xhr = new XMLHttpRequest();
-                var url = 'http://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo';
-                var queryParams = '?' + encodeURIComponent('serviceKey') + '=' + 'R3P3syhq6qRP0cz8mbV2J5t%2B32WwaSN9sH8ZW4k59oKAU3Ze0WvcljMrN36OJqxs38%2F780hMD4QfhCiDZQNUyA%3D%3D';
-                queryParams += '&' + encodeURIComponent('solYear') + '=' + encodeURIComponent(year);
-                queryParams += '&' + encodeURIComponent('numOfRows') + '=' + encodeURIComponent('30');
+            return new Promise((resolve) => {
+                const xhr = new XMLHttpRequest();
+                const url = 'http://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo';
+                const queryParams = '?' + encodeURIComponent('serviceKey') + '=' +
+                    'R3P3syhq6qRP0cz8mbV2J5t%2B32WwaSN9sH8ZW4k59oKAU3Ze0WvcljMrN36OJqxs38%2F780hMD4QfhCiDZQNUyA%3D%3D' +
+                    '&' + encodeURIComponent('solYear') + '=' + encodeURIComponent(year) +
+                    '&' + encodeURIComponent('numOfRows') + '=' + encodeURIComponent('30');
 
                 xhr.open('GET', url + queryParams);
                 xhr.onreadystatechange = function () {
-                    if (this.readyState == 4) {
-                        if (this.status == 200) {
-                            var parser = new DOMParser();
-                            var xmlDoc = parser.parseFromString(this.responseText, "text/xml");
+                    if (this.readyState === 4) {
+                        try {
+                            if (this.status === 200) {
+                                const parser = new DOMParser();
+                                const xmlDoc = parser.parseFromString(this.responseText, "text/xml");
+                                const items = xmlDoc.getElementsByTagName("item");
+                                const holidays = [];
 
-                            // XML에서 원하는 데이터 추출
-                            var items = xmlDoc.getElementsByTagName("item");
-                            let holidays = [];
-                            for (var i = 0; i < items.length; i++) {
-                                var locdate = items[i].getElementsByTagName("locdate")[0].textContent;
-                                var dateName = items[i].getElementsByTagName("dateName")[0].textContent;
+                                for (let i = 0; i < items.length; i++) {
+                                    const locdate = items[i].getElementsByTagName("locdate")[0]?.textContent;
+                                    const dateName = items[i].getElementsByTagName("dateName")[0]?.textContent;
+                                    if (locdate && dateName) holidays.push({ date: locdate, name: dateName });
+                                }
 
-                                holidays.push({date: locdate, name: dateName});
+                                resolve(holidays);
+                            } else {
+                                console.warn('⚠️ 공휴일 API 호출 실패 (status=' + this.status + '), 빈 배열 반환');
+                                resolve([]); // 실패해도 빈 배열 반환
                             }
-                            resolve(holidays);
-                        } else {
-                            console.error('오류 발생. HTTP 상태 코드:', this.status);
-                            reject(this.status);
+                        } catch (e) {
+                            console.error('⚠️ 공휴일 데이터 파싱 오류:', e);
+                            resolve([]); // 파싱 실패 시에도 빈 배열 반환
                         }
                     }
+                };
+
+                xhr.onerror = function () {
+                    console.warn('⚠️ 공휴일 API 네트워크 오류, 빈 배열 반환');
+                    resolve([]);
                 };
 
                 xhr.send();

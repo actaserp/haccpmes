@@ -86,7 +86,7 @@
                     { binding: 'mat_grp_name', header: '품목그룹', width: 120 ,allowMerging: true },
                     // { binding: 'mat_code', header: '품목코드', width: 150 ,allowMerging: true },
                     { binding: 'mat_name', header: '품목명', width: '*' , allowMerging: true },
-                    { binding: 'standard1', header: '규격', width: 100, allowMerging: false },
+                    // { binding: 'standard1', header: '규격', width: 100, allowMerging: false },
                     { binding: 'unit_name', header: '단위', width: 100, allowMerging: false },
                     { binding: 'gubn', header: '구분', width: 100, format: 'n0', align: 'right' },
                     ...Array.from({ length: 12 }, (_, i) => ({
@@ -102,12 +102,22 @@
             this.grid.itemFormatter = function (panel, row, col, cell) {
                 if (panel.cellType === wijmo.grid.CellType.Cell) {
                     let colName = panel.columns[col].binding;
-                    let rowData = panel.rows[row]?.dataItem;
-                    const prevRowData = panel.rows[row - 1]?.dataItem;
+                    const rowData = panel.rows[row]?.dataItem;
+
+                    // ✅ 반드시 리셋
+                    cell.style.fontWeight = '';
+                    cell.style.background = '';
+                    cell.style.borderBottom = '';
 
                     if (colName === 'gubn') {
                         const val = panel.getCellData(row, col, true);
-                        const label = val === '1' ? '생산수량' : val === '2' ? '영업일수' : val === '3' ? '시간당생산량' : '';
+                        const label =
+                        val === '1' ? '생산수량' :
+                        val === '2' ? '영업일수' :
+                        val === '3' ? '시간당생산량' :
+                        val === '4' ? '칩수' :
+                        val === '5' ? '생산칩수' :
+                        val === '6' ? '시간당칩생산량' : '';
                         cell.textContent = label;
                         cell.style.textAlign = 'center';
                     }
@@ -138,14 +148,22 @@
                         cell.style.alignItems = 'center';         // 수직 정렬
                         cell.style.justifyContent = 'left';     // 수평 정렬
                     }
+                    if (
+                        rowData &&
+                        ['1', '3', '4', '5', '6'].includes(rowData.gubn) &&
+                        rowData.mat_grp_name === '전체'
+                    ) {
+                        cell.style.fontWeight = 'bold';
+                        cell.style.background = '#eef3f9';
+                        cell.style.borderBottom = '2px solid #444';
+                    }
+
                 }
             };
             new FlexGridContextMenu(this.grid);
             this.grid.downloadFileName = '생산량 지표';
             this.grid.mergeManager = new CustomMergeManager(this.grid);
         }
-
-
 
         searchMainData() {
             let url = '/api/summary/indicator/prod_read'
@@ -154,12 +172,80 @@
                 'spjangcd' : sessionStorage.getItem('spjangcd')
 			}
             const result = AjaxUtil.getSyncData(url, data);
-            console.log("result data : ", result.data);
-            if (result) {
-                this.grid.itemsSource = result.data;
+            if (result && result.data) {
+                const summaryRows = this.makeSummaryRows(result.data);
+                // 🔥 최상단에 고정
+                this.grid.itemsSource = [...summaryRows, ...result.data];
+                // 🔥 써머리 행 개수만큼 상단 고정
+                this.grid.frozenRows = summaryRows.length;
             }
         }
 
+        makeSummaryRows(data) {
+            const rows = [];
+
+            const makeRow = (gubn, label, calcFn) => {
+                const row = {
+                    __summary: true,   // 🔥 핵심
+                    gubn,
+                    mat_name: label,
+                    mat_grp_name: '전체'
+                };
+
+                for (let m = 1; m <= 12; m++) {
+                    const key = `mon_${m}`;
+                    row[key] = calcFn(key);
+                }
+                return row;
+            };
+
+            // 해당 월에 생산 있었는지 판단
+            const hasProduction = (data, key) =>
+                data.some(r => r.gubn === '1' && (r[key] || 0) > 0);
+
+            // 생산수량 합계
+            rows.push(makeRow('1', '생산수량 합계', key =>
+                data.filter(r => r.gubn === '1')
+                    .reduce((s, r) => s + (r[key] || 0), 0)
+            ));
+
+            // 시간당생산량 평균
+            rows.push(makeRow('3', '시간당생산량 평균', key => {
+                if (!hasProduction(data, key)) return 0;
+
+                const v = data
+                    .filter(r => r.gubn === '3')
+                    .map(r => r[key])
+                    .filter(v => typeof v === 'number');
+
+                return v.length
+                    ? +(v.reduce((a,b)=>a+b,0) / v.length).toFixed(2)
+                    : 0;
+            }));
+
+
+            // 생산칩수 합계
+            rows.push(makeRow('5', '생산칩수 합계', key =>
+                data.filter(r => r.gubn === '5')
+                    .reduce((s, r) => s + (r[key] || 0), 0)
+            ));
+
+            // 시간당칩생산량 평균
+            rows.push(makeRow('6', '시간당 칩 생산량 KPI', key => {
+                const totalChip = data
+                    .filter(r => r.gubn === '5')
+                    .reduce((s, r) => s + (r[key] || 0), 0);
+
+                const workday = data.find(r => r.gubn === '2')?.[key] || 0;
+
+                return workday > 0
+                    ? +(totalChip / 189 / 13.3).toFixed(2)
+                    : 0;
+            }));
+
+
+            return rows;
+        }
     }
 
     let page = null;

@@ -47,8 +47,21 @@ public class IndicatorController {
             m."Standard1" AS standard1
     """;
 
-		// 생산수량 (GUBN = '1')
 		StringBuilder sql = new StringBuilder();
+
+		// BOM 수량 CTE
+		sql.append("""
+        WITH bom_qty AS (
+            SELECT
+                b."Material_id" AS mat_pk,
+                SUM(bc."Amount") AS bom_qty
+            FROM bom b
+            JOIN bom_comp bc ON bc."BOM_id" = b.id
+            GROUP BY b."Material_id"
+        )
+    """);
+
+		// 생산수량 (GUBN = '1')
 		sql.append(commonSelect).append(", '1' AS gubn");
 		for (int i = 1; i <= 12; i++) {
 			sql.append(", SUM(CASE WHEN EXTRACT(MONTH FROM jr.\"ProductionDate\") = ")
@@ -92,7 +105,6 @@ public class IndicatorController {
               AND jr."State" = 'finished'
               AND jr.spjangcd = :spjangcd
         )
-        GROUP BY m.id, mg."MaterialType", mg."Name", m."Code", m."Name", u."Name", m."Standard1"
     """);
 
 		// 시간당 생산량 (GUBN = '3')
@@ -114,6 +126,107 @@ public class IndicatorController {
           AND jr."State" = 'finished'
           AND jr.spjangcd = :spjangcd
         GROUP BY jr."Material_id", mg."MaterialType", mg."Name", m."Code", m."Name", u."Name", m."Standard1"
+    """);
+
+		// BOM 수량 (GUBN = '4')
+		sql.append(" UNION ALL ");
+		sql.append("""
+    SELECT
+        m.id AS mat_pk,
+        fn_code_name('mat_type', mg."MaterialType") AS mat_type_name,
+        mg."Name" AS mat_grp_name,
+        m."Code" AS mat_code,
+        m."Name" AS mat_name,
+        u."Name" AS unit_name,
+        m."Standard1" AS standard1,
+        '4' AS gubn
+""");
+
+		for (int i = 1; i <= 12; i++) {
+			sql.append(", COALESCE(bq.bom_qty, 0) AS mon_").append(i);
+		}
+
+		sql.append("""
+    FROM material m
+    JOIN bom_qty bq ON bq.mat_pk = m.id
+    LEFT JOIN mat_grp mg ON mg.id = m."MaterialGroup_id"
+    LEFT JOIN unit u ON u.id = m."Unit_id"
+    WHERE EXISTS (
+        SELECT 1 FROM job_res jr
+        WHERE jr."Material_id" = m.id
+          AND jr."ProductionDate" BETWEEN CAST(:date_form AS DATE) AND CAST(:date_to AS DATE)
+          AND jr."State" = 'finished'
+          AND jr.spjangcd = :spjangcd
+    )
+""");
+
+		// 생산수량 * BOM (GUBN = '5')
+		sql.append(" UNION ALL ");
+		sql.append(commonSelect).append(", '5' AS gubn");
+
+		for (int i = 1; i <= 12; i++) {
+			sql.append("""
+        , SUM(
+            CASE WHEN EXTRACT(MONTH FROM jr."ProductionDate") = %d
+            THEN jr."GoodQty" * COALESCE(bq.bom_qty, 0)
+            ELSE 0 END
+        ) AS mon_%d
+    """.formatted(i, i));
+		}
+
+		sql.append("""
+    FROM job_res jr
+    JOIN material m ON m.id = jr."Material_id"
+    JOIN bom_qty bq ON bq.mat_pk = m.id
+    LEFT JOIN mat_grp mg ON mg.id = m."MaterialGroup_id"
+    LEFT JOIN unit u ON u.id = m."Unit_id"
+    WHERE jr."ProductionDate" BETWEEN CAST(:date_form AS DATE) AND CAST(:date_to AS DATE)
+      AND jr."State" = 'finished'
+      AND jr.spjangcd = :spjangcd
+    GROUP BY jr."Material_id", mg."MaterialType", mg."Name",
+             m."Code", m."Name", u."Name", m."Standard1"
+""");
+
+
+		// 생산수량 * BOM / 영업일수 (GUBN = '6')
+		sql.append(" UNION ALL ");
+		sql.append(commonSelect).append(", '6' AS gubn");
+
+		for (int i = 1; i <= 12; i++) {
+			sql.append("""
+        , ROUND(
+            CASE WHEN %d = 0 THEN 0
+            ELSE
+                SUM(
+                    CASE WHEN EXTRACT(MONTH FROM jr."ProductionDate") = %d
+                    THEN jr."GoodQty" * COALESCE(bq.bom_qty, 0)
+                    ELSE 0 END
+                ) / %d / 8
+            END::numeric, 2
+        ) AS mon_%d
+    """.formatted(
+					workdays.get(i),   // 영업일수 0 방어
+					i,
+					workdays.get(i),
+					i
+			));
+		}
+
+		sql.append("""
+    FROM job_res jr
+    JOIN material m ON m.id = jr."Material_id"
+    JOIN bom_qty bq ON bq.mat_pk = m.id
+    LEFT JOIN mat_grp mg ON mg.id = m."MaterialGroup_id"
+    LEFT JOIN unit u ON u.id = m."Unit_id"
+    WHERE jr."ProductionDate" BETWEEN CAST(:date_form AS DATE) AND CAST(:date_to AS DATE)
+      AND jr."State" = 'finished'
+      AND jr.spjangcd = :spjangcd
+    GROUP BY jr."Material_id", mg."MaterialType", mg."Name",
+             m."Code", m."Name", u."Name", m."Standard1"
+""");
+
+
+		sql.append("""
         ORDER BY mat_type_name, mat_grp_name, mat_name, mat_code, gubn
     """);
 
