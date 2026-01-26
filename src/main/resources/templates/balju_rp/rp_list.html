@@ -233,6 +233,22 @@
                                     </ul>
                                 </dd>
                             </dl>
+                            <dl>
+                                <dt>
+                                    <label for="cboInout">
+                                        입출<span class="eq"></span>
+                                    </label>
+                                </dt>
+                                <dd>
+                                    <div class="srch-box">
+                                        <select id="cboInout" name="cboInout" style="width:130px;">
+                                            <option value>전체</option>
+                                            <option value="in">입고</option>
+                                            <option value="return">반품</option>
+                                        </select>
+                                    </div>
+                                </dd>
+                            </dl>
 
                             <dl>
                                 <dt>
@@ -1238,12 +1254,14 @@
                 let _this = this;
                 let srchStartDt = $('#searchForm').find("#srchStartDt").val();
                 let srchEndDt = $('#searchForm').find("#srchEndDt").val();
+                let inout = $('#searchForm').find('#cboInout').val();
                 let house_pk = $('#searchForm').find('#cboHouse').val();
                 let mat_type = $('#searchForm').find('#cboMatType').val();
                 let mat_grp_pk = $('#searchForm').find('#cboMatGroup').val();
                 let txtMatName = $('#searchForm').find('#txtMatName').val();
                 let data = {
                     'action': 'read',
+                    'inout': inout,
                     'srchStartDt': srchStartDt,
                     'srchEndDt': srchEndDt,
                     'house_pk': house_pk,
