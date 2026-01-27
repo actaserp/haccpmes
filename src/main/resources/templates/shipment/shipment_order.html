@@ -81,6 +81,7 @@
                                 <dd>
                                     <select class="" id="cboMaterial" name="cboMaterial">
                                     </select>
+                                    
                                 </dd>
                             </dl>
 
@@ -767,6 +768,7 @@
 
             AjaxUtil.fillSelectOptions($('#cboMatGroup'), 'material_group', 'all', '', 'product,semi,sangpum');
             AjaxUtil.fillSelectOptions($('#cboMaterial'), 'material', 'all', '', null);
+
             $('#cboMatGroup').change(function (e) {
                 let mat_grp_pk = $('#cboMatGroup').val();
                 AjaxUtil.fillSelectOptions($('#cboMaterial'), 'material', 'all', '', mat_grp_pk);
