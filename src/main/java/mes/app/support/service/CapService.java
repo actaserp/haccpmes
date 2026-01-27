@@ -59,7 +59,7 @@ public class CapService {
                                  left join company c on c.id = ci.company_id
                                  left join defect_type df on df.id = ci.defect_type_id
                                  where ci."CapNo" like :capNo
-                                 and ci.spjangcd :spjangcd
+                                 and ci.spjangcd = :spjangcd
                 """;
         List<Map<String,Object>> items = this.sqlRunner.getRows(sql, paramMap);
         return items;
