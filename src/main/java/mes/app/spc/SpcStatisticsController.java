@@ -9,17 +9,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -51,8 +42,8 @@ public class SpcStatisticsController {
 		@RequestParam String date_from,
 		@RequestParam String date_to,
 		@RequestParam(value="item_name", required=false) String item_name,
-		@RequestParam(value="process_cd") String processCode,        // ✅ 필수
-		@RequestParam(value="measure_code") String measureCode,      // ✅ 필수 (metric_cd 대신)
+		@RequestParam(value="process_cd") String processCode,
+		@RequestParam(value="measure_code") String measureCode,
 		@RequestParam(value="recipe", required=false) String recipe,
 		@RequestParam(required=false) String spjangcd
 	) {

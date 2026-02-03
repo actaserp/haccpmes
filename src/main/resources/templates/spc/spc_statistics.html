@@ -11,6 +11,10 @@
     #rightWrap .tab-item.active {
         display: block;
     }
+    .active-row {
+        outline: 2px solid #4c8bf5;
+        background: rgba(76, 139, 245, 0.08);
+    }
 
 </style>
 <th:block layout:fragment="content">
@@ -117,6 +121,14 @@
       </div>
 
       <h4 style=" margin-top: 10px;">관리기준</h4>
+      <div id="analysisMeta"
+           style="display:flex; gap:14px; flex-wrap:wrap; align-items:center;
+            padding:8px 10px; border:1px solid #e6e6e6; border-radius:10px; background:#fafafa; margin:6px 0 10px;">
+        <span><b>공정(설비)</b>: <span id="metaProcess">-</span></span>
+        <span><b>측정항목</b>: <span id="metaMeasure">-</span></span>
+        <span><b>레시피</b>: <span id="metaRecipe">-</span></span>
+        <span><b>품목</b>: <span id="metaItem">-</span></span>
+      </div>
       <table class="write-table" style="width: 100%; border-collapse: collapse;">
         <caption style="text-align: left; margin-bottom: 8px;">관리기준 상세테이블</caption>
         <input type="hidden" class="form-control2" id="spc_std_id" name="spc_std_id" readonly disabled/>
@@ -166,9 +178,7 @@
           </th>
           <td colspan="2">
             <div style="display:flex; align-items:center; gap:6px;">
-              <input type="text" id="measure_cycle_value" name="measure_cycle_value" style="width:70%;" readonly>
-              <!-- 예: MIN -->
-              <!-- <span>MIN</span> -->
+              <input type="text" id="measure_cycle_value" name="measure_cycle_value" style="width:100%;" readonly>
             </div>
           </td>
         </tr>
@@ -216,19 +226,19 @@
             <input style="width:100%;" id="outOfLimitCount" name="outOfLimitCount" readonly>
           </td>
 
-          <th style="text-align:center; width:7%; padding:5px; border:1px solid #ddd;">
+          <!--<th style="text-align:center; width:7%; padding:5px; border:1px solid #ddd;">
             <label>CPK</label>
           </th>
           <td colspan="2">
             <input style="width:100%;" id="cpk" name="cpk" readonly>
-          </td>
+          </td>-->
 
-          <th style="text-align:center; width:7%; padding:5px; border:1px solid #ddd;">
+          <!--<th style="text-align:center; width:7%; padding:5px; border:1px solid #ddd;">
             <label>측정주기</label>
           </th>
           <td colspan="2">
             <input style="width:100%;" id="measureCycleKpi" name="measureCycleKpi" readonly>
-          </td>
+          </td>-->
         </tr>
         </tbody>
       </table>
@@ -268,9 +278,7 @@
 
             <!-- 6) 알람 타임라인 -->
               <h5 style="margin-bottom:2px;">알람 / 이상 조짐 타임라인</h5>
-              <div class="timeline-note" style="margin-bottom:2px;">
-                * 이벤트 클릭 시 해당 시점으로 Zone/Profile/생산 그래프 동기화
-              </div>
+
               <div id="eventTimeline"><!-- JS로 채움 --></div>
 
           </section>
@@ -280,7 +288,8 @@
         <div class="tab-wrap" id="rightWrap" style="width:50%; min-width:0;">
           <ul class="tab-links">
             <li class="active"><a href="#R_tabHist">Histogram with USL/LSL</a></li>
-            <li><a href="#R_tabImr">관리도 I-MR</a></li>
+            <li><a href="#R_tabI">관리도 I (측정값)</a></li>
+            <li><a href="#R_tabMr">관리도 MR (변동)</a></li>
             <li><a href="#R_tabBox">Box Plot</a></li>
           </ul>
 
@@ -294,13 +303,31 @@
           </section>
 
           <!-- I-MR -->
-          <section class="tab-item" id="R_tabImr">
+          <!--<section class="tab-item" id="R_tabImr">
             <h5 style="margin:6px 0;">관리도 I-MR</h5>
             <div style="height:260px; position:relative;">
               <canvas id="imrChart"></canvas>
             </div>
             <div id="imrSummary" style="margin-top:6px; color:#666; font-size:12px;"></div>
+          </section>-->
+          <!-- I Chart -->
+          <section class="tab-item" id="R_tabI">
+            <h5 style="margin:6px 0;">관리도 I (측정값)</h5>
+            <div style="height:260px; position:relative;">
+              <canvas id="iChart"></canvas>
+            </div>
+            <div id="iSummary" style="margin-top:6px; color:#666; font-size:12px;"></div>
           </section>
+
+          <!-- MR Chart -->
+          <section class="tab-item" id="R_tabMr">
+            <h5 style="margin:6px 0;">관리도 MR (변동)</h5>
+            <div style="height:260px; position:relative;">
+              <canvas id="mrChart"></canvas>
+            </div>
+            <div id="mrSummary" style="margin-top:6px; color:#666; font-size:12px;"></div>
+          </section>
+
 
           <!-- Box Plot -->
           <section class="tab-item" id="R_tabBox">
@@ -434,8 +461,11 @@
      $('#lcl').val(spec.lcl ?? '');
 
      $('#sampleSize').val(spec.sample_size ?? spec.sampleSize ?? '');
-     $('#measure_cycle_value').val(spec.measure_cycle_value ?? spec.measureCycleValue ?? '');
-     // 단위: spec.unit_name 또는 payload.unit
+
+     const cycleValue = spec.measure_cycle_value ?? spec.measureCycleValue ?? '';
+     const cycleUnit  = spec.measure_cycle_unit_name ?? ''; // "MIN"
+     const cycleText  = (cycleValue && cycleUnit) ? `${cycleValue} ${cycleUnit}` : (cycleValue || '');
+     $('#measure_cycle_value').val(cycleText);
     }
 
     bindKpiToForm(payload) {
@@ -462,14 +492,14 @@
 
      // 측정주기(관리기준에서)
      const cycleValue = spec.measure_cycle_value ?? spec.measureCycleValue ?? '';
-     const cycleUnit  = spec.measure_cycle_unit  ?? spec.measureCycleUnit  ?? '';
+     const cycleUnit  = spec.measure_cycle_unit_name   ?? '';
      const cycleText  = (cycleValue && cycleUnit) ? `${cycleValue} ${cycleUnit}` : (cycleValue || '');
 
      // ✅ 폼 바인딩
      $('#master_grp').val(mean == null ? '' : this._fmt(mean, 3));
      $('#master_name').val(std  == null ? '' : this._fmt(std, 3));
 
-     $('#minMax').val((min == null || max == null) ? '' : `${this._fmt(min, 3)} / ${this._fmt(max, 3)}`);
+     $('#minMax').val((min == null || max == null) ? '' : `${this._fmt(min)} / ${this._fmt(max)}`);
      $('#sampleCountN').val(n);
 
      $('#outOfLimitCount').val(out);
@@ -480,7 +510,6 @@
      $('#measureCycleKpi').val(cycleText);
     }
 
-
     // ✅ 빈 화면 처리
     renderEmptyRawLog(message) {
      $('#rawLogTableBody').html(
@@ -489,8 +518,11 @@
      $('#eventTimeline').html(`<div style="color:#888; padding:6px 0;">이벤트가 없습니다.</div>`);
 
      $('#histSummary').text('');
-     $('#imrSummary').text('');
+     //$('#imrSummary').text('');
      $('#boxSummary').text('');
+
+     $('#iSummary').text('');     // ✅ 추가
+     $('#mrSummary').text('');    // ✅ 추가
 
      this._destroyCharts();
     }
@@ -520,6 +552,29 @@
      const ucl = this._toNum(spec.ucl);
      const lcl = this._toNum(spec.lcl);
 
+     const processText = $('#processCode option:selected').text() || payload.process_name || spec.process_name || '-';
+     const measureText = $('#measure_code option:selected').text() || payload.measure_name || spec.measure_name || '-';
+
+     const recipeText  =
+      ($('#recipe').val() || '').trim()
+      || payload.recipe
+      || spec.recipe
+      || rows[0]?.recipe
+      || rows[0]?.file_name
+      || rows[0]?.fileName
+      || '-';
+
+     const itemText =
+      ($('#item_name').val() || '').trim()
+      || payload.item_name
+      || spec.item_name
+      || '-';
+
+     $('#metaProcess').text(processText);
+     $('#metaMeasure').text(measureText);
+     $('#metaRecipe').text(recipeText);
+     $('#metaItem').text(itemText);
+
      $('#valueHeader').text(unit ? `값(${unit})` : '값');
 
      // LEFT: judge 기준을 뭘로 할지 결정
@@ -545,7 +600,15 @@
 
      // I-MR은 내부에서 한계 계산하니 mean만 있으면 되지만,
      // 규격선(USL/LSL)을 같이 보여주려면 usl/lsl 넘기는 건 OK
-     this._drawIMR(values, labels, { mean, usl, lsl, unit });
+     // this._drawIMR(values, labels, { mean, usl, lsl, unit });
+     this._drawIChart(values, labels, {
+      mean,
+      target: spec.target_value ?? spec.target,
+      ucl, lcl,
+      unit
+     });
+
+     this._drawMRChart(values, labels, { mean, unit });
 
      this._drawBoxPlot(values, { unit });
 
@@ -554,44 +617,107 @@
      $('#boxSummary').text(`Box: 중앙값/사분위 기반(분포 확인용)`);
     }
 
+    // ✅ "2026-01-29 오전 06:58:26" -> timestamp(ms)
+    _toMs(t) {
+     if (t == null) return NaN;
+     if (typeof t === 'number') return t;
+
+     const s = String(t).trim();
+     const m = s.match(/^(\d{4}-\d{2}-\d{2})\s+(오전|오후)\s+(\d{1,2}):(\d{2}):(\d{2})$/);
+     if (m) {
+      const date = m[1];
+      const ampm = m[2];
+      let hh = parseInt(m[3], 10);
+      const mm = m[4];
+      const ss = m[5];
+
+      if (ampm === '오전') {
+       if (hh === 12) hh = 0;
+      } else {
+       if (hh !== 12) hh += 12;
+      }
+      return new Date(`${date}T${String(hh).padStart(2, '0')}:${mm}:${ss}`).getTime();
+     }
+
+     const ms = Date.parse(s);
+     return Number.isNaN(ms) ? NaN : ms;
+    }
+
+    // ✅ 테이블/타임라인 연결용 고유키
+    _rowKey(r) {
+     // time이 가장 안정적이라 time 기준 + 값(동일시각 중복 대비)
+     return `${r?.time ?? ''}__${r?.value ?? ''}`;
+    }
+
     // ---------- LEFT: 테이블 ----------
     _renderRawTable(rows, { ucl, lcl }) {
      const $tb = $('#rawLogTableBody').empty();
+     if (!Array.isArray(rows) || rows.length === 0) return;
 
-     rows.forEach((r, idx) => {
+     // ✅ 최신순 DESC
+     const sortedRows = [...rows].sort((a, b) => {
+      const ta = this._toMs(a.time);
+      const tb = this._toMs(b.time);
+      if (Number.isNaN(ta) && Number.isNaN(tb)) return 0;
+      if (Number.isNaN(ta)) return 1;
+      if (Number.isNaN(tb)) return -1;
+      return tb - ta;
+     });
+
+     sortedRows.forEach((r) => {
       const t = this._fmtTime(r.time);
       const v = this._toNum(r.value);
       const memo = (r.memo ?? '').toString();
 
+      // ✅ 관리한계 판정(한쪽만 있어도 OK)
       let judge = (r.judge ?? '').toString();
-      if (v != null && ucl != null && lcl != null) {
-       judge = (v > ucl || v < lcl) ? '이상' : '정상';
+      if (v != null) {
+       const overUcl  = (ucl != null && v > ucl);
+       const underLcl = (lcl != null && v < lcl);
+       judge = (overUcl || underLcl) ? '이상' : '정상';
       }
 
       const badge = (judge === '이상')
        ? `<span style="display:inline-block; padding:2px 8px; border-radius:10px; background:#ffe8e8; color:#b00020; font-size:12px;">이상</span>`
        : `<span style="display:inline-block; padding:2px 8px; border-radius:10px; background:#e9f7ef; color:#1b7f3a; font-size:12px;">정상</span>`;
 
+      const key = this._rowKey(r);
+
       $tb.append(`
-        <tr data-idx="${idx}">
-          <td style="white-space:nowrap;">${this._escapeHtml(t)}</td>
-          <td style="text-align:right;">${v == null ? '-' : this._fmt(v, 3)}</td>
-          <td>${badge}</td>
-          <td>${this._escapeHtml(memo)}</td>
-        </tr>
-      `);
+      <tr data-key="${this._escapeHtml(key)}">
+        <td style="white-space:nowrap;">${this._escapeHtml(t)}</td>
+        <td style="text-align:right;">${v == null ? '-' : this._fmt(v, 3)}</td>
+        <td>${badge}</td>
+        <td>${this._escapeHtml(memo)}</td>
+      </tr>
+    `);
      });
     }
 
     // ---------- LEFT: 타임라인(이상점만) ----------
     _renderTimeline(rows, { ucl, lcl }) {
      const $t = $('#eventTimeline').empty();
+     if (!Array.isArray(rows) || rows.length === 0) {
+      $t.html(`<div style="color:#888; padding:6px 0;">이벤트가 없습니다.</div>`);
+      return;
+     }
 
+     // ✅ 이상 이벤트 수집 (UCL/LCL 한쪽만 있어도 동작)
      const events = [];
-     rows.forEach((r, idx) => {
+     rows.forEach((r) => {
       const v = this._toNum(r.value);
-      if (v == null || ucl == null || lcl == null) return;
-      if (v > ucl || v < lcl) events.push({ idx, time: r.time, value: v, type: '이상' });
+      if (v == null) return;
+
+      const overUcl  = (ucl != null && v > ucl);
+      const underLcl = (lcl != null && v < lcl);
+      if (!(overUcl || underLcl)) return;
+
+      events.push({
+       key: this._rowKey(r),
+       time: r.time,
+       value: v,
+       type: '이상'
+      });
      });
 
      if (events.length === 0) {
@@ -599,19 +725,32 @@
       return;
      }
 
-     events.forEach(ev => {
-      $t.append(`
-        <div class="timeline-item" data-idx="${ev.idx}"
-             style="padding:6px 10px; border:1px solid #eee; border-radius:10px; margin:6px 0; cursor:pointer;">
-          <div style="font-size:12px; color:#666;">${this._escapeHtml(this._fmtTime(ev.time))}</div>
-          <div style="font-weight:600; color:#b00020;">[${ev.type}] 값: ${this._fmt(ev.value, 3)}</div>
-        </div>
-      `);
+     // ✅ 타임라인도 최신순 DESC
+     events.sort((a, b) => {
+      const ta = this._toMs(a.time);
+      const tb = this._toMs(b.time);
+      if (Number.isNaN(ta) && Number.isNaN(tb)) return 0;
+      if (Number.isNaN(ta)) return 1;
+      if (Number.isNaN(tb)) return -1;
+      return tb - ta;
      });
 
+     // ✅ 렌더
+     events.forEach(ev => {
+      $t.append(`
+      <div class="timeline-item" data-key="${this._escapeHtml(ev.key)}"
+           style="padding:6px 10px; border:1px solid #eee; border-radius:10px; margin:6px 0; cursor:pointer;">
+        <div style="font-size:12px; color:#666;">${this._escapeHtml(this._fmtTime(ev.time))}</div>
+        <div style="font-weight:600; color:#b00020;">[${ev.type}] 값: ${this._fmt(ev.value, 3)}</div>
+      </div>
+    `);
+     });
+
+     // ✅ 클릭 시 테이블의 같은 rowKey로 이동/강조
      $t.off('click').on('click', '.timeline-item', (e) => {
-      const idx = parseInt($(e.currentTarget).data('idx'), 10);
-      const $row = $(`#rawLogTableBody tr[data-idx="${idx}"]`);
+      const key = String($(e.currentTarget).data('key') ?? '');
+      const $row = $(`#rawLogTableBody tr[data-key="${CSS.escape(key)}"]`);
+
       if ($row.length) {
        $row.addClass('active-row');
        $row.siblings().removeClass('active-row');
@@ -777,7 +916,152 @@
     }
 
     // ---------- RIGHT: I-MR (Data-based) ----------
-    _drawIMR(values, labels, { mean, usl = null, lsl = null, unit } = {}) {
+    _calcIMRParams(values, mean) {
+     if (!values || values.length < 2) return null;
+
+     const mr = [];
+     for (let i = 1; i < values.length; i++) mr.push(Math.abs(values[i] - values[i - 1]));
+     const mrBar = mr.reduce((a, b) => a + b, 0) / mr.length;
+
+     const iUcl = mean + 2.66 * mrBar;
+     const iLcl = mean - 2.66 * mrBar;
+     const mrUcl = 3.268 * mrBar;
+
+     return { mr, mrBar, iUcl, iLcl, mrUcl };
+    }
+    _drawIChart(values, labels, { mean, target = null, ucl = null, lcl = null, unit } = {}) {
+     const ctx = document.getElementById('iChart');
+     if (!ctx) return;
+
+     if (this._iChart) { this._iChart.destroy(); this._iChart = null; }
+     if (!values || !values.length) return;
+
+     const cleaned = [];
+     for (let i = 0; i < values.length; i++) {
+      const v = Number(values[i]);
+      if (Number.isFinite(v)) cleaned.push({ v, l: labels?.[i] ?? String(i + 1) });
+     }
+     const xs = cleaned.map(x => x.v);
+     const ls = cleaned.map(x => x.l);
+     if (xs.length < 2) return;
+
+     const imr = this._calcIMRParams(xs, mean);
+     const iUcl = (ucl != null) ? ucl : imr?.iUcl ?? null;
+     const iLcl = (lcl != null) ? lcl : imr?.iLcl ?? null;
+
+     const center = (target != null) ? target : mean;
+
+     const pointBg = xs.map(v => {
+      const over = (iUcl != null && v > iUcl);
+      const under = (iLcl != null && v < iLcl);
+      return (over || under) ? 'red' : 'rgba(54, 162, 235, 1)';
+     });
+
+     const datasets = [
+      { label: unit ? `I(${unit})` : 'I', data: xs, pointRadius: 3, tension: 0,
+       pointBackgroundColor: pointBg, pointBorderColor: pointBg },
+      { label: (target != null ? 'Target' : 'Mean'), data: xs.map(() => center), pointRadius: 0, borderDash: [6, 4] },
+      ...(iUcl != null ? [{ label: 'UCL', data: xs.map(() => iUcl), pointRadius: 0, borderDash: [6, 4] }] : []),
+      ...(iLcl != null ? [{ label: 'LCL', data: xs.map(() => iLcl), pointRadius: 0, borderDash: [6, 4] }] : []),
+     ];
+
+     this._iChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: ls, datasets },
+      options: {
+       responsive: true,
+       maintainAspectRatio: false,
+       plugins: {
+        legend: { display: true },
+        tooltip: {
+         callbacks: {
+          afterBody: (items) => {
+           const v = items?.[0]?.parsed?.y;
+           if (!Number.isFinite(v)) return '';
+           if (iUcl != null && v > iUcl) return `🔴 UCL(${iUcl.toFixed(2)}) 초과`;
+           if (iLcl != null && v < iLcl) return `🔴 LCL(${iLcl.toFixed(2)}) 미만`;
+           return '';
+          }
+         }
+        }
+       },
+       scales: {
+        x: { ticks: { autoSkip: true, maxTicksLimit: 8, maxRotation: 0, minRotation: 0 } },
+        y: { beginAtZero: false }
+       }
+      }
+     });
+
+     const abnormalCount = xs.filter(v => (iUcl != null && v > iUcl) || (iLcl != null && v < iLcl)).length;
+     $('#iSummary').text(`I: 중심=${this._fmt(center)} / UCL=${iUcl != null ? this._fmt(iUcl) : '-'} / LCL=${iLcl != null ? this._fmt(iLcl) : '-'} / 이상=${abnormalCount}건`);
+    }
+
+    _drawMRChart(values, labels, { mean } = {}) {
+     const ctx = document.getElementById('mrChart');
+     if (!ctx) return;
+
+     if (this._mrChart) { this._mrChart.destroy(); this._mrChart = null; }
+     if (!values || !values.length) return;
+
+     const cleaned = [];
+     for (let i = 0; i < values.length; i++) {
+      const v = Number(values[i]);
+      if (Number.isFinite(v)) cleaned.push({ v, l: labels?.[i] ?? String(i + 1) });
+     }
+     const xs = cleaned.map(x => x.v);
+     const ls = cleaned.map(x => x.l);
+     if (xs.length < 2) return;
+
+     const imr = this._calcIMRParams(xs, mean);
+     const mr = imr.mr;
+     const mrBar = imr.mrBar;
+     const mrUcl = imr.mrUcl;
+
+     const mrSeries = [null, ...mr];
+
+     const pointBg = mrSeries.map(v => {
+      if (v == null) return 'rgba(0,0,0,0)';
+      return (mrUcl != null && v > mrUcl) ? 'red' : 'rgba(153, 102, 255, 1)';
+     });
+
+     const datasets = [
+      { label: 'MR', data: mrSeries, pointRadius: 3, tension: 0,
+       pointBackgroundColor: pointBg, pointBorderColor: pointBg },
+      { label: 'MR-CL', data: ls.map((_, i) => (i === 0 ? null : mrBar)), pointRadius: 0, borderDash: [6, 4] },
+      { label: 'MR-UCL', data: ls.map((_, i) => (i === 0 ? null : mrUcl)), pointRadius: 0, borderDash: [6, 4] },
+     ];
+
+     this._mrChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: ls, datasets },
+      options: {
+       responsive: true,
+       maintainAspectRatio: false,
+       plugins: {
+        legend: { display: true },
+        tooltip: {
+         callbacks: {
+          afterBody: (items) => {
+           const v = items?.[0]?.parsed?.y;
+           if (!Number.isFinite(v)) return '';
+           if (mrUcl != null && v > mrUcl) return `🔴 MR-UCL(${mrUcl.toFixed(2)}) 초과`;
+           return '';
+          }
+         }
+        }
+       },
+       scales: {
+        x: { ticks: { autoSkip: true, maxTicksLimit: 8, maxRotation: 0, minRotation: 0 } },
+        y: { beginAtZero: true }
+       }
+      }
+     });
+
+     const abnormalCount = mr.filter(v => mrUcl != null && v > mrUcl).length;
+     $('#mrSummary').text(`MR: MRbar=${this._fmt(mrBar)} / MR-UCL=${this._fmt(mrUcl)} / 이상=${abnormalCount}건`);
+    }
+
+    /*_drawIMR(values, labels, { mean, usl = null, lsl = null, unit } = {}) {
      const ctx = document.getElementById('imrChart');
      if (!ctx) return;
 
@@ -875,7 +1159,7 @@
        }
       }
      });
-    }
+    }*/
 
     // ---------- RIGHT: Box Plot ----------
     _drawBoxPlot(values, { unit }) {
@@ -901,7 +1185,9 @@
 
     _destroyCharts() {
      if (this._histChart) { this._histChart.destroy(); this._histChart = null; }
-     if (this._imrChart) { this._imrChart.destroy(); this._imrChart = null; }
+     // if (this._imrChart) { this._imrChart.destroy(); this._imrChart = null; }
+     if (this._iChart)   { this._iChart.destroy(); this._iChart = null; }
+     if (this._mrChart)  { this._mrChart.destroy(); this._mrChart = null; }
      if (this._boxChart) { this._boxChart.destroy(); this._boxChart = null; }
     }
 
@@ -924,12 +1210,12 @@
 
    function fillMeasureByProcess(procCode, selectedValue) {
     const $m = $('#measure_code').empty();
-    $m.append($('<option>').val('').text(i18n.getCommonText('선택')));
+    //$m.append($('<option>').val('').text(i18n.getCommonText('선택')));
 
     // console.log('[fillMeasureByProcess] procCode=', procCode);
 
-    const res = AjaxUtil.getSyncData('/api/summary/SPCStatistics/measureCodes', { process_code: procCode });
-    // console.log('[measureCodes res]=', res);
+    const res = AjaxUtil.getSyncData('/api/spc/SPCStatistics/measureCodes', { process_code: procCode });
+    console.log('[measureCodes res]=', res);
 
     // ✅ 가능한 형태를 전부 커버
     const rows =
@@ -938,7 +1224,7 @@
      || res?.rows
      || [];
 
-    // console.log('[measureCodes rows]=', rows);
+    console.log('[measureCodes rows]=', rows);
 
     rows.forEach(r => {
      $m.append($('<option>').val(r.value).text(r.text));

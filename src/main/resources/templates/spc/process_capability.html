@@ -630,7 +630,7 @@
 
     // console.log('[fillMeasureByProcess] procCode=', procCode);
 
-    const res = AjaxUtil.getSyncData('/api/summary/SPCStatistics/measureCodes', {process_code: procCode});
+    const res = AjaxUtil.getSyncData('/api/spc/SPCStatistics/measureCodes', {process_code: procCode});
     // console.log('[measureCodes res]=', res);
 
     // ✅ 가능한 형태를 전부 커버

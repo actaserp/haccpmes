@@ -25,20 +25,36 @@ public class SpcCapabilityService {
 	// ---------------------------
 	// 1) 관리기준 조회 (수정본)
 	// ---------------------------
-	public Map<String, Object> findSpec(String processCd, String metricCd) {
+	public Map<String, Object> findSpec(String processCd, String metricCd, String recipe, String itemName) {
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		param.addValue("process_cd", processCd);
 		param.addValue("metric_cd", metricCd);
+		param.addValue("recipe", recipe);
+		param.addValue("item_name", itemName);
 
-		// ✅ 최신 1건만 쓰고 싶으면 DB에 맞게 LIMIT/TOP 적용 가능
 		String sql = """
-            select *
-            from tb_spc_std01
-            where process_code = :process_cd
-              and measure_code = :metric_cd
-              and coalesce(use_yn, 'Y') = 'Y'
-            order by updated_at desc, id desc
-            """;
+        select spc.*,
+               s."Value" as measure_cycle_unit_name
+        from tb_spc_std01 spc
+        left join sys_code s
+               on s."Code" = spc.measure_cycle_unit
+              and s."CodeType" = 'measure_cycle_unit'
+        where spc.process_code = :process_cd
+          and spc.measure_code = :metric_cd
+          and coalesce(spc.use_yn, 'Y') = 'Y'
+          -- ✅ recipe/item 조건은 있으면 적용, 없으면 무시 (fallback 가능)
+          and (coalesce(:recipe,'') = '' or spc.recipe = :recipe)
+          and (coalesce(:item_name,'') = '' or spc.item_name = :item_name)
+        order by
+          -- ✅ recipe가 들어왔으면 recipe 매칭이 먼저
+          case when coalesce(:recipe,'') <> '' and spc.recipe = :recipe then 0 else 1 end,
+          -- ✅ item이 들어왔으면 item 매칭이 먼저
+          case when coalesce(:item_name,'') <> '' and spc.item_name = :item_name then 0 else 1 end,
+          spc.updated_at desc,
+          spc.id desc
+        limit 1
+        """;
+
 
 		return sqlRunner.getRow(sql, param);
 	}
@@ -51,7 +67,7 @@ public class SpcCapabilityService {
 																		String measureCode, String recipe) {
 
 		// (A) 관리기준
-		Map<String, Object> specRow = findSpec(processCode, measureCode);
+		Map<String, Object> specRow = findSpec(processCode, measureCode, recipe, itemName);
 		if (specRow == null || specRow.isEmpty()) {
 			throw new IllegalArgumentException("관리기준이 없습니다. (공정/측정항목 기준)");
 		}
@@ -63,6 +79,7 @@ public class SpcCapabilityService {
 		Double lcl = toDouble(specRow.get("lcl"));
 		Integer sampleSize = toInt(specRow.get("sample_size"), 1);
 		Integer cycleValue = toInt(specRow.get("measure_cycle_value"), 1);
+		String cycleUnitName = toStr(specRow.get("measure_cycle_unit_name"));
 		String cycleUnit = toStr(specRow.get("measure_cycle_unit"));
 		String unitName = toStr(specRow.get("unit_name"));
 		String measureName = toStr(specRow.get("measure_name"));
@@ -76,6 +93,7 @@ public class SpcCapabilityService {
 		spec.put("sampleSize", sampleSize);
 		spec.put("measureCycleValue", cycleValue);
 		spec.put("measureCycleUnit", cycleUnit);
+		spec.put("measure_cycle_unit_name", cycleUnitName);
 		spec.put("unitName", unitName);
 		spec.put("measureName", measureName);
 
