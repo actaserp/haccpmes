@@ -762,7 +762,7 @@ let FormUtil = {
                 $input.attr('name', newName);
 
                 if (nameWithoutIndex === 'VatIncluded') {
-                    $input.prop('checked', true);
+                    // $input.prop('checked', true);
                 }
             });
             $newRow.find('a[title="삭제"]').attr('id', `btnDelItem_${index}`);
