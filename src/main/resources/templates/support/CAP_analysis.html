@@ -85,6 +85,8 @@
                 </li>
               </dd>
             </dl>
+
+
           </div>
         </div> <!--//section-top end -->
         <div class="container-fluid">
@@ -149,10 +151,20 @@
               </tr>
               <tr>
                 <th >
+                  <label for="date_finish"><span class="eq">*</span>완료일</label>
+                </th>
+                <td >
+                  <input type="date" id="date_finish" name="date_finish" style="width: 100%;" placeholder="완료일"/>
+                </td>
+              </tr>
+              <tr>
+                <th >
                   <label for="cap_depart"><span class="eq">*</span>발생 부서</label>
                 </th>
                 <td >
-                  <input type="text" id="cap_depart" name="cap_depart" style="width: 100%;" placeholder="발생부서"/>
+                <select class="" id="cap_depart" name="cap_depart" style="width: 100%;">
+                                    </select>
+                                    
                 </td>
               </tr>
               <tr>
@@ -162,7 +174,7 @@
                 <td style="width: 100%;">
                   <div class="input-with-button">
                     <div class="input-clear">
-                      <input type="text" id="product" name="product" placeholder="품목을 선택하세요" />
+                      <input type="text" id="product" readonly name="product" placeholder="품목을 선택하세요" />
                     </div>
                     <a class="btn in_btn cap" title="품목 검색" id="btnProductSearch">
                       <img src="/images/icon/btn-srch-black.svg" alt="검색 아이콘" />
@@ -174,12 +186,35 @@
                   <input type="hidden" id="material_id" name="material_id" />
                 </td>
               </tr>
+
+              <tr>
+                <th >
+                  <label for="company"><span class="eq">*</span>거래처</label>
+                </th>
+                <td style="width: 100%;">
+                  <div class="input-with-button">
+                    <div class="input-clear">
+                      <input type="text" id="cboCompany" readonly name="cboCompany" placeholder="거래처를 선택하세요" />
+                    </div>
+                    <a class="btn in_btn cap" title="거래처 검색" id="btnCompanySearch">
+                      <img src="/images/icon/btn-srch-black.svg" alt="검색 아이콘" />
+                    </a>
+                  </div>
+
+                  <!-- hidden input -->
+                  <input type="hidden" id="cboCompanyText" name="cboCompanyText" />
+                  <input type="hidden" id="cboCompanyHidden" name="cboCompanyHidden" />
+                </td>
+              </tr>  
+
+
               <tr>
                 <th >
                   <label for="cap_unit"><span class="eq">*</span>측정단위</label>
                 </th>
                 <td >
-                  <input type="text" id="cap_unit" name="cap_unit" style="width: 100%;" placeholder="층정단위"/>
+                  <select class="" id="cap_unit" name="cap_unit"  style="width: 100%;">
+                                    </select>
                 </td>
               </tr>
               <tr>
@@ -187,7 +222,11 @@
                   <label for="cap_progress"><span class="eq">*</span>진행상태</label>
                 </th>
                 <td >
-                  <input type="text" id="cap_progress" name="cap_progress" style="width: 100%;" placeholder="진행상태"/>
+                  <select id="cap_progress" name="cap_progress" style="width: 100%">
+                      <option value="접수">접수</option>
+                      <option value="진행">진행</option>
+                      <option value="완료">완료</option>
+                  </select>
                 </td>
               </tr>
               <tr>
@@ -195,17 +234,31 @@
                   <label for="cap_process"><span class="eq">*</span>발생공정</label>
                 </th>
                 <td >
-                  <input type="text" id="cap_process" name="cap_process" style="width: 100%;" placeholder="발생공정"/>
+                  <select class="" id="cap_process" name="cap_process"  style="width: 100%;">
+                  </select>
                 </td>
               </tr>
-              <tr>
+              <!-- <tr>
                 <th >
                   <label for="cap_claims"><span class="eq">*</span>클레임 유형</label>
                 </th>
                 <td >
                   <input type="text" id="cap_claims" name="cap_claims" style="width: 100%;" placeholder="클레임 유형"/>
                 </td>
-              </tr>
+              </tr> -->
+
+
+              <tr>
+                <th >
+                  <label for="defect_type"><span class="eq">*</span>부적합 유형</label>
+                </th>
+                <td >
+                  <select class="" id="defect_type" name="defect_type"  style="width: 100%;">
+                  </select>
+                </td>
+              </tr>  
+              
+
               <tr>
                 <th >
                   <label for="cap_creater_id"><span class="eq">*</span>작성자</label>
@@ -239,6 +292,8 @@
 <th:block layout:fragment="scripts">
   <th:block th:replace="/common/approve_box :: approve_box"></th:block>
   <th:block th:replace="/common/ax5_uploader :: ax5_uploader"></th:block>
+  <th:block th:replace="/common/popup_company :: popup_company"></th:block>
+
   <th:block th:replace="/common/multiform_material :: multiform_material"></th:block>
 
   <script type="text/javascript">
@@ -257,25 +312,33 @@
           autoGenerateColumns: false,
           showMarquee: true,
           isReadOnly: true,
+
           formatItem: (sender, e) => {
             if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
               e.cell.style.textAlign = 'center';
             }
           },
+
           columns: [
-            {binding: '', header: 'cap_id', width: 150, visible: false},
-            {binding: '', header: 'CAP 번호', width: 150},
-            {binding: '', header: '발생일', width: 70, align: 'center'},
-            {binding: '', header: '고객', width: 70, align: 'center'},
-            {binding: '', header: '발생부서', width: 120, align: 'center'},
-            {binding: '', header: '품목', width: 120, align: 'center'},
-            {binding: '', header: '조치항목', width: 120, align: 'center'},
-            {binding: '', header: '조치 일자', width: 120, align: 'center'},
-            {binding: '', header: '주요원인', width: 120, align: 'center'},
-            {binding: '', header: '문제 요약', width: 120, align: 'center'},
-            {binding: '', header: '진행상태', width: 120, align: 'center'},
-            {binding: '', header: '담당자', width: 120, align: 'center'},
-            {binding: '', header: '보기', width: 120, align: 'center'},
+            {binding: 'id', header: 'id', width: 150, visible: false},
+            {binding: 'cap_no', header: 'CAP 번호', width: 150, align: 'center'},
+            {binding: 'occur_depart', header: '발생부서id', width: 70, align: 'center', visible: false},
+            {binding: 'depart_name', header: '발생부서', width: 120, align: 'center'},
+            
+            {binding: 'company_id', header: '거래처id', width: 120, align: 'center', visible: false},
+            {binding: 'company_name', header: '거래처', width: 120, align: 'center'},
+            
+
+            {binding: 'material_name', header: '품목', width: 120, align: 'center'},
+            {binding: 'unit_name', header: '측정단위', width: 120, align: 'center'},
+            {binding: 'status', header: '진행상태', width: 120, align: 'center'},
+            {binding: 'process_name', header: '발생공정', width: 120, align: 'center'},
+
+            {binding: 'defect_type_name', header: '부적합유형', width: 120, align: 'center'},
+            {binding: 'defect_type_id', header: '부적합유형id', width: 120, align: 'center', visible: false},
+            
+            
+            {binding: 'writer', header: '작성자', width: 120, align: 'center'},
 
           ],
           itemsSource: this.viewData, // 데이터를 설정할 배열
@@ -284,12 +347,29 @@
         new FlexGridContextMenu(this.grid);
         this.grid.downloadFileName = 'CAP 분석';
 
-        this.grid.hostElement.addEventListener('dblclick', function (e) {
-          let items = _this.grid.selectedItems;
-          if (items.length === 0) {
-            return false;
-          }
-          _this.$btnEdit.trigger('click');
+        this.grid.hostElement.addEventListener('click', function (e) {
+          let items = _this.grid.selectedItems[0];
+        
+          $('#cap_number').val(items.cap_no);
+          //$('#cap_claims').val(items.claim_type);
+          $('#cap_depart').val(items.occur_depart);
+          $('#id').val(items.id);
+          $('#cap_problem_content').val(items.issue_summary);
+          $('#material_id').val(items.material_id);
+          $('#product').val(items.material_name);
+          $('#date_occurrence').val(items.occur_date);
+
+          $('#date_finish').val(items.process_date);
+
+          $('#cboCompanyHidden').val(items.company_id);
+          $('#cboCompany').val(items.company_name);
+          $('#defect_type').val(items.defect_type_id);
+          
+          $('#cap_process').val(items.process_id);
+          $('#cap_progress').val(items.status);
+          $('#cap_unit').val(items.unit_id);
+          $('#cap_creater_id').val(items.writer);
+        
         });
 
         $('#btnProductSearch').click(function () {
@@ -307,6 +387,21 @@
           });
         });
 
+        $('#btnCompanySearch').click(function () {
+
+            let poppage = new PopCompComponent();
+            let $poppage = $(poppage);
+            let searchcallback = function (items) {
+                // $content.find('#cboCompany').val(items.id);
+                // $content.find('#CompanyName').val(items.compname);
+                console.log('items : ',items);
+                document.getElementById('cboCompany').value = items.compname;
+                document.getElementById('cboCompanyHidden').value = items.id;
+            };
+
+            poppage.show(searchcallback);
+        });
+
         $('#product').on('input', function () {
           if (!$(this).val().trim()) {
             $('#product_code').val('');
@@ -315,6 +410,128 @@
         });
 
       }//init
+
+      searchMainData(){
+
+        let _this = this;
+
+        $.ajax({
+                url: '/api/support/cap/read',
+                type: 'GET',
+                data: {
+                    'capNo': $('#txtMatgrp').val(),
+                    spjangcd: sessionStorage.getItem('spjangcd'),
+                },
+                async: false,
+                success: function (result) {
+                    if (result.success) {
+                        _this.viewData.sourceCollection = result.data;
+                    } else {
+                        Alert.alert('', '에러가 발생하였습니다.');
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.error('Error fetching log_list data:', textStatus, errorThrown);
+
+                }
+            });
+      }
+
+      save(){
+
+        let _this = this;
+        
+        let url = '/api/support/cap/save';
+      
+        // 🔍 필수값 체크
+        const dateOccurrence = $('#date_occurrence').val();
+        const materialId = $('#material_id').val();
+        const companyId = $('#cboCompanyHidden').val();
+        const capProgress = $('#cap_progress').val();
+        const capProcess = $('#cap_process').val();
+        const defectType = $('#defect_type').val();
+
+        if (!dateOccurrence) {
+            Alert.alert('', '발생일자를 입력해주세요.');
+            $('#date_occurrence').focus();
+            return;
+        }
+
+        if (!materialId) {
+            Alert.alert('', '품목을 선택해주세요.');
+            $('#product').focus();
+            return;
+        }
+
+        if (!companyId) {
+            Alert.alert('', '회사를 선택해주세요.');
+            return;
+        }
+
+        if (!capProgress) {
+            Alert.alert('', '진행상태를 선택해주세요.');
+            $('#cap_progress').focus();
+            return;
+        }
+
+        if (!capProcess) {
+            Alert.alert('', '발생공정을 선택해주세요.');
+            $('#cap_process').focus();
+            return;
+        }
+
+        if (!defectType) {
+            Alert.alert('', '불량유형을 선택해주세요.');
+            $('#defect_type').focus();
+            return;
+        }
+
+        let data = FormUtil.extractForm($('#CapAnalysisForm'));
+        data.spjangcd=sessionStorage.getItem('spjangcd');
+
+        Alert.confirm('', '저장하시겠습니까?', function () {
+                let fnSuccess = function (result) {
+                    if (result.success) {
+                        Alert.alert('', '저장되었습니다');
+                        _this.searchMainData(); // 저장 후 데이터 갱신
+                    } else {
+                        Alert.alert('저장 실패', result.message);
+                        console.error('저장 실패:', result.message);
+                    }
+                };
+
+                // 데이터 저장 요청
+                AjaxUtil.postAsyncData(url, data, fnSuccess);
+            });
+      }
+
+      delete(){
+
+        let _this = this;
+        
+        let url = '/api/support/cap/delete';
+
+        let items = _this.grid.selectedItems[0];
+      
+        let data = {
+          'capNo' : items.cap_no
+        }
+
+        Alert.confirm('', '삭제하시겠습니까?', function () {
+                let fnSuccess = function (result) {
+                    if (result.success) {
+                        Alert.alert('', '삭제되었습니다');
+                        _this.searchMainData(); // 저장 후 데이터 갱신
+                    } else {
+                        Alert.alert('저장 실패', result.message);
+                        console.error('저장 실패:', result.message);
+                    }
+                };
+
+                // 데이터 저장 요청
+                AjaxUtil.postAsyncData(url, data, fnSuccess);
+            });
+      }
 
     }//CAPAnalysisPage
 
@@ -330,15 +547,22 @@
 
       //page.searchMainData();
 
+      AjaxUtil.fillSelectOptions($('#cap_depart'), 'depart', 'all', '', null);
+      AjaxUtil.fillSelectOptions($('#cap_unit'), 'unit', 'all', '', null);
+      AjaxUtil.fillSelectOptions($('#cap_process'), 'process', 'all', '', null);
+      AjaxUtil.fillSelectOptions($('#defect_type'), 'defect_type', '', '', null);
+      
+            
+
       // 검색버튼
       $('#btnSearch').click(function (e) {
-        searchMainData();
+        page.searchMainData();
       });
 
       // 엔터키 검색
       $('#txtMatgrp').on('keypress', function (e) {
         if (event.keyCode == 13) {
-          searchMainData();
+          page.searchMainData();
         }
       });
 
@@ -355,6 +579,23 @@
         });
       });
 
+      $('#btnSearch').click(function(e){
+        page.searchMainData();
+      })
+      
+      $('#btnSave').click(function (e){
+
+        page.save();
+          
+      });
+
+
+      $('#btnDel').click(function (e){
+        
+        page.delete();
+      })
+
+      page.searchMainData();
     });
 
   </script>

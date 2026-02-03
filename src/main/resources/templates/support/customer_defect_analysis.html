@@ -85,8 +85,9 @@
               <div class="srch-box">
                 <select id="cboCusState" name="cboCusState">
                   <option value="" >전체</option>
-                  <option value="processing" >조치중</option>
-                  <option value="done" >완료</option>
+                  <option value="receipt" >접수</option>
+                  <option value="progress" >진행</option>
+                  <option value="finish" >완료</option>
                 </select>
               </div>
             </dd>
@@ -118,78 +119,125 @@
   <script type="text/javascript">
     class CustomerDefectAnalysisPage {
       constructor() {
+        this.viewData = new wijmo.collections.CollectionView([]);
         this.gird = null;
         this.init();
+        
         this.url = '/api/inventory/material_current_stock';
       }
 
+      
       init() {
+  let _this = this;
+
+  this.grid = new wijmo.grid.FlexGrid('#material-stock-grid', {
+    selectionMode: wijmo.grid.SelectionMode.Row,
+    headersVisibility: wijmo.grid.HeadersVisibility.Column,
+    autoGenerateColumns: false,
+    isReadOnly: true,
+    showMarquee: true,
+    allowSorting: false,
+    // 1. 여기서 아예 포맷 형식을 강제로 바꿔버립니다.
+    // {value}는 그룹명, {count}는 아이템 개수입니다.
+    groupHeaderFormat: '{value} ({count}건)', 
+    columns: [
+      { binding: 'company_name', header: '고객사', width: 210 },
+      { binding: 'material_name', header: '품목', width: 150 },
+      { binding: 'defect_type_name', header: '불량유형', width: 150, align: 'center' },
+      { binding: 'occur_date', header: '접수일', width: 100, align: 'center' },
+      { binding: 'process_date', header: '처리완료일', width: 100, align: 'center' },
+      { binding: 'process_days', header: '처리소요일', width: 150, align: 'center' },
+      { binding: 'cap_no', header: 'CAP번호', width: 180 },
+      { binding: 'status', header: '진행상태', width: 100, align: 'center' }
+    ],
+    itemsSource: this.viewData
+  });
+
+  // 2. 소계 행 때문에 늘어난 건수를 수동으로 교정하기 위한 핸들러
+  this.grid.formatItem.addHandler((s, e) => {
+  // --- [데이터 셀 영역 처리] ---
+  if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+    const item = s.rows[e.row].dataItem;
+
+    // 1. 소계 행(is_footer === 1)인 경우
+    if (item && item.is_footer === 1) {
+      e.cell.style.backgroundColor = '#fdf2f2'; // 집계행 색상
+      e.cell.style.fontWeight = 'bold';
+      e.cell.style.color = '#333';
+
+      if (s.columns[e.col].binding === 'process_days') {
+        const avgVal = parseFloat(item.process_days);
+        e.cell.textContent = !isNaN(avgVal) ? '평균 처리일 : ' + avgVal.toFixed(1) + '일' : '-';
+        e.cell.style.color = '#e74c3c';
+      }
+
+      const skipCols = ['cap_no', 'defect_type_name', 'material_name', 'status'];
+      if (skipCols.includes(s.columns[e.col].binding)) {
+        e.cell.textContent = '';
+      }
+    } 
+    // 2. 일반 데이터 행인 경우 (반드시 초기화 로직이 필요함!)
+    else {
+      e.cell.style.backgroundColor = ''; // 배경색 초기화
+      e.cell.style.fontWeight = '';      // 굵기 초기화
+      e.cell.style.color = '';           // 글자색 초기화
+      // 텍스트는 Wijmo가 알아서 바인딩하므로 건드릴 필요 없음
+    }
+  }
+
+  // --- [그룹 헤더 영역 처리] ---
+  if (e.panel.cellType === wijmo.grid.CellType.GroupHeader) {
+    const row = s.rows[e.row];
+    const col = s.columns[e.col];
+
+    if (col.binding === 'company_name') {
+      const realCount = row.group.items.filter(i => i.is_footer !== 1).length;
+      e.cell.innerHTML = `<span style="font-weight:bold;">${row.group.name} (${realCount}건)</span>`;
+    } else {
+      e.cell.innerHTML = '';
+    }
+    // 그룹 헤더도 재사용될 수 있으므로 배경색 등을 명시적으로 관리하고 싶다면 여기에 추가
+    e.cell.style.backgroundColor = ''; 
+  }
+});
+
+  this.viewData.groupDescriptions.clear();
+  this.viewData.groupDescriptions.push(new wijmo.collections.PropertyGroupDescription('company_name'));
+
+  new FlexGridContextMenu(this.grid);
+}
+
+
+      searchMainData() {
         let _this = this;
-        this.grid = new wijmo.grid.FlexGrid('#material-stock-grid', {
-          autoGenerateColumns: false,
-          frozenColumns: 0, // 열 고정
-          headersVisibility: wijmo.grid.HeadersVisibility.Column,
-          selectionMode: wijmo.grid.SelectionMode.None, // 다중 선택 불가
-          allowSorting: true, // 정렬 가능
-          formatItem: (sender, e) => {
-            if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
-              e.cell.style.textAlign = 'center';
+
+        $.ajax({
+          url: '/api/support/customer/read',
+          type: 'GET',
+          data: {
+            startDt: $('#srchStartDt').val(),
+            endDt:  $('#srchEndDt').val(),
+            company_name:  $('#btnCompanySearch').val(),
+            material_name: $('#cboMatName').val(),
+            defect_type_id: $('#cboDefectTypeSearch').val(),
+            progress :  $('#cboCusState').val(),  
+            spjangcd: sessionStorage.getItem('spjangcd')
+          },
+          success: function (result) {
+            if (result.success) {
+              console.log('asda', result.data);
+              _this.viewData.sourceCollection = result.data;
+              _this.viewData.refresh(); // ⭐ 중요
+            } else {
+              Alert.alert('', '조회 중 오류가 발생했습니다.');
             }
           },
-          columns: [
-            {binding: '', header: '고객사', width: 210, align: 'left', isReadOnly: true},
-            {binding: '', header: '품목', width: 120, align: 'left', isReadOnly: true},
-            {binding: '', header: '불량유형', width: 100, align: 'center', isReadOnly: true},
-            {binding: '', header: '발생건수', width: 70, align: 'left', isReadOnly: true},
-            {binding: '', header: '조치완료건수', width: 100, align: 'left', isReadOnly: true},
-            {binding: '', header: '평균처리일', width: 100, align: 'left', isReadOnly: true},
-            {binding: '', header: '주요원인', width: 250, align: 'left', isReadOnly: true},
-            {binding: '', header: 'CAP번호', width: 200, align: 'left', isReadOnly: true},
-            {binding: '', header: '진행상태', width: 100, align: 'left', isReadOnly: true},
-            {binding: '', header: '비고', width: '*', align: 'left', isReadOnly: true},
-
-          ],
-          itemsSource: new wijmo.collections.CollectionView([]), // 빈 데이터로 초기화
-          itemFormatter: (panel, row, col, cell) => {
-            if (panel.cellType === wijmo.grid.CellType.Cell) {
-              const item = panel.rows[row].dataItem; // 현재 행 데이터
-              const column = panel.columns[col]; // 현재 열
-
-              // 'cur_stock' 열에 대해 조건에 따른 클래스 추가
-              if (column.binding === 'cur_stock' && item.cur_stock < item.safety_stock) {
-                cell.classList.add('grid-cell-red');
-              }
-
-              // 'house_stock' 열에 대해 조건에 따른 클래스 추가
-              if (column.binding === 'house_stock' && item.house_stock < 0) {
-                cell.classList.add('redText');
-              }
-            }
+          error: function (err) {
+            console.error(err);
           }
         });
-        new FlexGridContextMenu(this.grid);
-        this.grid.downloadFileName = '자재 적정 재고 현황 내역';
       }
 
-      searchDataBind() {
-        let _this = this;
-
-        let param = {
-          'action': 'read',
-          'mat_type': $('#cboMatType').val(),
-          'mat_grp_pk': $('#cboMatGrp').val(),
-          'mat_name': $('#txtMatName').val(),
-          'store_house_id': $('#cboStoreHouse').val(),
-          'spjangcd' : sessionStorage.getItem('spjangcd')
-
-        };
-
-
-        let result = AjaxUtil.getSyncData(this.url + '/read', param);
-        if (result != null) {
-          _this.grid.itemsSource.sourceCollection = result.data;
-        }
-      }
 
     }
 
@@ -221,10 +269,10 @@
 
       // 검색버튼
       $('#btnSearch').click(function (e) {
-        page.searchDataBind();
+        page.searchMainData();
       });
 
-      page.searchDataBind();
+      page.searchMainData();
 
     });
 
