@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/spc-management") // ✅ /api prefix 유지 (보안상 명확)
+@RequestMapping("/api/spc-management")
 @RequiredArgsConstructor
 public class SpcManagementController {
 

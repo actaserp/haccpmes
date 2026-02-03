@@ -329,6 +329,7 @@
         formData['process_name'] = $('#process_code option:selected').text();
         formData['measure_name'] = $('#measure_code option:selected').text();
         formData['unit_name'] = $('#unit_code option:selected').text();
+        formData['item_code'] = $('#item_code').val();
         // formData['measure_cycle_unit_name'] = $('#measure_cycle_unit option:selected').text();
 
         formData['use_yn'] = $('#use_yn').is(':checked') ? 'Y' : 'N';
@@ -413,7 +414,7 @@
           // $productCode.val(item.Code);
           // $materialGroup.val(item.group_name);
           $('#item_name').val(item.Name);        // 품목명
-          $('#item_code').attr('data-code', item.Code); // 품목코드
+          $('#item_code').val(item.Code); // 품목코드
         });
       });
 
