@@ -179,6 +179,9 @@
                 itemsSource: viewdata
             });
 
+            new FlexGridContextMenu(this.theGrid);
+            this.theGrid.downloadFileName = '로그인 로그';
+
             theGrid.rowHeaders.columns.splice(0, 1);  //맨 앞에 헤더부분 없애기
 
             /*  new FlexGridContextMenu(theGrid);*/

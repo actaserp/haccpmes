@@ -229,6 +229,9 @@
         itemsSource: viewdata
       });
 
+      new FlexGridContextMenu(this.theGrid);
+      this.theGrid.downloadFileName = '시스템 로그';
+
       theGrid.hostElement.addEventListener('dblclick', function (e) {
         let selectedItem = theGrid.selectedItems[0];
 

@@ -498,6 +498,9 @@
                 itemsSource: viewdata
             });
 
+            new FlexGridContextMenu(this.theGrid);
+            this.theGrid.downloadFileName = '사용자관리';
+
             theGrid.hostElement.addEventListener('dblclick', function (e) {
                 let selectedItem = theGrid.selectedItems[0];
                 /*console.log('확인', selectedItem);*/
@@ -896,6 +899,9 @@
                 isReadOnly: false,
                 itemsSource: viewdata2
             });
+
+            new FlexGridContextMenu(this.theGrid2);
+            this.theGrid2.downloadFileName = '사용자그룹';
 
             // Grid 생성 후 formatItem 이벤트로 헤더에 HTML 적용
             theGrid2.formatItem.addHandler((s, e) => {

@@ -207,6 +207,8 @@
         itemsSource: viewdata
       });
 
+      new FlexGridContextMenu(this.theGrid);
+      this.theGrid.downloadFileName = '프라퍼티 마스터';
 
       theGrid.hostElement.addEventListener('click', function (e) {
         $('#detailBox').find('input, select').each(function () {

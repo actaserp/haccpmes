@@ -294,6 +294,9 @@
                 itemsSource: viewdata
             });
 
+            new FlexGridContextMenu(this.theGrid);
+            this.theGrid.downloadFileName = '스토리보드';
+
             theGrid.rowHeaders.columns.splice(0, 1);
             /*  new FlexGridContextMenu(theGrid);*/
         }

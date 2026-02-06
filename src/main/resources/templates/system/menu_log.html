@@ -257,6 +257,9 @@
                 itemsSource: viewdata1
             });
 
+            new FlexGridContextMenu(this.theGrid1);
+            this.theGrid1.downloadFileName = '메뉴카운트';
+
             theGrid1.rowHeaders.columns.splice(0, 1);
             /*  new FlexGridContextMenu(theGrid);*/
 
@@ -371,6 +374,9 @@
                 isReadOnly: true,
                 itemsSource: viewdata2
             });
+
+            new FlexGridContextMenu(this.theGrid);
+            this.theGrid.downloadFileName = '메뉴로그';
 
 
             theGrid2.rowHeaders.columns.splice(0, 1);

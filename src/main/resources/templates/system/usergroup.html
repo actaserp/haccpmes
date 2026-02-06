@@ -183,6 +183,9 @@
         setButtonState();
       });
 
+      new FlexGridContextMenu(this.theGrid);
+      this.theGrid.downloadFileName = '사용자그룹';
+
       theGrid.rowHeaders.columns.splice(0, 1);
       /*  new FlexGridContextMenu(theGrid);*/
 
