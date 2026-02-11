@@ -343,7 +343,7 @@
                 <div class="input-with-checkbox">
                   <input type="text" name="BaljuUnitPrice" placeholder="단가" />
                   <input type="hidden" name="originalUnitPrice" value="" />
-                  <input type="checkbox" id="VatIncluded" name="VatIncluded" checked />
+                  <input type="checkbox" id="VatIncluded" name="VatIncluded" />
                 </div>
               </td>
               <td><input type="text" name="BaljuPrice"  /></td>
@@ -501,7 +501,7 @@
         // 숫자 포맷 적용 대상 필드들
         const formatFields = [
           'input[name^="quantity_"]',
-          // 'input[name^="BaljuUnitPrice_"]', 소수점 허용
+          'input[name^="BaljuUnitPrice_"]',
           'input[name^="BaljuPrice_"]',
           'input[name^="BaljuVat_"]',
           'input[name^="totalAmount_"]'
@@ -523,42 +523,55 @@
           });
         });
 
-        // 계산 이벤트 바인딩
+        function applyFormatting($row) {
+          formatFields.forEach(selector => {
+            const $el = $row.find(selector);
+            if ($el.length) {
+              formatNumberInput($el.val(), $el[0]);
+            }
+          });
+        }
+
+        // 3. 수량/단가 변경 시 계산 및 포맷팅
         $row.find('input[name^="quantity_"], input[name^="BaljuUnitPrice_"]')
-          .off('keyup change').on('keyup change', function () {
+                .off('keyup.calc change.calc').on('keyup.calc change.calc', function () {
           calculateAmount({ row: $row, $content });
+          applyFormatting($row); // ✅ 계산 결과값들에 콤마 입히기
           updateBaljuTotalPrice($content);
         });
 
+        // 4. 부가세 포함여부 변경 시
         $row.find('input[name^="VatIncluded"]').off('change').on('change', function () {
-          $row.data('supplyEdited', false);  // ✅ 플래그 초기화
-          $row.data('vatEdited', false);     // ✅ 플래그 초기화
+          $row.data('supplyEdited', false);
+          $row.data('vatEdited', false);
           calculateAmount({ row: $row, $content });
-          updateBaljuTotalPrice($content);
-        });
-        // ✅ 공급가 수동 입력 시 플래그 추가하고 계산
-        $row.find('input[name^="BaljuPrice_"]').off('input').on('input', function () {
-          $row.data('supplyEdited', false);  // ✅ 플래그 초기화
-          $row.data('vatEdited', false);     // ✅ 플래그 초기화
-          $row.data('supplyEdited', true);
-          calculateAmount({ row: $row, $content });
+          applyFormatting($row); // ✅ 콤마 입히기
           updateBaljuTotalPrice($content);
         });
 
-        // ✅ 부가세 수동 입력 시 플래그 추가하고 계산
-        $row.find('input[name^="BaljuVat_"]').off('input').on('input', function () {
-          $row.data('supplyEdited', false);  // ✅ 플래그 초기화
-          $row.data('vatEdited', false);     // ✅ 플래그 초기화
+        // 5. 공급가 수동 입력 (이벤트 네임스페이스 manual 사용)
+        $row.find('input[name^="BaljuPrice_"]').off('input.manual').on('input.manual', function () {
+          $row.data('supplyEdited', true);
+          $row.data('vatEdited', false);
+          calculateAmount({ row: $row, $content });
+          applyFormatting($row); // ✅ 직접 쳐도 계산 결과에 의해 덮어씌워질 수 있으므로 다시 입힘
+          updateBaljuTotalPrice($content);
+        });
+
+        // 6. 부가세 수동 입력
+        $row.find('input[name^="BaljuVat_"]').off('input.manual').on('input.manual', function () {
+          $row.data('supplyEdited', false);
           $row.data('vatEdited', true);
           calculateAmount({ row: $row, $content });
+          applyFormatting($row);
           updateBaljuTotalPrice($content);
         });
 
-        $row.find('input[name^="totalAmount_"]').off('input').on('input', function () {
-          const $this = $(this);
-          const $edited = $row.find('input[name^="totalEdited_"]');
-          $edited.val('Y'); // ✅ 수동입력 표시
+        // 7. 합계금액 수동 입력
+        $row.find('input[name^="totalAmount_"]').off('input.manual').on('input.manual', function () {
+          $row.find('input[name^="totalEdited_"]').val('Y');
           updateBaljuTotalPrice($content);
+          // 포맷팅은 위 input.format에서 자동으로 처리됨
         });
 
         // 제품 검색 기능 (기존 그대로 유지)
