@@ -165,7 +165,13 @@ public class BaljuOrderController {
 
       Integer materialId = Integer.parseInt(item.get("Material_id").toString());
       Double qty = Double.parseDouble(item.get("quantity").toString());
-      Double unitPrice = Double.parseDouble(item.get("unit_price").toString());
+      Object rawPrice = item.get("unit_price");
+      Double unitPrice = null;
+
+      // 단가가 있을 때만 파싱하고 저장 로직을 태움
+      if (rawPrice != null && !rawPrice.toString().trim().isEmpty()) {
+        unitPrice = Double.parseDouble(rawPrice.toString().trim().replace(",", ""));
+      }
       Double supply_price = Double.parseDouble(item.get("supply_price").toString());
       Double vat = Double.parseDouble(item.get("vat").toString());
 
