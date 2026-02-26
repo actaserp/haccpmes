@@ -727,13 +727,11 @@
           <!-- 열 너비 고정용 헤더 -->
           <tr style="height: 0; font-size: 0; line-height: 0; border: none;">
             <th style="border: none; padding: 0; width: 5%;"></th>   <!-- No -->
-<!--            <th style="border: none; padding: 0; width: 6%;"></th>   &lt;!&ndash; 월 &ndash;&gt;-->
-<!--            <th style="border: none; padding: 0; width: 6%;"></th>   &lt;!&ndash; 일 &ndash;&gt;-->
-            <th style="border: none; padding: 0; width: 35%;"></th>  <!-- 품목 -->
-            <th style="border: none; padding: 0; width: 8%;"></th>   <!-- 수량 -->
-            <th style="border: none; padding: 0; width: 10%;"></th>  <!-- 단가 -->
-            <th style="border: none; padding: 0; width: 12%;"></th>  <!-- 공급가액 -->
-            <th style="border: none; padding: 0; width: 12%;"></th>  <!-- 부가세액 -->
+            <th style="border: none; padding: 0; width: 47%;"></th>  <!-- 품목 -->
+            <th style="border: none; padding: 0; width: 7%;"></th>   <!-- 수량 -->
+            <th style="border: none; padding: 0; width: 7%;"></th>  <!-- 단가 -->
+            <th style="border: none; padding: 0; width: 8%;"></th>  <!-- 공급가액 -->
+            <th style="border: none; padding: 0; width: 8%;"></th>  <!-- 부가세액 -->
             <th style="border: none; padding: 0; width: 10%;"></th>   <!-- 비고1 -->
             <th style="border: none; padding: 0; width: 8%;"></th>   <!-- 비고2 -->
           </tr>
@@ -1166,71 +1164,135 @@
 
                 function renderInvoiceHtml(data) {
                     let template = document.getElementById('writPrint_Template').innerHTML;
-                    console.log('renderInvoiceHtml(data)', data);
+
                     function formatNumber(value) {
                         if (value == null || value === '') return '';
                         return Number(value).toLocaleString();
                     }
+
+                    // 1. 규격(spec)이 존재하는지 확인 및 최대 길이 계산
+                    let maxSpecLength = 0;
+                    const hasSpec = Array.isArray(data.detailList) && data.detailList.some(item => {
+                        if (item.spec && item.spec.trim() !== '') {
+                            const str = item.spec.trim();
+                            let len = 0;
+                            for (let i = 0; i < str.length; i++) {
+                                // 한글 이외의 문자는 0.5, 한글은 1로 계산하여 정확도 향상
+                                len += (escape(str.charAt(i)).length > 4) ? 1 : 0.5;
+                            }
+                            maxSpecLength = Math.max(maxSpecLength, len);
+                            return true;
+                        }
+                        return false;
+                    });
+
+                    // 2. 동적 너비 계산
+                    let dynamicSpecWidth = 8;
+                    if (hasSpec) {
+                        // 글자당 가중치를 1.2로 높여서 긴 문장은 확실히 늘리고, 짧은건 8% 유지
+                        dynamicSpecWidth = Math.min(15, Math.max(8, maxSpecLength * 1.2));
+                    }
+                    let dynamicNameWidth = 47 - (hasSpec ? dynamicSpecWidth : 0);
 
                     // ${key} 를 data[key]로 치환
                     template = template.replace(/\$\{(.*?)\}/g, function (match, key) {
                         return data[key.trim()] ?? '';
                     });
 
-                    // detailList 행 추가
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = template;
 
+                    // --- [규격 컬럼 동적 처리 시작] ---
+
+                    // 하단 상세 테이블 (두 번째 table)
+                    const detailTable = tempDiv.querySelectorAll('table')[1];
+
+                    if (detailTable && hasSpec) {
+                        // A. 열 너비 고정용 th들 수정 (width 조정)
+                        const colWidths = detailTable.querySelectorAll('tr:first-child th');
+                        if (colWidths.length >= 2) {
+                            colWidths[1].style.width = dynamicNameWidth + '%'; // 품목 너비 동적 조절
+                            const specWidthTh = document.createElement('th');
+                            specWidthTh.style.cssText = `border: none; padding: 0; width: ${dynamicSpecWidth}%;`;
+                            colWidths[1].after(specWidthTh);
+                        }
+
+                        // B. 실제 헤더(제목 행) 수정
+                        const headerRow = detailTable.querySelector('tr[style*="background-color"]');
+                        if (headerRow) {
+                            const nameTh = headerRow.cells[1]; // '품목' th
+                            const specTh = document.createElement('th');
+                            specTh.innerText = '규격';
+                            nameTh.after(specTh);
+                        }
+
+                        // C. "내용" 행의 colspan 확대 (기존 10 -> 11)
+                        const contentTitleRow = detailTable.querySelector('td[style*="font-weight: bold"]');
+                        if (contentTitleRow && contentTitleRow.getAttribute('colspan')) {
+                            const currentColspan = parseInt(contentTitleRow.getAttribute('colspan'));
+                            contentTitleRow.setAttribute('colspan', (currentColspan + 1).toString());
+                        }
+                    }
+
+                    // --- [데이터 행(tbody) 생성] ---
                     const tbody = tempDiv.querySelector('#detailRows');
                     let totalQty = 0;
-                    let supplyTotal = 0;
-                    let taxTotal = 0;
 
                     if (tbody && Array.isArray(data.detailList)) {
                         const list = data.detailList;
                         const minRows = 10;
 
                         for (let i = 0; i < Math.max(list.length, minRows); i++) {
-                            const item = list[i] || {};  // 없는 항목은 빈 객체 처리
-
+                            const item = list[i] || {};
                             const qty = parseFloat(item.qty) || 0;
                             totalQty += qty;
 
                             const tr = document.createElement('tr');
-                            tr.innerHTML = `
-                                    <td>${i + 1}</td>
-                                    <td class="text-left">${item.name || ''}</td>
-                                    <td>${formatNumber(item.qty)}</td>
-                                    <td class="text-right">${formatNumber(item.unitcost)}</td>
-                                    <td class="text-right">${formatNumber(item.supplycost)}</td>
-                                    <td class="text-right">${formatNumber(item.tax)}</td>
-                                    <td class="text-left" colspan="2">${item.remark || ''}</td>
-                                `;
+
+                            let html = `<td>${i + 1}</td>`;
+                            html += `<td class="text-left">${item.name || ''}</td>`;
+
+                            // 규격이 있을 때만 td 추가
+                            if (hasSpec) {
+                                html += `<td class="text-center">${item.spec || ''}</td>`;
+                            }
+
+                            html += `
+                                <td>${formatNumber(item.qty)}</td>
+                                <td class="text-right">${formatNumber(item.unitcost)}</td>
+                                <td class="text-right">${formatNumber(item.supplycost)}</td>
+                                <td class="text-right">${formatNumber(item.tax)}</td>
+                                <td class="text-left" colspan="2">${item.remark || ''}</td>
+                            `;
+                            tr.innerHTML = html;
                             tbody.appendChild(tr);
                         }
                     }
 
+                    // --- [합계(tfoot) 생성] ---
                     const tfoot = tempDiv.querySelector('tfoot');
                     if (tfoot) {
+                        const sumLabelColspan = hasSpec ? 3 : 2; // 합계 텍스트가 차지할 칸수
+                        const bottomColspan = hasSpec ? 9 : 8;   // 인수자 라인이 차지할 칸수
+
                         tfoot.innerHTML = `
-                        <tr>
-                            <td colspan="2" style="text-align: center; font-weight: bold;">합계</td>
-                            <td style="text-align: center;">${formatNumber(totalQty)}</td>
-                            <td></td>
-                            <td style="text-align: right;">${formatNumber(data.supplycost)}</td>
-                            <td style="text-align: right;">${formatNumber(data.taxtotal)}</td>
-                            <td colspan="2" style="text-align: right;">${formatNumber(data.totalamt)}</td>
-                        </tr>
-                        <tr>
-                            <td colspan="8" style="text-align:right; padding-top:10px; font-weight:bold;">
-                                인수자: _________________________________
-                            </td>
-                        </tr>
-                    `;
+                            <tr>
+                                <td colspan="${sumLabelColspan}" style="text-align: center; font-weight: bold;">합계</td>
+                                <td style="text-align: center;">${formatNumber(totalQty)}</td>
+                                <td></td>
+                                <td style="text-align: right;">${formatNumber(data.supplycost)}</td>
+                                <td style="text-align: right;">${formatNumber(data.taxtotal)}</td>
+                                <td colspan="2" style="text-align: right;">${formatNumber(data.totalamt)}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="${bottomColspan}" style="text-align:right; padding-top:10px; font-weight:bold;">
+                                    인수자: _________________________________
+                                </td>
+                            </tr>
+                        `;
                     }
 
                     return tempDiv.innerHTML;
-
                 }
 
                 // 수정 클릭

@@ -2039,30 +2039,6 @@ public class SalesInvoiceService {
                 WHERE m.misnum = :misnum
                 """;
 
-        String detailSql = """ 
-            SELECT
-                ROW_NUMBER() OVER (ORDER BY sh."ShipDate") AS misseq,
-                TO_CHAR(sh."ShipDate", 'MM') AS month,
-                   TO_CHAR(sh."ShipDate", 'DD') AS day,
-                   sh."ShipDate",
-                sh.misnum,
-                s."Qty" as qty,
-                s."UnitPrice" as unitcost,
-                s."Price" as supplycost,
-                s."Vat" as tax,
-                s."Description" as remark,
-                   m."Name" AS name
-               FROM
-                   shipment_head sh
-               JOIN
-                   shipment s ON sh.id = s."ShipmentHead_id"
-               JOIN
-                   material m ON s."Material_id" = m.id
-               WHERE
-                   sh.misnum = :misnum
-               order by sh."ShipDate"
-            """;
-
         String fallbackDetailSql = """
             SELECT
                 d.misseq,
@@ -2072,6 +2048,7 @@ public class SalesInvoiceService {
                 d.supplycost,
                 d.taxtotal as tax,
                 d.remark,
+                d.spec,
                 SUBSTRING(d.misdate FROM 5 FOR 2) AS month,
                 SUBSTRING(d.misdate FROM 7 FOR 2) AS day
             FROM tb_salesdetail d

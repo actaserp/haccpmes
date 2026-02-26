@@ -16,6 +16,7 @@ import javax.servlet.http.HttpSession;
 import javax.transaction.Transactional;
 
 import mes.app.MailService;
+import mes.app.interceptor.SmartFactoryLogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.security.authentication.*;
@@ -54,6 +55,9 @@ public class AccountController {
 	@Autowired
 	MailService emailService;
 
+	@Autowired
+	private SmartFactoryLogService logService;
+
 	private final ConcurrentHashMap<String, String> tokenStore = new ConcurrentHashMap<>();
 	private final ConcurrentHashMap<String, Long> tokenExpiry = new ConcurrentHashMap<>();
 	private Boolean flag;
@@ -86,6 +90,9 @@ public class AccountController {
 							SecurityContextHolder.getContext().setAuthentication(token);
 							session.setAttribute("SPRING_SECURITY_CONTEXT", SecurityContextHolder.getContext());
 
+							String clientIp = getClientIp(request);
+							logService.sendLog("DO6999", username, clientIp);
+
 							return new ModelAndView("redirect:/");
 						} else {
 							Cookie clearCookie = new Cookie("DY_AUTO_LOGIN", null);
@@ -113,6 +120,14 @@ public class AccountController {
 		}
 
 		return mv;
+	}
+
+	private String getClientIp(HttpServletRequest request) {
+		String ip = request.getHeader("X-Forwarded-For");
+		if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+			ip = request.getRemoteAddr();
+		}
+		return ip;
 	}
 
 	@GetMapping("/MobileFirstPage")

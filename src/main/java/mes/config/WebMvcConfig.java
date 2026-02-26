@@ -1,6 +1,8 @@
 package mes.config;
 
 
+import mes.app.interceptor.SmartFactoryInterceptor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -10,11 +12,33 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer{
 
+    @Autowired
+    private SmartFactoryInterceptor smartFactoryInterceptor;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        //registry.addInterceptor(new GuiHttpInterceptor()).addPathPatterns("/gui/*");
-        //registry.addInterceptor(new ApiHttpInterceptor()).addPathPatterns("/Api/*");
+        registry.addInterceptor(smartFactoryInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns(
+                        "/",                // 루트 경로 제외
+                        "/assets/**",
+                        "/css/**",
+                        "/js/**",
+                        "/images/**",
+                        "/resource/**",
+                        "/font/**",
+                        "/img/**",
+                        "/api/common/**",
+                        "/user-auth/getspjangcd",
+                        "/weather/**",
+                        "/*.ico",
+                        "/*.html",
+                        "/gui/**",
+                        "/api/system/**",
+                        "/api/popup/**"
+                );
     }
+
 
     @Override
     public void addCorsMappings(CorsRegistry registry){
