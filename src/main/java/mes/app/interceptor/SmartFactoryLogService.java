@@ -68,11 +68,10 @@ public class SmartFactoryLogService {
             RestTemplate restTemplate = new RestTemplate();
             String response = restTemplate.postForObject(API_URL, entity, String.class);
 
-            System.out.println("보낸 JSON 문자열: " + jsonStr);
-            System.out.println("스마트공장 API 응답: " + response);
+            log.info("[스마트공장 API] 전송 성공 | 코드: {} | 사용자: {} | 응답: {}", useSe, userId, response);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("[스마트공장 API] 전송 중 오류 발생 | 코드: {} | 사용자: {} | 에러: {}", useSe, userId, e.getMessage(), e);
         }
     }
 }
