@@ -35,8 +35,8 @@ public class SmartFactoryLogService {
     public void sendLog(String useSe, String userId, String ip) {
         try {
 
-            if ("127.0.0.1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip)) {
-                log.info("로컬 개발 환경이므로 스마트공장 로그 전송을 스킵합니다. (IP: {})", ip);
+            if ("127.0.0.1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip) || "14.36.41.134".equals(ip)) {
+                log.info("[스마트공장 API] 전송 스킵 대상입니다. (접속 IP: {}, 사용자: {})", ip, userId);
                 return;
             }
 
@@ -68,10 +68,10 @@ public class SmartFactoryLogService {
             RestTemplate restTemplate = new RestTemplate();
             String response = restTemplate.postForObject(API_URL, entity, String.class);
 
-            log.info("[스마트공장 API] 전송 성공 | 코드: {} | 사용자: {} | 응답: {}", useSe, userId, response);
+            log.info("[스마트공장 API] 전송 성공 | 코드: {} | 사용자: {} | IP: {} | 응답: {}", useSe, userId, ip, response);
 
         } catch (Exception e) {
-            log.error("[스마트공장 API] 전송 중 오류 발생 | 코드: {} | 사용자: {} | 에러: {}", useSe, userId, e.getMessage(), e);
+            log.error("[스마트공장 API] 전송 오류 | 코드: {} | 사용자: {} | IP: {} | 메시지: {}", useSe, userId, ip, e.getMessage(), e);
         }
     }
 }
