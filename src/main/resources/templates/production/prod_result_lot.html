@@ -1599,10 +1599,7 @@
                 }
 
                 // 필수입력
-                if (!data.prod_date) {
-                    Alert.alert('', '생산일을 선택해주세요.');
-                    return;
-                } else if (!data.shift_code) {
+                if (!data.shift_code) {
                     Alert.alert('', '근무조를 선택해주세요.');
                     return;
                 } else if (!data.workcenter_id) {
@@ -1613,6 +1610,12 @@
                     return;
                 }
 
+                // 생산일 기본값(미입력 시 오늘 날짜)
+                const today = new Date();
+                data.prod_date =
+                    today.getFullYear() + '-' +
+                    ('0' + (today.getMonth() + 1)).slice(-2) + '-' +
+                    ('0' + today.getDate()).slice(-2);
 
                 let now = new Date();
                 let now_time = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
