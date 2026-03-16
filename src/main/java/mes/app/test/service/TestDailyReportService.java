@@ -36,6 +36,7 @@ public class TestDailyReportService {
         JOIN defect_type dt ON dt.id = i."DefectType_id"
         where "InspectionDate" BETWEEN CAST(:date_from AS date) AND CAST(:date_to AS date)
         and i."WorkCenter_id" =:work_id
+        order by dt.id
         """;
 
 //    log.info("검사일보 read SQL: {}", sql);
@@ -83,9 +84,10 @@ public class TestDailyReportService {
         dt.id as defect_type_id ,
         dt."Name" as defect_type
         from proc_defect_type pdt
-        left join work_center wc on wc.id = pdt."Process_id"
+        left join work_center wc on wc."Process_id" = pdt."Process_id"
         left join defect_type dt on pdt."DefectType_id" = dt.id
         where wc.id = :work_id
+        order by defect_type_id
       """;
     return sqlRunner.getRows(sql, dicParam);
   }

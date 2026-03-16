@@ -526,9 +526,10 @@
               headers: {'X-CSRF-TOKEN': csrfToken},
               success: function (res) {
                 if (res.success) {
-                  _this.searchMainData();
-
-                  modalContainer.close(); // 저장 후 닫기 등
+                  setTimeout(function() {  // 임시로 테스트
+                    _this.searchMainData();
+                  }, 500);
+                  modalContainer.close();
                 } else {
                   Alert.alert('실패', res.message || '검사일보 저장 실패');
                 }

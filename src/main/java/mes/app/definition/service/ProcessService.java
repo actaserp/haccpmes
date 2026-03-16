@@ -95,7 +95,7 @@ public class ProcessService {
 	        inner join defect_type dt on dt.id = pd."DefectType_id"
 	        where pd."Process_id" = :process_id
 	        AND pd.spjangcd = :spjangcd
-	        order by 2
+	        order by defect_type_id
 		    """;
         
         List<Map<String, Object>> items = this.sqlRunner.getRows(sql, dicParam);
