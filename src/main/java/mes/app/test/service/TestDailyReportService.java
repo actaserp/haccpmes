@@ -92,9 +92,10 @@ public class TestDailyReportService {
     return sqlRunner.getRows(sql, dicParam);
   }
 
-  public List<Map<String, Object>> findInspectionQty(String date) {
-    MapSqlParameterSource params = new MapSqlParameterSource()
-        .addValue("inspection_date", date); // 'YYYY-MM-DD' 가정
+  public List<Map<String, Object>> findInspectionQty(String date, Integer work_id) {
+    MapSqlParameterSource params = new MapSqlParameterSource();
+    params.addValue("inspection_date", date);
+    params.addValue("work_id", work_id);
 
     String sql = """
       select 
@@ -103,6 +104,7 @@ public class TestDailyReportService {
         ir."InspectionQty" as inspection_qty
       from inspection_reports ir
       where ir."InspectionDate" = to_date(:inspection_date, 'YYYY-MM-DD')
+      and ir."WorkCenter_id" = :work_id
       order by "InspectionQty"
     """;
 
@@ -114,7 +116,7 @@ public class TestDailyReportService {
     List<Map<String, Object>> defects = defectsList(workId);
 
     // 2) 날짜(필요시 작업장까지) 기준 저장값 조회
-    List<Map<String, Object>> rows = findInspectionQty(date); // 현재 시그니처 유지
+    List<Map<String, Object>> rows = findInspectionQty(date, workId); // 현재 시그니처 유지
 
     // 3) DefectType_id -> 조회행 매핑
     Map<Integer, Map<String, Object>> byType = new HashMap<>();

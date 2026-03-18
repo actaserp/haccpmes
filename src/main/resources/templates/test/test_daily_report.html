@@ -209,11 +209,9 @@
         new FlexGridContextMenu(this.grid);
         this.grid.downloadFileName = '검사일보';
 
-        this.grid.hostElement.addEventListener('dblclick', function (e) {
+        $(this.grid.hostElement).off('dblclick').on('dblclick', function (e) {
           let items = _this.grid.selectedItems;
-          if (items.length === 0) {
-            return false;
-          }
+          if (items.length === 0) return false;
           _this.$btnEdit.trigger('click');
         });
 
@@ -272,8 +270,7 @@
           rowPpm.dataItem = ppmData;
         });
 
-
-        this.$btnAddNew.click(function (e) {
+        this.$btnAddNew.off('click').on('click', function (e) {
 
           let nowDate = CommonUtil.getYYYYMMDD();
           const workCenterId = $('#SrchWorkCenter_id').val();
@@ -293,7 +290,7 @@
           _this.showTestAddNewForm(defaultData);
         });
 
-        this.$btnEdit.click(() => {
+        this.$btnEdit.off('click').on('click', () => {
           const selection = this.grid.selection;
 
           const row = selection.row;
@@ -463,28 +460,27 @@
           });
         };
 
-        // 초기 로드 및 변경 시 다시 로드
-        loadDefects();
-
         $workCenter.on('change', () => loadDefects());
         $inspectionDate.on('change', () => loadDefects());
 
         if (data && data.mode === 'edit') {
           // 날짜 설정
           $inspectionDate.val(data.InspectionDate);
-          console.log('🎯 input에 실제 세팅된 값:', $inspectionDate.val());
 
           // 워크센터 설정
           $workCenter.val(data.WorkCenter_id);
 
-          // 🚀 loadDefects 즉시 호출 (타이밍 문제 없이 정확하게 동작)
-          loadDefects(data.WorkCenter_id, data.InspectionDate);
-
-          // UI 제어 (비동기 이후에 실행해도 무방한 영역)
+          // UI 제어
           setTimeout(() => {
             $workCenter.css({'pointer-events': 'none', 'background-color': '#EDEFF5'});
             $inspectionDate.prop('readonly', true);
           }, 0);
+
+          // edit 모드: 실제 날짜/워크센터로 1번만 호출
+          loadDefects(data.WorkCenter_id, data.InspectionDate);
+        } else {
+          // new 모드: 초기 로드
+          loadDefects();
         }
 
         $btnPopSave.off('click').on('click', function () {
@@ -662,10 +658,10 @@
 
     $(document).ready(function () {
       initPage();
-      $('#SearchDate').val(CommonUtil.getYYYYMMDD().substring(0, 7));
-      AjaxUtil.fillSelectOptions($('#WorkCenter_id'), 'workcenter', '', false);
-
-      page = new TestDailyReportPage();
+      // $('#SearchDate').val(CommonUtil.getYYYYMMDD().substring(0, 7));
+      // AjaxUtil.fillSelectOptions($('#WorkCenter_id'), 'workcenter', '', false);
+      //
+      // page = new TestDailyReportPage();
       //page.searchMainData();
 
       $('#SearchDate').on('change', async function () {
