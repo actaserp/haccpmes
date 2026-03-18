@@ -103,6 +103,27 @@
         font-size:12px;
         color:#888;
     }
+
+    .status-normal {
+        color: #1f9d55;
+        font-weight: 700;
+    }
+
+    .status-warn {
+        color: #f4b400;
+        font-weight: 700;
+    }
+
+    .status-danger {
+        color: #e53935;
+        font-weight: 700;
+    }
+
+    .status-unknown {
+        color: #888;
+        font-weight: 600;
+    }
+
 </style>
 <th:block layout:fragment="content">
   <div class="layout-contents">
@@ -184,6 +205,10 @@
             <dl><dt>Heat 1-6</dt><dd id="kpi-heat16">-</dd></dl>
             <dl><dt>Heat 7-10</dt><dd id="kpi-heat710">-</dd></dl>
             <dl><dt>Cool</dt><dd id="kpi-coolhz">-</dd></dl>
+
+            <dl><dt>N2 SYSTEM STATUS</dt><dd id="kpi-n2status" class="status-text">-</dd></dl>
+            <dl><dt>현재 압력</dt><dd id="kpi-n2pressure" class="status-text">-</dd></dl>
+            <dl><dt>순도</dt><dd id="kpi-n2purity" class="status-text">-</dd></dl>
           </section>
 
           <!-- CM + PPM 통합 카드 -->
@@ -230,7 +255,7 @@
 
           <!-- 6) 알람 타임라인 -->
           <section class="timeline-section"
-                   style="flex:1; min-width:240px; border-radius:14px; max-height:190px;">
+                   style="flex:1; min-width:240px; border-radius:14px; max-height:235px;">
             <h5 style="margin-bottom:2px;">알람 / 이상 조짐 타임라인</h5>
             <div class="timeline-note" style="margin-bottom:2px;">
               * 이벤트 클릭 시 해당 시점으로 Zone/Profile/생산 그래프 동기화
@@ -718,6 +743,23 @@
      this.setText('#kpi-heat16',  current["Heat 1-6"]);
      this.setText('#kpi-heat710', current["Heat 7-10"]);
      this.setText('#kpi-coolhz',  current["Cool"]);
+
+     const n2Status   = current["N2 SYSTEM STATUS"];
+     const n2Pressure = current["현재 압력"];
+     const n2Purity   = current["순도"];
+
+     this.setText('#kpi-n2status', n2Status ?? '-');
+     this.setText('#kpi-n2pressure', n2Pressure ?? '-');
+     this.setText('#kpi-n2purity', n2Purity ?? '-');
+
+      // 상태 색상 적용
+     const statusLevel   = this.normalizeSystemStatus(n2Status);
+     const pressureLevel = this.getPressureStatus(n2Pressure);
+     const purityLevel   = this.getPurityStatus(n2Purity);
+
+     this.setStatusColor('#kpi-n2status', statusLevel);
+     this.setStatusColor('#kpi-n2pressure', pressureLevel);
+     this.setStatusColor('#kpi-n2purity', purityLevel);
 
      // =========================
      // 4) CM 카드 (컨베이어)
@@ -1439,6 +1481,73 @@
      const hh = String(d.getHours()).padStart(2,'0');
      const mm = String(d.getMinutes()).padStart(2,'0');
      return `${hh}:${mm}`;
+    }
+
+    clearStatusClass(selector) {
+     const el = document.querySelector(selector);
+     if (!el) return;
+
+     el.classList.remove('status-normal', 'status-warn', 'status-danger', 'status-unknown');
+    }
+
+    setStatusColor(selector, status) {
+     const el = document.querySelector(selector);
+     if (!el) return;
+
+     this.clearStatusClass(selector);
+
+     switch ((status || '').toString().trim()) {
+      case '정상':
+      case 'NORMAL':
+       el.classList.add('status-normal');
+       break;
+
+      case '주의':
+      case 'WARN':
+       el.classList.add('status-warn');
+       break;
+
+      case '위험':
+      case 'DANGER':
+       el.classList.add('status-danger');
+       break;
+
+      default:
+       el.classList.add('status-unknown');
+       break;
+     }
+    }
+
+    getPressureStatus(pressure) {
+     const p = this.toNum(pressure);
+     if (p == null) return 'unknown';
+
+     // 추측입니다: 임시 기준
+     if (p >= 5.0) return '정상';
+     if (p >= 4.5) return '주의';
+     return '위험';
+    }
+
+    getPurityStatus(purity) {
+     const p = this.toNum(purity);
+     if (p == null) return 'unknown';
+
+     // 추측입니다: 임시 기준
+     if (p >= 99.95) return '정상';
+     if (p >= 99.90) return '주의';
+     return '위험';
+    }
+
+    normalizeSystemStatus(statusText) {
+     const s = (statusText || '').toString().trim();
+
+     if (!s) return 'unknown';
+
+     if (s.includes('정상')) return '정상';
+     if (s.includes('주의')) return '주의';
+     if (s.includes('위험')) return '위험';
+
+     return 'unknown';
     }
 
    }//DashPage

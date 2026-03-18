@@ -32,14 +32,14 @@ public class EquipmentRunChartService {
 
 		MapSqlParameterSource dicParam = new MapSqlParameterSource();
 
-        dicParam.addValue("id", id);
-        dicParam.addValue("runType", runType);
+		dicParam.addValue("id", id);
+		dicParam.addValue("runType", runType);
 		dicParam.addValue("date_from", start_date);
 		dicParam.addValue("date_to", end_date);
 		dicParam.addValue("spjangcd", spjangcd);
 
 		String sql = """
-				select
+			select
 				er."id" as id,
 				er."RunState",
 				er."StartDate" as "StartDate",
@@ -52,10 +52,19 @@ public class EquipmentRunChartService {
 				sc."StopCauseName" as "StopCauseName",
 				er."Equipment_id" as "Equipment_id",
 				e."Name" as "Name",
-				er."Description" as "Description"
+				er."Description" as "Description",
+			 case
+						when er."RunState" = 'complete' then r."GoodQty"
+						else null
+				end as "GoodQty",
+				case
+						when er."RunState" = 'complete' then r."DefectQty"
+						else null
+				end as "DefectQty"
 				from equ_run er
 				left join stop_cause sc on sc.id = er."StopCause_id"
 				left join equ e on e.id = er."Equipment_id"
+				left join job_res r on r."WorkOrderNumber" = er."WorkOrderNumber"
 				where er.spjangcd = :spjangcd
 				AND (
 					(er."StartDate" <= :date_to) AND

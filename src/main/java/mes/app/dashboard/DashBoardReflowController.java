@@ -24,6 +24,8 @@ public class DashBoardReflowController {
 	//  로그 폴더
 	private static final String BASE_DIR = "C:\\temp\\mes21\\Reflow\\PV";
 
+	private static final Random RANDOM = new Random();
+
 	//  GET /api/dashboard/reflow?mmdd=01-09
 	@GetMapping
 	public ResponseEntity<Map<String, Object>> read(
@@ -90,6 +92,8 @@ public class DashBoardReflowController {
 		}
 
 		List<Map<String, Object>> rows = parseTabLog(file);
+
+		applyMockN2DataToRows(rows);	//압력 데이터
 
 		Map<String, Object> current = null;
 
@@ -234,6 +238,21 @@ public class DashBoardReflowController {
 		return null;
 	}
 
+	private static void applyMockN2DataToRows(List<Map<String, Object>> rows) {
+		if (rows == null || rows.isEmpty()) return;
 
+		for (Map<String, Object> row : rows) {
+			double pressure = randomDouble(5.0, 5.4);
+			double purity = randomDouble(99.95, 99.99);
+
+			row.put("현재 압력", String.format("%.1f bar", pressure));
+			row.put("순도", String.format("%.2f%%", purity));
+			row.put("N2 SYSTEM STATUS", "정상");
+		}
+	}
+
+	private static double randomDouble(double min, double max) {
+		return min + (max - min) * RANDOM.nextDouble();
+	}
 }
 
