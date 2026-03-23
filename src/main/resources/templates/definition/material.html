@@ -2292,7 +2292,9 @@
                 let stockData = FormUtil.extractForm($('#matStockForm'));
                 let data = $.extend({}, basicData, stockData);
                 console.log("버튼눌림");
-
+                console.log("1: " + basicData );
+                console.log("2: " + stockData );
+                
                 if (!data.MaterialGroup_id) {
                     Alert.alert('', '품목 그룹을 선택해 주세요');
                     $('#matBasicForm #MaterialGroup_id').focus();  // 해당 input으로 포커스 이동
@@ -2326,6 +2328,14 @@
                     $('#tab_basic').hide();
                     $('#tab_inventory').show();  // 해당 탭 내용 표시
                     return;
+                }
+
+                if (data.LotSize !== undefined && data.LotSize !== null && data.LotSize !== '') {
+                if (isNaN(data.LotSize) || Number(data.LotSize) <= 0) {
+                    Alert.alert('', 'LOT 수량은 0보다 큰 숫자만 입력 가능합니다.');
+                    $('#matStockForm #LotSize').focus();
+                    return;
+                }
                 }
 
                 // if (!data.MinOrder) {

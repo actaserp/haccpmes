@@ -154,7 +154,7 @@ public class MaterialMoveService {
         , ml."CurrentStock"
         , sh.id as storehouse_id
         , sh."Name" as storehouse_name
-        from material m 
+        from material m
         inner join mat_lot ml on m.id = ml."Material_id" 
         inner join store_house sh on ml."StoreHouse_id" = sh.id
         inner join unit u on m."Unit_id" = u.id

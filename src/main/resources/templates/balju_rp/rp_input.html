@@ -2579,59 +2579,87 @@ th {
 
                 // 로트계산버튼 클릭
                 $btnLotCalc.click(function (e) {
-                    _this.matLotGrid.itemsSource.sourceCollection = [];
 
-                    if ($EffectiveDate.val() === '' || $EffectiveDate.val() == null) {
-                        Alert.alert('로트저장', '유효 일시를 입력해주세요.', function () {
-                        });
-                        return;
-                    }
+    if ($EffectiveDate.val() === '' || $EffectiveDate.val() == null) {
+        Alert.alert('로트저장', '유효 일시를 입력해주세요.', function () {});
+        return;
+    }
 
-                    let inputQty = $InputQty.val();
-                    let lotSize = $LotSize.val();
-                    let effectedDate = $EffectiveDate.val();
+    let inputQty = Number($InputQty.val());
+    let lotSize = Number($LotSize.val());
+    let effectedDate = $EffectiveDate.val();
 
-                    if (inputQty === '' || inputQty === 0) {
-                        // alert(1);
-                        Alert.alert('입고수량', '입고수량이 없습니다.');
-                        return;
-                    }
-                    if (lotSize === '' || lotSize === 0) {
-                        // alert(2);
-                        Alert.alert('로트당수량', '로트당 수량을 입력해주세요.');
-                        return;
-                    }
-                    let lotCount = (inputQty / lotSize);
-                    if (lotCount < 1) {
-                        // alert(3);
-                        Alert.alert('', '입고수량과 로트당수량을 확인해주세요.');
-                        return;
-                    }
-                    lotCount = Math.ceil(lotCount);
-                    let remainQty = Number(inputQty);
-                    let now = CommonUtil.getYYYYMMDD();
-                    let updatedCollection = [];
+    if (inputQty === '' || inputQty === 0) {
+        Alert.alert('입고수량', '입고수량이 없습니다.');
+        return;
+    }
+    if (lotSize === '' || lotSize === 0) {
+        Alert.alert('로트당수량', '로트당 수량을 입력해주세요.');
+        return;
+    }
 
-                    for (let idx = 0; idx < lotCount; idx++) {
-                        let qty = lotSize;
-                        if (remainQty < qty) {
-                            qty = remainQty;
-                        }
-                        let r = {
-                            InputQty: qty,
-                            UnitName: item.unit_name,
-                            InputDateTime: now,
-                            Description: item.Description,
-                            mio_id: item.mio_pk,
-                            EffectiveDate: effectedDate,
-                            LotNumber: ''
-                        };
+    let existingCollection = _this.matLotGrid.itemsSource.sourceCollection;
 
-                        updatedCollection.push(r);
-                        remainQty = remainQty - qty;
-                    }
-                    _this.matLotGrid.itemsSource.sourceCollection = updatedCollection;
-                });
+    // ✅ 기존 행 없으면 기존 로직대로
+    if (existingCollection.length === 0) {
+        let lotCount = Math.ceil(inputQty / lotSize);
+        if (lotCount < 1) {
+            Alert.alert('', '입고수량과 로트당수량을 확인해주세요.');
+            return;
+        }
+
+        let remainQty = inputQty;
+        let now = CommonUtil.getYYYYMMDD();
+        let updatedCollection = [];
+
+        for (let idx = 0; idx < lotCount; idx++) {
+            let qty = remainQty < lotSize ? remainQty : lotSize;
+            updatedCollection.push({
+                InputQty: qty,
+                UnitName: item.unit_name,
+                InputDateTime: now,
+                Description: item.Description,
+                mio_id: item.mio_pk,
+                EffectiveDate: effectedDate,
+                LotNumber: ''
+            });
+            remainQty -= qty;
+        }
+
+        _this.matLotGrid.itemsSource.sourceCollection = updatedCollection;
+
+    // ✅ 기존 행 있으면 기존 수량 고려해서 나머지만 추가
+    } else {
+        let existingQty = existingCollection.reduce((sum, row) => sum + Number(row.InputQty || 0), 0);
+        let remainTotal = inputQty - existingQty;
+
+        if (remainTotal <= 0) {
+            Alert.alert('', '이미 수량이 모두 채워졌습니다.');
+            return;
+        }
+
+        let lotCount = Math.ceil(remainTotal / lotSize);
+        let remainQty = remainTotal;
+        let now = CommonUtil.getYYYYMMDD();
+        let updatedCollection = [...existingCollection]; // ✅ 기존 행 유지
+
+        for (let idx = 0; idx < lotCount; idx++) {
+            let qty = remainQty < lotSize ? remainQty : lotSize;
+            updatedCollection.push({
+                InputQty: qty,
+                UnitName: item.unit_name,
+                InputDateTime: now,
+                Description: item.Description,
+                mio_id: item.mio_pk,
+                EffectiveDate: effectedDate,
+                LotNumber: ''
+            });
+            remainQty -= qty;
+        }
+
+        _this.matLotGrid.itemsSource.sourceCollection = updatedCollection;
+    }
+});
 
                 let $btnBarcordPrint = $content.find('#btnBarcordPrint');
 

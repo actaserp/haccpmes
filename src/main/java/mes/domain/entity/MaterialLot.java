@@ -57,5 +57,8 @@ public class MaterialLot extends AbstractAuditModel{
 	@Column(name = "\"StoreHouse_id\"")
 	Integer storeHouseId;
 
+    @Column(name = "\"MaterialBarcode\"")
+    String materialBarCode;
+
 	String spjangcd;
 }
