@@ -999,4 +999,106 @@ public class DashBoardService {
 	}
 
 
+	public List<Map<String, Object>> getSujuList(String spjangcd, Timestamp start, Timestamp end) {
+		MapSqlParameterSource dicParam = new MapSqlParameterSource();
+		dicParam.addValue("spjangcd", spjangcd);
+		dicParam.addValue("start", start);
+		dicParam.addValue("end", end);
+
+		String sql = """
+			WITH suju_state_summary AS (
+			  SELECT
+				sh.id AS suju_head_id,
+				-- 상태 요약 계산
+				CASE
+				  WHEN COUNT(DISTINCT s."State") = 1 THEN MIN(s."State")
+				  WHEN BOOL_AND(s."State" IN ('received', 'planned')) AND BOOL_OR(s."State" = 'planned') THEN 'part_planned'
+				  WHEN BOOL_AND(s."State" IN ('received', 'ordered', 'planned')) AND BOOL_OR(s."State" = 'ordered') THEN 'part_ordered'
+				  ELSE '기타'
+				END AS summary_state
+			   
+			  FROM suju_head sh
+			  JOIN suju s ON s."SujuHead_id" = sh.id
+			   
+			  GROUP BY sh.id
+			),
+			shipment_summary AS (
+				SELECT
+					s."SujuHead_id",
+					SUM(s."SujuQty") AS total_qty,
+					COALESCE(SUM(shp."shippedQty"), 0) AS total_shipped,
+					CASE
+					  WHEN COUNT(shp."shippedQty") = 0 THEN ''
+					  WHEN SUM(shp."shippedQty") >= SUM(s."SujuQty") THEN 'shipped'
+					  WHEN SUM(shp."shippedQty") < SUM(s."SujuQty") THEN 'partial'
+					ELSE ''
+					END AS shipment_state
+				  FROM suju s
+				  LEFT JOIN (
+					SELECT "SourceDataPk", SUM("Qty") AS "shippedQty"
+					FROM shipment
+					GROUP BY "SourceDataPk"
+				  ) shp ON shp."SourceDataPk" = s.id
+				  GROUP BY s."SujuHead_id"
+			)
+			   
+			SELECT
+			  sh.id,
+			  sh."JumunNumber",
+			  to_char(sh."JumunDate", 'yyyy-mm-dd') AS "JumunDate",
+			  to_char(sh."DeliveryDate", 'yyyy-mm-dd') AS "DueDate",
+			  sh."Company_id",
+			  c."Name" AS "CompanyName",
+			  sh."TotalPrice",
+			  sh."Description",
+			  sc_state."Value" AS "StateName",
+			  sc_type."Value" AS "SujuTypeName",
+			   
+			  -- 대표 제품명 + 외 N개
+			  CASE
+				WHEN COUNT(DISTINCT s."Material_id") = 1 THEN MAX(m."Name")
+				ELSE CONCAT(MAX(m."Name"), ' 외 ', COUNT(DISTINCT s."Material_id") - 1, '개')
+			  END AS product_name,
+			   
+			  sss.summary_state AS "State",
+			  sc_ship."Value" AS "ShipmentStateName"
+			   
+			FROM suju_head sh
+			JOIN suju s ON s."SujuHead_id" = sh.id
+			JOIN material m ON m.id = s."Material_id"
+			LEFT JOIN (
+			  SELECT "SourceDataPk", SUM("Qty") AS "shippedQty"
+			  FROM shipment
+			  GROUP BY "SourceDataPk"
+			) shp ON shp."SourceDataPk" = s.id
+			LEFT JOIN company c ON c.id = sh."Company_id"
+			LEFT JOIN shipment_summary ss ON ss."SujuHead_id" = sh.id
+			LEFT JOIN suju_state_summary sss ON sss.suju_head_id = sh.id
+			LEFT JOIN sys_code sc_state ON sc_state."Code" = sss.summary_state AND sc_state."CodeType" = 'suju_state'
+			LEFT JOIN sys_code sc_type ON sc_type."Code" = sh."SujuType" AND sc_type."CodeType" = 'suju_type'
+			LEFT JOIN sys_code sc_ship ON sc_ship."Code" = ss.shipment_state AND sc_ship."CodeType" = 'shipment_state'
+            where 1 = 1
+            and sh.spjangcd = :spjangcd
+      and sh."JumunDate" between :start and :end
+				group by
+					 sh.id,
+					 sh."JumunNumber",
+					 sh."JumunDate",
+					 sh."DeliveryDate",
+					 sh."Company_id",
+					 c."Name",
+					 sh."TotalPrice",
+					 sh."Description",
+					 sh."SujuType",
+					 sss.summary_state,
+					 sc_state."Value",
+					 sc_type."Value",
+					 sc_ship."Value"
+				order by sh."JumunDate" desc,  sh.id desc             
+			""";
+
+		List<Map<String, Object>> itmes = this.sqlRunner.getRows(sql, dicParam);
+
+		return itmes;
+	}
 }

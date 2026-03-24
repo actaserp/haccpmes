@@ -172,7 +172,18 @@ public class DashBoardController {
 		result.data = items;
 		return result;
 	}
-	
+
+	@GetMapping("/suju_read")
+	public AjaxResult getSujuList(@RequestParam(value = "spjangcd")String spjangcd){
+		AjaxResult result = new AjaxResult();
+
+		Timestamp start = Timestamp.valueOf("2026-02-24 00:00:00"); // 한 달 전 날짜
+		Timestamp end = Timestamp.valueOf("2026-03-24 23:59:59"); // 오늘 날짜
+
+		List<Map<String,Object>> items = dashBoardService.getSujuList(spjangcd, start, end);
+		result.data = items;
+		return result;
+	}
 	
 	
 	

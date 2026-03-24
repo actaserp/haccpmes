@@ -49,13 +49,13 @@
     <div class="layout-contents">
         <div class="page-title-wrap">
             <div class="left">
-                <h2>재고 생산 현황</h2>
+                <h2>수주 및 재고 생산 현황</h2>
                 <a title="북마크" class="bookmark toggle">내 메뉴</a>
             </div>
             <ul class="page-navi">
                 <li><img src="/images/icon/ico-nav-home.svg" alt="홈아이콘"></li>
                 <li>대시보드</li>
-                <li>재고 생산 현황</li>
+                <li>수주 및 재고 생산 현황</li>
             </ul>
         </div>
 
@@ -74,7 +74,13 @@
                 <!-- 오른쪽 : 생산성과, 수익현황 -->
                 <section style="flex: 1; display: flex; flex-direction: column; gap: 10px; min-height: 0;">
 
-                    <!-- 생산성과 -->
+                    <div class="title-wrap"><h3>수주 진행 현황</h3></div>
+                    <div class="content-wrap" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
+                        <p class="card-text">한 달간의 수주 내역을 표시합니다.</p>
+                        <div id="suju-grid" class="wj-flexgrid" style="flex: 1;"></div>
+                    </div>
+
+                    <!--&lt;!&ndash; 생산성과 &ndash;&gt;
                     <section style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
                         <div class="title-wrap"><h3>생산 성과</h3></div>
                         <div class="content-wrap" style="display: flex; flex-direction: column; flex: 1;">
@@ -83,7 +89,7 @@
                         </div>
                     </section>
 
-                    <!-- 수익현황 -->
+                    &lt;!&ndash; 수익현황 &ndash;&gt;
                     <section style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
                         <div class="title-wrap"><h3>수익현황</h3></div>
                         <div class="content-wrap" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
@@ -97,7 +103,7 @@
                                 </div>
                             </div>
                         </div>
-                    </section>
+                    </section>-->
                 </section>
             </div>
         </div>
@@ -113,11 +119,12 @@
             constructor() {
                 this.init();
                 this.setData();
+                this.viewData = new wijmo.collections.CollectionView();
             }
 
             init() {
                 this.initGrids();
-                this.initCharts();
+                // this.initCharts();
 
             }
 
@@ -140,24 +147,24 @@
                 //     ]
                 // });
 
-                this.todayProdGrid = new wijmo.grid.FlexGrid('#today-prod-grid', {
-                    autoGenerateColumns: false,
-                    headersVisibility: wijmo.grid.HeadersVisibility.Column,
-                    isReadOnly: true,
-                    formatItem: (s, e) => {
-                        if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
-                            e.cell.style.textAlign = 'center';
-                        }
-                    },
-                    columns: [
-                        { header: '품목그룹', binding: 'prod_grp', width: 130 },
-                        { header: '품목명', binding: 'prod', width: '*' },
-                        { header: '작업지시량', binding: 'ord', width: 110, align: 'right' },
-                        { header: '생산량', binding: 'com', width: 110, align: 'right' },
-                        { header: '작업', binding: 'wor', width: 110, align: 'right' },
-                        { header: '완료율(%)', binding: 'wor_per', width: 105, align: 'right' }
-                    ]
-                });
+                // this.todayProdGrid = new wijmo.grid.FlexGrid('#today-prod-grid', {
+                //     autoGenerateColumns: false,
+                //     headersVisibility: wijmo.grid.HeadersVisibility.Column,
+                //     isReadOnly: true,
+                //     formatItem: (s, e) => {
+                //         if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+                //             e.cell.style.textAlign = 'center';
+                //         }
+                //     },
+                //     columns: [
+                //         { header: '품목그룹', binding: 'prod_grp', width: 130 },
+                //         { header: '품목명', binding: 'prod', width: '*' },
+                //         { header: '작업지시량', binding: 'ord', width: 110, align: 'right' },
+                //         { header: '생산량', binding: 'com', width: 110, align: 'right' },
+                //         { header: '작업', binding: 'wor', width: 110, align: 'right' },
+                //         { header: '완료율(%)', binding: 'wor_per', width: 105, align: 'right' }
+                //     ]
+                // });
 
                 // this.defectGrid = new wijmo.grid.FlexGrid('#defect-grid', {
                 //     autoGenerateColumns: false,
@@ -177,23 +184,23 @@
                 //     ]
                 // });
 
-                this.stockGrid = new wijmo.grid.FlexGrid('#stock-grid', {
-                    autoGenerateColumns: false,
-                    headersVisibility: wijmo.grid.HeadersVisibility.Column,
-                    isReadOnly: true,
-                    formatItem: (s, e) => {
-                        if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
-                            e.cell.style.textAlign = 'center';
-                        }
-                    },
-                    columns: [
-                        { header: '품목그룹', binding: 'prod_grp', width: 100 },
-                        { header: '품목명', binding: 'prod', width: 100 },
-                        { header: '단가', binding: 'unitp', width: 70, align: 'right' },
-                        { header: '양품량', binding: 'stq', width: 100, align: 'right' },
-                        { header: '총금액', binding: 'stp', width: '*', align: 'right' }
-                    ]
-                });
+                // this.stockGrid = new wijmo.grid.FlexGrid('#stock-grid', {
+                //     autoGenerateColumns: false,
+                //     headersVisibility: wijmo.grid.HeadersVisibility.Column,
+                //     isReadOnly: true,
+                //     formatItem: (s, e) => {
+                //         if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+                //             e.cell.style.textAlign = 'center';
+                //         }
+                //     },
+                //     columns: [
+                //         { header: '품목그룹', binding: 'prod_grp', width: 100 },
+                //         { header: '품목명', binding: 'prod', width: 100 },
+                //         { header: '단가', binding: 'unitp', width: 70, align: 'right' },
+                //         { header: '양품량', binding: 'stq', width: 100, align: 'right' },
+                //         { header: '총금액', binding: 'stp', width: '*', align: 'right' }
+                //     ]
+                // });
 
                 this.materialStockGrid = new wijmo.grid.FlexGrid('#material-stock-grid', {
                     autoGenerateColumns: false,
@@ -237,6 +244,33 @@
                 });
                 new FlexGridContextMenu(this.materialStockGrid);
                 this.materialStockGrid.downloadFileName = '수주대비 재고현황 내역';
+
+                this.sujuDataGrid = new wijmo.grid.FlexGrid('#suju-grid', {
+                    selectionMode: wijmo.grid.SelectionMode.Row,
+                    headersVisibility: wijmo.grid.HeadersVisibility.Column,
+                    autoGenerateColumns: false,
+                    showMarquee: true,
+                    isReadOnly: true,
+                    formatItem: (sender, e) => {
+                        if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+                            e.cell.style.textAlign = 'center';
+                        }
+                    },
+                    columns: [
+                        {binding: 'JumunDate', header: '수주일', width: 110, align: 'center'},
+                        {binding: 'product_name', header: '제품명', width: 200},
+                        {binding: 'DueDate', header: '납기일', width: 110, align: 'center'},
+                        {binding: 'StateName', header: '작업상태', width: 90, align: 'center'},
+                        {binding: 'ShipmentStateName', header: '출하상태', width: 90, align: 'center'},
+                        {binding: 'CompanyName', header: '판매처', width: 150, align: 'center'},
+                        {binding: 'JumunNumber', header: '수주 번호', width: 150, align: 'center'},
+                    ],
+                    itemsSource: this.viewData, // 데이터를 설정할 배열
+                });
+
+                new FlexGridContextMenu(this.sujuDataGrid);
+                this.sujuDataGrid.downloadFileName = '수주 내역';
+
             }
 
             initCharts() {
@@ -295,24 +329,31 @@
                 // let prodData = AjaxUtil.getSyncData('/api/dashboard/today_week_prod');
                 // this.produceGrid.itemsSource = prodData.data;
 
-                let todayProdData = AjaxUtil.getSyncData('/api/dashboard/today_prod');
-                this.todayProdGrid.itemsSource = todayProdData.data;
+                // let todayProdData = AjaxUtil.getSyncData('/api/dashboard/today_prod');
+                // this.todayProdGrid.itemsSource = todayProdData.data;
 
                 // let defectData = AjaxUtil.getSyncData('/api/dashboard/year_def_prod');
                 // this.defectGrid.itemsSource = defectData.data;
                 // this.updateChart(this.defectChart, defectData.data, 'prod', 'dep');
 
-                let stockData = AjaxUtil.getSyncData('/api/dashboard/mat_stock');
-                this.stockGrid.itemsSource = stockData.data;
-                this.updateChart(this.stockChart, stockData.data, 'prod', 'stp');
+                // let stockData = AjaxUtil.getSyncData('/api/dashboard/mat_stock');
+                // this.stockGrid.itemsSource = stockData.data;
+                // this.updateChart(this.stockChart, stockData.data, 'prod', 'stp');
 
                 let materialStockData = AjaxUtil.getSyncData('/api/dashboard/optimal_stock');
                 this.materialStockGrid.itemsSource = materialStockData.data;
+
+                let SujuData = AjaxUtil.getSyncData('/api/dashboard/suju_read');
+                this.sujuDataGrid.itemsSource  = SujuData.data;
             }
 
             refreshOptimalStock() {
                 let materialStockData = AjaxUtil.getSyncData('/api/dashboard/optimal_stock');
                 this.materialStockGrid.itemsSource = materialStockData.data;
+
+                let SujuData = AjaxUtil.getSyncData('/api/sales/suju/read');
+                this.sujuDataGrid.itemsSource  = SujuData.data;
+
             }
 
             updateChart(chart, data, labelKey, valueKey) {
