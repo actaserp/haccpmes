@@ -287,6 +287,8 @@
 <th:block layout:fragment="scripts">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot@4.4.4/build/index.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script type="text/javascript">
     class ProcessCapabilityPage {
       constructor() {
@@ -682,6 +684,45 @@
         page.searchMainData();
       });
 
+    });
+
+    $('#btnMail').on('click', async function () {
+
+      const target = document.querySelector('.layout-contents');
+
+      const canvas = await html2canvas(target, {
+        scale: 2,
+        useCORS: true
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+
+      const { jsPDF } = window.jspdf;
+
+      // 가로 설정 ('l' = landscape)
+      const pdf = new jsPDF('l', 'mm', 'a4');
+
+      const pageWidth = 297;   // A4 가로
+      const pageHeight = 210;  // A4 세로
+
+      const imgWidth = pageWidth;
+      const imgHeight = canvas.height * imgWidth / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save('SPC_report.pdf');
     });
   </script>
 </th:block>
