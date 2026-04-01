@@ -97,6 +97,8 @@ public class InventoryManagementApiController {
             return result;
         }
 
+
+
         //todo: 근데 저장로직 for문이랑 합치는 것도 좋음. 근데 어차피 시간복잡도면에서 상수시간 차이라 그냥 분리해서 가독성 높히는게 유리해보임 ㅇㅇ.
         //다른 품목에 등록된 박스 바코드인지 체크
         for(Map<String, Object> item : data){
@@ -148,6 +150,52 @@ public class InventoryManagementApiController {
 
         result.success = true;
         result.message = "저장이 완료되었습니다.";
+        return result;
+    }
+
+    @PostMapping("/lot/delete")
+    @Transactional
+    public AjaxResult deleteLot(
+        @RequestBody List<Map<String, Object>> data,
+        Authentication auth
+    ){
+        AjaxResult result = new AjaxResult();
+
+        try{
+            Integer lotId = Integer.parseInt(data.get(0).get("id").toString());
+
+            if (lotId == null) {
+                result.success = false;
+                result.message = "LOT ID가 없습니다.";
+                return result;
+            }
+
+            // 1. lot 조회
+            MaterialLot ml = matLotRepository.findById(lotId).orElse(null);
+
+            if(ml == null){
+                result.success = false;
+                result.message = "해당 LOT를 찾을 수 없습니다.";
+                return result;
+            }
+
+            // 2. 이미 출고된 수량 체크 (현재고 != 입고수량이면 출고된 것)
+            if (ml.getCurrentStock() < ml.getInputQty()) {
+                result.success = false;
+                result.message = "이미 출고된 수량이 있어 삭제할 수 없습니다.";
+                return result;
+            }
+
+            matLotRepository.delete(ml);
+
+            result.success = true;
+            result.message = "LOT가 삭제되었습니다.";
+
+        }catch (Exception e){
+            result.success = false;
+            result.message = "삭제 중 오류가 발생했습니다: " + e.getMessage();
+            throw e;
+        }
         return result;
     }
 }

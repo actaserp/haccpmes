@@ -70,6 +70,8 @@ public class DispatchController {
 
         Timestamp today_timestamp = new Timestamp(System.currentTimeMillis());
 
+
+        //todo; lot만 소진시키고 재고는 차감되면 안됨.
         if(to_storehouse_id == 999){  /// 창고이동이 아니라 그냥 lot재고 삭제하는 불출 의미
             for(Map<String, Object> map : lotList){
                 int mat_id = (int) map.get("mat_id");
@@ -79,21 +81,21 @@ public class DispatchController {
                 String lotnumber = map.get("LotNumber").toString();
                 float currentStock = Float.parseFloat(map.get("CurrentStock").toString());
 
-                MaterialInout mio_out = new MaterialInout();
-                mio_out.setMaterialId(mat_id);
-                mio_out.setStoreHouseId(from_storehouse_id);
-                mio_out.setInOut("out");
-                mio_out.setLotNumber(lotnumber);
-                mio_out.setOutputType("mobile_release"); //모바일로 불출한것.
-                mio_out.setOutputQty(currentStock);
-                mio_out.setInoutDate(nowDate);
-                mio_out.setInoutTime(nowTime);
-                mio_out.setDescription("모바일자재불출");
-                mio_out.setState("confirmed");
-                mio_out.set_status("a");
-                mio_out.set_audit(user);
-                mio_out.setSpjangcd(spjangcd);
-                this.matInoutRepository.save(mio_out);
+//                MaterialInout mio_out = new MaterialInout();
+//                mio_out.setMaterialId(mat_id);
+//                mio_out.setStoreHouseId(from_storehouse_id);
+//                mio_out.setInOut("out");
+//                mio_out.setLotNumber(lotnumber);
+//                mio_out.setOutputType("mobile_release"); //모바일로 불출한것.
+//                mio_out.setOutputQty(currentStock);
+//                mio_out.setInoutDate(nowDate);
+//                mio_out.setInoutTime(nowTime);
+//                mio_out.setDescription("모바일자재불출");
+//                mio_out.setState("confirmed");
+//                mio_out.set_status("a");
+//                mio_out.set_audit(user);
+//                mio_out.setSpjangcd(spjangcd);
+//                this.matInoutRepository.save(mio_out);
 
                 MatLotCons mlc = new MatLotCons();
                 mlc.setOutputDateTime(today_timestamp);
