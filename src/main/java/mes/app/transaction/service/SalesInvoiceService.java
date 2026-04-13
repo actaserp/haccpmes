@@ -247,10 +247,14 @@ public class SalesInvoiceService {
         company.setName(name);
         company.setInvoiceEmail((String) paramMap.get("InvoiceeEmail1"));
         company.setAccountManagerPhone((String) paramMap.get("InvoiceeTEL1"));
-        company.setCompanyType("sale");
         company.set_audit(user);
         company.setRelyn("0");
         company.setSpjangcd((String) paramMap.get("spjangcd"));
+
+        // 신규일 때만 companyType 설정
+        if (id == null) {
+            company.setCompanyType("sale");
+        }
 
         company = companyRepository.save(company);
 
