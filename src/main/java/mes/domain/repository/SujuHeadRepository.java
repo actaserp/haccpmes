@@ -16,4 +16,5 @@ public interface SujuHeadRepository extends JpaRepository<SujuHead, Integer>{
 
 	Optional<SujuHead> findByJumunNumberAndSpjangcd(String jumunNumber, String spjangcd);
 
+	Optional<Object> findByJumunNumber(String jumunNumber);
 }

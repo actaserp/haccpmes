@@ -28,7 +28,7 @@
   "wm_bom_proc_comp": { "name": "공정별BOM", "templates": { "default": "definition/bom_proc_comp.html" } },
   "wm_routing": { "name": "라우팅", "templates": { "default": "definition/routing.html" } },
 
-
+  "wm_suju_quote": { "name": "수주견적서 등록", "templates": { "default": "sales/suju_quote.html" } },
   "wm_suju_upload": { "name": "수주 등록(일괄)", "templates": { "default": "sales/suju_upload.html" } },
   "wm_suju_list_a": { "name": "수주 및 계획량 등록", "templates": { "default": "sales/suju_list_a.html" } },
   "wm_suju_summary": { "name": "수주량집계", "templates": { "default": "summary/suju_summary.html" } },
@@ -40,6 +40,7 @@
   "wm_shipment_list": { "name": "출고내역", "templates": { "default": "shipment/shipment_list.html" } },
   "wm_shipment_stmt_a": { "name": "거래명세서발행", "templates": { "default": "shipment/trade_stmt/shipment_stmt_a.html" } },
 
+  "wm_balju_view": {"name": "발주서조회", "templates": { "default": "balju_rp/balju_view" }},
   "wm_balju_order": {"name": "발주등록", "templates": { "default": "balju_rp/balju_order" }},
   "wm_balju_order_aggregate": {"name": "발주량집계", "templates": { "default": "balju_rp/balju_order_aggregate" }},
   "wm_balju_order_list": {"name": "월별 발주량", "templates": { "default": "balju_rp/balju_order_list" }},

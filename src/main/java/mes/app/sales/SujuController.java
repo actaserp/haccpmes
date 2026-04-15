@@ -95,6 +95,7 @@ public class SujuController {
 			@RequestParam(value="start", required=false) String start_date,
 			@RequestParam(value="end", required=false) String end_date,
 			@RequestParam(value="spjangcd") String spjangcd,
+			@RequestParam(value = "suju_type", required = false) String suju_type,
 			HttpServletRequest request) {
 		
 		start_date = start_date + " 00:00:00";
@@ -103,7 +104,7 @@ public class SujuController {
 		Timestamp start = Timestamp.valueOf(start_date);
 		Timestamp end = Timestamp.valueOf(end_date);
 		
-		List<Map<String, Object>> items = this.sujuService.getSujuList(date_kind, start, end, spjangcd);
+		List<Map<String, Object>> items = this.sujuService.getSujuList(date_kind, start, end, spjangcd, suju_type);
 		
 		AjaxResult result = new AjaxResult();
 		result.data = items;
@@ -645,8 +646,6 @@ public class SujuController {
 		}
 	}
 
-
-
 	// 수주 변환 changeSujuBulkData
 	@PostMapping("/change")
 	public AjaxResult changeSujuBulkData(
@@ -751,6 +750,52 @@ public class SujuController {
 		return result;
 	}
 
+	@PostMapping("/estimate_confirm")
+	@Transactional
+	public AjaxResult estimateConfirm(
+		@RequestParam("JumunNumber") String jumunNumber,
+		Authentication auth
+	) {
+		AjaxResult result = new AjaxResult();
+
+		// 입력 검증
+		if (jumunNumber == null || jumunNumber.isBlank()) {
+			result.success = false;
+			result.message = "주문번호가 없습니다.";
+			return result;
+		}
+
+		// 1) 헤더 조회
+		SujuHead head = (SujuHead) sujuHeadRepository.findByJumunNumber(jumunNumber)
+																 .orElse(null);
+		if (head == null) {
+			result.success = false;
+			result.message = "수주 헤더를 찾을 수 없습니다.";
+			return result;
+		}
+
+		// 2) 이미 확정된 건(= sales)이면 멱등 처리
+		if ("sales".equalsIgnoreCase(head.getSujuType())
+
+		) {
+			result.success = true;
+			result.message = "이미 견적확정된 건입니다.";
+			return result;
+		}
+
+		// 3) 확정 처리
+		head.setSujuType("sales");
+
+
+		sujuHeadRepository.save(head);
+
+		// (선택) 디테일 일괄 동기화가 필요하면 벌크 업데이트 사용 권장
+		// sujuRepository.bulkConfirmByHeadId(head.getId());
+
+		result.success = true;
+		result.message = "견적이 확정되었습니다.";
+		return result;
+	}
 
 
 }

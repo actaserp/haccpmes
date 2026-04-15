@@ -351,7 +351,7 @@
                 let materialStockData = AjaxUtil.getSyncData('/api/dashboard/optimal_stock');
                 this.materialStockGrid.itemsSource = materialStockData.data;
 
-                let SujuData = AjaxUtil.getSyncData('/api/sales/suju/read');
+                let SujuData = AjaxUtil.getSyncData('/api/dashboard/suju_read');
                 this.sujuDataGrid.itemsSource  = SujuData.data;
 
             }

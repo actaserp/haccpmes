@@ -1,0 +1,551 @@
+<html layout:decorate="~{layout_page}">
+
+<th:block layout:fragment="content">
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>발주서 조회</h2>
+        <a title="북마크" class="bookmark toggle">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img src="/images/icon/ico-nav-home.svg" alt="홈아이콘"></li>
+        <li>발주/수불관리</li>
+        <li>발주서 조회</li>
+      </ul>
+    </div>
+
+    <section class="section">
+      <div class="section-top">
+        <!-- ── 검색 영역 ── -->
+        <div class="search-wrap">
+          <input type="hidden" id="spjangcdHidden" name="spjangcd"/>
+          <dl>
+            <dt>
+              <label for="cboDateKind">검색 구분<span class="eq"></span></label>
+            </dt>
+            <dd>
+              <div class="srch-box">
+                <select id="cboDateKind" name="cboDateKind">
+                  <option value="sales">발주일</option>
+                  <option value="delivery">납기일</option>
+                </select>
+              </div>
+            </dd>
+          </dl>
+          <dl>
+            <dt>조회기간<span class="eq">*</span></dt>
+            <dd>
+              <ul class="date-box">
+                <li>
+                  <input type="date" id="srchStartDt" name="srchStartDt">
+                  <label for="srchStartDt" class="hide">시작일</label>
+                </li>
+                <li>
+                  <input type="date" id="srchEndDt" name="srchEndDt">
+                  <label for="srchEndDt" class="hide">종료일</label>
+                </li>
+              </ul>
+            </dd>
+          </dl>
+          <dl>
+            <dt>&nbsp;</dt>
+            <dd>
+              <li>
+                <a class="btn btn-delete" title="검색" id="btnSearch">
+                  <img src="/images/icon/btn-srch.svg" alt="검색 아이콘">
+                  검색
+                </a>
+              </li>
+            </dd>
+          </dl>
+        </div>
+
+        <!-- ── 버튼 영역: 메일 전송만 ── -->
+        <!--<div class="button-wrap">
+          <ul>
+            <li>
+              <a class="btn btn-excell" title="메일 전송" id="btnMail">
+                <img src="/images/icon/ico-mail.svg" alt="메일 아이콘">
+                메일 전송
+              </a>
+            </li>
+          </ul>
+        </div>-->
+      </div>
+
+      <div class="container-fluid">
+        <div id="theGrid" style="height: 730px;"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ======================================================
+       읽기 전용 상세 팝업 템플릿
+  ======================================================= -->
+  <script type="text/x-tmpl" id="baljuViewTemplate">
+    <style>
+      /* 품목 테이블 */
+      .item-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        margin-top: 10px;
+      }
+      .item-table th {
+        background-color: #EDEFF5;
+        text-align: center;
+        font-weight: bold;
+        padding: 8px;
+        border: 1px solid #ccc;
+        font-size: 13px;
+      }
+      .item-table td {
+        padding: 6px 8px;
+        text-align: center;
+        border: 1px solid #ccc;
+        font-size: 13px;
+      }
+      .item-table td.al-left { text-align: left; }
+      .item-table td.al-right { text-align: right; }
+
+      /* 팝업 레이아웃 */
+      .content_wrap.popup {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      .table-wrap {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 5px;
+      }
+      .popup-button {
+        flex-shrink: 0;
+        padding: 10px;
+        background: #fff;
+        border-top: 1px solid #ddd;
+        text-align: center;
+      }
+
+      /* 읽기 전용 강조 */
+      .write-table input[readonly],
+      .write-table textarea[readonly] {
+        background-color: #f5f5f5;
+        color: #333;
+        cursor: default;
+      }
+    </style>
+
+    <div class="content_wrap popup">
+      <div class="table-wrap">
+        <!-- 헤더 정보 -->
+        <table class="write-table">
+          <caption>발주서 상세</caption>
+          <tbody>
+            <tr>
+              <th style="text-align:center">발주일</th>
+              <td><input type="date" id="vw_JumunDate" value="" readonly></td>
+              <th style="text-align:center">납기예정일</th>
+              <td><input type="date" id="vw_DueDate" value="" readonly></td>
+            </tr>
+            <tr>
+              <th style="text-align:center">구매처</th>
+              <td colspan="3">
+                <input class="form-control2" type="text" id="vw_CompanyName" readonly style="width:100%"/>
+              </td>
+            </tr>
+            <tr>
+              <th style="text-align:center">발주구분</th>
+              <td><input type="text" id="vw_BaljuTypeName" readonly></td>
+              <th style="text-align:center">상태</th>
+              <td><input type="text" id="vw_StateName" readonly></td>
+            </tr>
+            <tr>
+              <th style="text-align:center">특이사항</th>
+              <td colspan="3">
+                <textarea id="vw_special_note" style="height:80px;width:100%" readonly></textarea>
+              </td>
+            </tr>
+            <tr>
+              <th style="text-align:center">총 발주액</th>
+              <td colspan="3">
+                <input id="vw_BaljuTotalPrice" style="width:100%" readonly>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- 품목 목록 -->
+        <table class="item-table">
+          <colgroup>
+            <col style="width:8%">
+            <col style="width:22%">
+            <col style="width:7%">
+            <col style="width:10%">
+            <col style="width:11%">
+            <col style="width:10%">
+            <col style="width:11%">
+            <col style="width:13%">
+            <col style="width:8%">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>품목코드</th>
+              <th>품목명</th>
+              <th>수량</th>
+              <th>단가</th>
+              <th>공급가액</th>
+              <th>부가세</th>
+              <th>합계</th>
+              <th>비고</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+          <tbody id="vw_itemTbody">
+            <!-- JS 동적 렌더링 -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 닫기 버튼만 -->
+      <div class="popup-button">
+        <button type="button" class="btn-popup" id="modal-close-button">닫기</button>
+      </div>
+    </div>
+  </script>
+
+  <!-- ======================================================
+       메일 팝업 템플릿 (기존과 동일)
+  ======================================================= -->
+  <script type="text/x-tmpl" id="BalJuMailTemplate">
+    <style>
+      .btn.in_btn.plus img { width: 15px; height: 15px; display: block; margin-right: 2px; }
+      .btn.in_btn.plus {
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: 15px; width: 24px; height: 24px;
+        border: 1px solid #ccc; border-radius: 4px; margin-left: 6px;
+        background-color: #f9f9f9; cursor: pointer;
+      }
+      .btn.in_btn.plus:hover { background-color: #e0e0e0; }
+      .btn.in_btn.del img { width: 15px; height: 15px; display: block; margin-right: 2px; }
+      .btn.in_btn.del {
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: 15px; width: 24px; height: 24px;
+        border: 1px solid #ccc; border-radius: 4px; margin-left: 6px;
+        background-color: #f9f9f9; cursor: pointer;
+      }
+      .btn.in_btn.del:hover { background-color: #e0e0e0; }
+      .input-with-button { display: flex; align-items: center; gap: 4px; }
+      .input-with-button input { flex: 1; padding: 6px; }
+    </style>
+
+    <div class="content_wrap popup" id="div_excel_upload">
+      <div class="table-wrap">
+        <form id="BalJuMailForm">
+          <table class="write-table">
+            <tbody>
+              <tr>
+                <th style="text-align:center"><label for="Recipient">받는사람</label></th>
+                <td colspan="8">
+                  <div id="recipient-container">
+                    <div class="input-with-button">
+                      <input name="Recipient" style="width:100%;"/>
+                      <a class="btn in_btn plus" id="addRecipient" title="추가">
+                        <img src="/images/icon/ico-plus.svg" alt="추가 아이콘"/>
+                      </a>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <th style="text-align:center"><label for="MailTitle">제목</label></th>
+                <td colspan="8">
+                  <input id="MailTitle" name="MailTitle" style="width:100%;">
+                </td>
+              </tr>
+              <tr>
+                <th style="text-align:center"><label for="MailContent">내용</label></th>
+                <td colspan="8">
+                  <textarea id="MailContent" name="MailContent"
+                    style="width:100%; height:120px; resize:vertical;"></textarea>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </form>
+      </div>
+      <div class="popup-button">
+        <button type="button" class="btn-popup y_write_auth" id="btnPopBalJuMail">전송</button>
+        <button type="button" class="btn-popup" id="modal-close-button">닫기</button>
+      </div>
+    </div>
+  </script>
+</th:block>
+
+<!-- ======================================================
+     스크립트
+======================================================= -->
+<th:block layout:fragment="scripts">
+  <script type="text/javascript">
+
+   class BaljuViewPage {
+    constructor() {
+     this.url      = '/api/balju/balju_order';
+     this.grid     = null;
+     this.$btnMail = $('#btnMail');
+     this.spjangcd = $('#spjangcdHidden');
+     this.viewData = new wijmo.collections.CollectionView();
+     this.init();
+    }
+
+    // ── 초기화 ──────────────────────────────────────────
+    init() {
+     const _this = this;
+
+     // 그리드 생성 (isReadOnly: true, 등록 페이지와 동일한 컬럼)
+     this.grid = new wijmo.grid.FlexGrid('#theGrid', {
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      showMarquee: true,
+      isReadOnly: true,
+      formatItem: (sender, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+        e.cell.style.textAlign = 'center';
+       }
+      },
+      columns: [
+       { binding: 'bh_id',            header: 'bh_id',      width: 150, visible: false },
+       { binding: 'CompanyName',       header: '구매처',     width: 150 },
+       { binding: 'BaljuTypeName',     header: '구분',       width: 70,  align: 'center' },
+       { binding: 'JumunDate',         header: '발주일',     width: 120, align: 'center' },
+       { binding: 'MaterialGroupName', header: '제품그룹',   width: 120 },
+       { binding: 'product_code',      header: '제품코드',   width: 90,  visible: false },
+       { binding: 'product_name',      header: '제품명',     width: 210 },
+       { binding: 'unit',              header: '단위',       width: 60,  align: 'center' },
+       { binding: 'SujuQty',           header: '수량',       width: 100, align: 'right', format: 'n0' },
+       { binding: 'BaljuUnitPrice',    header: '단가',       width: 100, align: 'right', format: 'n2' },
+       { binding: 'BaljuPrice',        header: '공급가',     width: 100, align: 'right' },
+       { binding: 'BaljuVat',          header: '부가세',     width: 100, align: 'right' },
+       { binding: 'BaljuTotalPrice',   header: '발주액',     width: 100, align: 'right' },
+       { binding: 'bh_StateName',      header: '상태',       width: 80,  align: 'center' },
+       { binding: 'SujuQty2',          header: '기입고수량', width: 100, align: 'right' },
+       { binding: 'SujuQty3',          header: '미입고수량', width: 100, align: 'right' },
+       { binding: 'ShipmentStateName', header: '납품장소',   width: 100, align: 'center' },
+       { binding: 'DueDate',           header: '납기예정일', width: 120, align: 'center' },
+       { binding: 'Description',       header: '비고',       width: 200 }
+      ],
+      itemsSource: this.viewData
+     });
+
+     new FlexGridContextMenu(this.grid);
+     this.grid.downloadFileName = '발주서 조회';
+
+     // 더블클릭 → 읽기 전용 상세 팝업
+     this.grid.hostElement.addEventListener('dblclick', function () {
+      const items = _this.grid.selectedItems;
+      if (!items.length) return;
+      _this.showDetailPopup(items[0].bh_id);
+     });
+
+     // 메일 전송 버튼
+     this.$btnMail.click(function () {
+      const selected = _this.grid.selectedItems;
+      if (selected.length !== 1) {
+       Alert.alert('', '하나의 항목만 선택해주세요.');
+       return;
+      }
+      $.ajax({
+       url: '/api/balju/balju_order/receiverEmail',
+       type: 'GET',
+       data: { bhId: selected[0].bh_id },
+       success: function (response) {
+        _this.showBalJuMailForm({
+         id: selected[0].bh_id,
+         mode: 'mail',
+         recipients: Array.isArray(response.data) ? response.data : [response.data]
+        });
+       },
+       error: function () {
+        Alert.alert('', '거래처 이메일 정보를 불러오는 데 실패했습니다.');
+       }
+      });
+     });
+    }
+
+    // ── 읽기 전용 상세 팝업 ─────────────────────────────
+    showDetailPopup(bhId) {
+     const _this = this;
+
+     AjaxUtil.getAsyncData(
+      this.url + '/detail',
+      { id: bhId, action: 'detail' },
+      function (result) {
+       if (!result?.data) {
+        Alert.alert('오류', '상세 데이터를 불러올 수 없습니다.');
+        return;
+       }
+
+       const data     = result.data;
+       const $content = $(tmpl('baljuViewTemplate', data));
+       const modal    = new PopupDraggable('발주서 상세 조회');
+       modal.open({ width: 1200, height: 620, $content });
+
+       // ① 헤더 필드 바인딩
+       $content.find('#vw_JumunDate').val(data.JumunDate || '');
+       $content.find('#vw_DueDate').val(data.DueDate || data.DeliveryDate || '');
+       $content.find('#vw_CompanyName').val(data.CompanyName || '');
+       $content.find('#vw_BaljuTypeName').val(data.BaljuTypeName || '');
+       $content.find('#vw_StateName').val(data.StateName || data.bh_StateName || '');
+       $content.find('#vw_special_note').val(data.special_note || '');
+
+       // ② 품목 행 렌더링
+       const $tbody = $content.find('#vw_itemTbody');
+       let grandTotal = 0;
+
+       if (Array.isArray(data.items) && data.items.length > 0) {
+        data.items.forEach(function (item) {
+         const totalAmt = parseFloat(item.total_price || 0);
+         grandTotal += totalAmt;
+
+         const vatDisplay = (item.vat === '면세' || item.vat === 0 && item.vatIncluded === 'N')
+          ? '면세'
+          : Number(item.vat || 0).toLocaleString();
+
+         $tbody.append(`
+                  <tr>
+                    <td>${item.product_code  || ''}</td>
+                    <td class="al-left">${item.product_name  || ''}</td>
+                    <td class="al-right">${Number(item.quantity   || 0).toLocaleString()}</td>
+                    <td class="al-right">${Number(item.unit_price || 0).toLocaleString()}</td>
+                    <td class="al-right">${Number(item.supply_price || 0).toLocaleString()}</td>
+                    <td class="al-right">${vatDisplay}</td>
+                    <td class="al-right">${totalAmt.toLocaleString()}</td>
+                    <td class="al-left">${item.description  || ''}</td>
+                    <td>${item.balju_StateName || ''}</td>
+                  </tr>
+                `);
+        });
+       } else {
+        $tbody.append('<tr><td colspan="9" style="text-align:center;color:#999;">품목 데이터가 없습니다.</td></tr>');
+       }
+
+       // ③ 총 발주액
+       $content.find('#vw_BaljuTotalPrice').val(grandTotal.toLocaleString());
+      }
+     );
+    }
+
+    // ── 메일 팝업 ────────────────────────────────────────
+    showBalJuMailForm(data) {
+     const _this   = this;
+     const content = tmpl('BalJuMailTemplate', data);
+     const $content = $(content);
+     const csrfToken = $('[name=_csrf]').val();
+
+     const modal = new PopupDraggable('발주서 발송');
+     modal.open({ width: 650, height: 410, $content });
+
+     // 수신자 필드 렌더링
+     const $recipientContainer = $content.find('#recipient-container');
+     if (Array.isArray(data.recipients)) {
+      if (data.recipients.length === 1) {
+       $recipientContainer.find('input[name="Recipient"]').val(data.recipients[0]);
+      } else {
+       $recipientContainer.empty();
+       data.recipients.forEach(function (email) {
+        $recipientContainer.append(`
+                <div class="input-with-button" style="margin-top:6px;">
+                  <input name="Recipient" style="width:100%;padding:6px;" value="${email}"/>
+                  <a class="btn in_btn del" title="삭제" onclick="this.parentElement.remove()">
+                    <img src="/images/icon/ico-delete.svg" alt="삭제 아이콘"/>
+                  </a>
+                </div>
+              `);
+       });
+      }
+     }
+
+     // + 버튼: 수신자 최대 3명
+     $content.find('#addRecipient').on('click', function () {
+      if ($recipientContainer.find('input[name="Recipient"]').length >= 3) {
+       Alert.alert('', '받는 사람은 최대 3명까지 추가할 수 있습니다.');
+       return;
+      }
+      $recipientContainer.append(`
+            <div class="input-with-button" style="margin-top:6px;">
+              <input name="Recipient" style="width:100%;padding:6px;"/>
+              <a class="btn in_btn del" title="삭제" onclick="this.parentElement.remove()">
+                <img src="/images/icon/ico-delete.svg" alt="삭제 아이콘"/>
+              </a>
+            </div>
+          `);
+     });
+
+     // 전송 버튼
+     $content.find('#btnPopBalJuMail').on('click', function () {
+      const recipients = $recipientContainer
+      .find('input[name="Recipient"]')
+      .map(function () { return $(this).val().trim(); })
+      .get()
+      .filter(Boolean);
+
+      const title       = $content.find('#MailTitle').val().trim();
+      const mailContent = $content.find('#MailContent').val().trim();
+
+      if (!recipients.length) { Alert.alert('', '받는 사람 이메일을 하나 이상 입력해주세요.'); return; }
+      if (!title)             { Alert.alert('', '메일 제목을 입력해주세요.');                 return; }
+      if (!mailContent)       { Alert.alert('', '메일 내용을 입력해주세요.');                 return; }
+
+      $.ajax({
+       url: '/api/balju/balju_order/sendBalJuMail',
+       type: 'POST',
+       contentType: 'application/json',
+       headers: { 'X-CSRF-TOKEN': csrfToken },
+       data: JSON.stringify({ recipients, title, content: mailContent, bhId: data.id }),
+       success: function () {
+        Alert.alert('', '메일이 성공적으로 전송되었습니다.');
+        modal.close();
+       },
+       error: function () {
+        Alert.alert('', '메일 전송 중 오류가 발생했습니다.');
+       }
+      });
+     });
+    }
+
+    // ── 목록 조회 ────────────────────────────────────────
+    searchMainData() {
+     const _this = this;
+     const data  = {
+      date_kind : $('#cboDateKind').val(),
+      start     : $('#srchStartDt').val(),
+      end       : $('#srchEndDt').val(),
+      action    : 'read',
+      spjangcd  : this.spjangcd.val()
+     };
+
+     AjaxUtil.getAsyncData(this.url + '/read', data, function (result) {
+      if (result) _this.viewData.sourceCollection = result.data;
+     });
+    }
+   }
+
+   // ── document ready ────────────────────────────────────
+   $(document).ready(function () {
+    const spjangcd = sessionStorage.getItem('spjangcd');
+    if (spjangcd) $('#spjangcdHidden').val(spjangcd);
+
+    const page = new BaljuViewPage();
+
+    $('#srchStartDt').val(CommonUtil.getYYYYMMDD(-7));
+    $('#srchEndDt').val(CommonUtil.getYYYYMMDD());
+    page.searchMainData();
+
+    $('#btnSearch').click(function () { page.searchMainData(); });
+   });
+  </script>
+</th:block>
+
+<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+</html>

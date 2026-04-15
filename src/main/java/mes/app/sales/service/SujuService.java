@@ -24,17 +24,18 @@ public class SujuService {
 	
 	@Autowired
 	SujuRepository SujuRepository;
-	
-	
-	// 수주 내역 조회 
-	public List<Map<String, Object>> getSujuList(String date_kind, Timestamp start, Timestamp end, String spjangcd) {
-		
+
+
+	// 수주 내역 조회
+	public List<Map<String, Object>> getSujuList(String date_kind, Timestamp start, Timestamp end, String spjangcd, String suju_type) {
+
 		MapSqlParameterSource dicParam = new MapSqlParameterSource();
 		dicParam.addValue("date_kind", date_kind);
 		dicParam.addValue("start", start);
 		dicParam.addValue("end", end);
 		dicParam.addValue("spjangcd", spjangcd);
-		
+		dicParam.addValue("suju_type", suju_type);
+
 		String sql = """
 			WITH suju_state_summary AS (
 			  SELECT
@@ -111,6 +112,12 @@ public class SujuService {
             and sh.spjangcd = :spjangcd
 			""";
 
+		if (suju_type != null && !suju_type.isBlank()) {
+			sql += """
+        AND sh."SujuType" = :suju_type
+        """;
+		}
+
 		if (date_kind.equals("sales")) {
 			sql += """
         		and sh."JumunDate" between :start and :end
@@ -153,7 +160,7 @@ public class SujuService {
 
 
 		List<Map<String, Object>> itmes = this.sqlRunner.getRows(sql, dicParam);
-		
+
 		return itmes;
 	}
 	
@@ -217,7 +224,7 @@ public class SujuService {
 				         s."ReservationStock",
 				         s."State" AS "original_state",
 				         COALESCE(sh.shipped_qty, -1) AS "shipped_qty",
-				         
+				         sh2."SujuType" AS "head_suju_type",
 				         CASE
 				             WHEN sh.shipped_qty = -1 THEN s."State"
 				             WHEN sh.shipped_qty = 0 THEN 'force_complement'
@@ -232,6 +239,7 @@ public class SujuService {
 				     LEFT JOIN unit u ON m."Unit_id" = u.id
 				     LEFT JOIN TB_DA003 p ON p."projno" = s.project_id
 				     LEFT JOIN shipment_status sh ON sh."SourceDataPk" = s.id
+				     LEFT JOIN suju_head sh2 ON sh2.id = s."SujuHead_id"
 				     WHERE s."SujuHead_id" = :id
 				 )
 				 
@@ -256,7 +264,11 @@ public class SujuService {
 				     s."totalAmount",
 				     s.final_state AS "State",
 				     
-				     COALESCE(sc_ship."Value", sc_suju."Value") AS "suju_StateName",
+				     --COALESCE(sc_ship."Value", sc_suju."Value") AS "suju_StateName",
+				 		CASE
+								 WHEN s."head_suju_type" = 'estimate' THEN '견적'
+								 ELSE COALESCE(sc_ship."Value", sc_suju."Value")
+						 END AS "suju_StateName",
 				 
 				     s."invatyn",
 				     s."SujuQty2",
