@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html layout:decorate="~{layout_page}" xmlns:layout="http://www.w3.org/1999/xhtml" lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>작업표준서 관리(SOP)</title>
+  <style>
+    .wj-header { text-align: center !important; }
+
+    /* 사진 첨부 영역 */
+    .photo-upload-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .photo-box {
+      width: 100%;
+      min-height: 78px;
+      border: 1px dashed #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      background: #fafafa;
+      position: relative;
+      overflow: hidden;
+    }
+    .photo-box:hover { background: #f0f4f8; border-color: #aaa; }
+    .photo-box img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+    .photo-placeholder { font-size: 11px; color: #aaa; text-align: center; }
+    .photo-placeholder i { display: block; font-size: 18px; margin-bottom: 3px; }
+    .photo-file-input { display: none; }
+    .btn-photo-remove {
+      font-size: 11px; padding: 2px 6px;
+      border: 1px solid #e0a0a0; background: #fff; color: #c00;
+      cursor: pointer; border-radius: 2px; display: none; width: 100%;
+    }
+    .btn-photo-remove:hover { background: #fff0f0; }
+
+    /* 보호구 체크박스 */
+    .ppe-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+    }
+    .ppe-item {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 12px; cursor: pointer;
+      padding: 3px 4px;
+      border: 1px solid #e0e0e0;
+      border-radius: 3px;
+    }
+    .ppe-item:hover { background: #f5f5f5; }
+    .ppe-item.checked { background: #eaf1fb; border-color: #b3cdef; }
+    .ppe-item input[type=checkbox] { margin: 0; }
+
+    /* 작업항목 번호 셀 */
+    .item-seq-cell {
+      text-align: center;
+      font-weight: bold;
+      vertical-align: middle;
+      background: #f7f8fa;
+    }
+
+    /* textarea 공통 */
+    .work-textarea {
+      width: 100%; resize: vertical;
+      padding: 4px 6px;
+      border: 1px solid #ccc;
+      font-size: 12px;
+      font-family: 'Malgun Gothic', sans-serif;
+      line-height: 1.5;
+    }
+    .work-textarea:focus { outline: none; border-color: #4a90d9; }
+  </style>
+</head>
+
+<th:block layout:fragment="content">
+  <div class="layout-contents">
+
+    <!-- 페이지 타이틀 -->
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>작업표준서 관리(SOP)</h2>
+        <a title="북마크" class="bookmark toggle">내메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img src="/images/icon/ico-nav-home.svg" alt="홈아이콘"></li>
+        <li>기준정보</li>
+        <li>작업표준서 관리(SOP)</li>
+      </ul>
+    </div>
+
+    <div style="display: flex; gap: 5px">
+
+      <!-- ① 좌측: 목록 그리드 -->
+      <section class="section" style="width: 35%;">
+        <div class="section-top">
+          <div class="search-wrap">
+            <dl>
+              <dt><label>품명</label></dt>
+              <dd>
+                <div class="srch-box">
+                  <input type="text" id="txtSopName" name="txtSopName" class="form-control2"/>
+                </div>
+              </dd>
+            </dl>
+            <dl>
+              <dt><span class="eq"></span></dt>
+              <dd>
+                <li>
+                  <a class="btn btn-delete" title="검색" id="btnSearch">
+                    <img src="/images/icon/btn-srch.svg" alt="검색 아이콘">검색
+                  </a>
+                </li>
+              </dd>
+            </dl>
+          </div>
+        </div>
+        <div class="container-fluid">
+          <div id="theGrid"></div>
+        </div>
+      </section>
+
+      <!-- ② 우측: 등록/수정 폼 -->
+      <section style="width: 65%;">
+        <div class="section-top">
+          <div class="search-wrap">
+            <ul>
+              <li>
+                <button type="button" class="btn-excellt btn-default" id="btnNew" name="btnNew"
+                        style="height: 36px; width:115px;">
+                  <i class="fas fa-plus"></i>신규등록
+                </button>
+              </li>
+              <li>
+                <button type="button" class="btn-excellt btn-default y_write_auth" id="btnSave"
+                        style="float:none; height: 36px; width:115px;">
+                  <i class="fas fa-save"></i>저장
+                </button>
+              </li>
+              <li>
+                <button type="button" class="btn-delete btn-danger y_write_auth" id="btnDel"
+                        style="float:none; height: 36px; width:115px;" disabled>
+                  <i class="fas fa-trash"></i>삭제
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="table-wrap" style="overflow-x: auto; max-height: calc(100vh - 200px); overflow-y: auto;">
+          <form id="sopForm">
+            <input type="hidden" id="id" name="id"/>
+
+            <!-- 기본 정보 -->
+            <table class="write-table" id="detail_box">
+              <caption style="text-align: left; margin-bottom: 8px;">등록테이블</caption>
+              <colgroup>
+                <col class="wp15">
+                <col class="wp35">
+                <col class="wp15">
+                <col class="wp35">
+              </colgroup>
+              <tbody>
+              <tr>
+                <th><label for="sop_name"><span class="eq">*</span>품명</label></th>
+                <td colspan="3"><input type="text" id="sop_name" name="sop_name" style="width:100%;"></td>
+              </tr>
+              <tr>
+                <th><label for="issue_date">제정일자</label></th>
+                <td><input type="date" id="issue_date" name="issue_date" style="width:100%;" readonly></td>
+                <th><label for="rev_date">개정일자</label></th>
+                <td><input type="date" id="rev_date" name="rev_date" style="width:100%;" readonly></td>
+              </tr>
+<!--              <tr>-->
+<!--                <th><label for="author">작성자</label></th>-->
+<!--                <td colspan="3"><input type="text" id="author" name="author" style="width:40%;"></td>-->
+<!--              </tr>-->
+              </tbody>
+            </table>
+
+            <!-- 작업 항목 (1~8번) -->
+            <table class="write-table" style="margin-top: 10px;">
+              <caption style="text-align: left; margin-bottom: 8px;">작업 항목</caption>
+              <colgroup>
+                <col style="width: 6%">
+                <col>
+                <col>
+                <col>
+              </colgroup>
+              <thead>
+              <tr>
+                <th style="text-align:center;">No.</th>
+                <th style="text-align:center;">작업 방법</th>
+                <th style="text-align:center;">검사 항목</th>
+                <th style="text-align:center;">사진</th>
+              </tr>
+              </thead>
+              <tbody id="workItemsBody">
+              <!-- JS 렌더링 -->
+              </tbody>
+            </table>
+
+            <!-- 비고 + 보호구 -->
+            <table class="write-table" style="margin-top: 10px;">
+              <colgroup>
+                <col class="wp15">
+                <col>
+              </colgroup>
+              <tbody>
+              <tr>
+                <th><label for="remarks">비고</label></th>
+                <td>
+                  <textarea id="remarks" name="remarks" rows="3" class="work-textarea"
+                            placeholder="※이상 발생 시 조치 요령 / 부적합품 관리규정&#10;1. 품질, 설비, 안전, 기타 이상 발생 시 반장에게 보고&#10;2. 신속 보고 후 작업 지시 받을 것."></textarea>
+                </td>
+              </tr>
+              <tr>
+                <th><label for="ppe">작업 진행시<br>보호구</label></th>
+                <td>
+                  <textarea id="ppe" name="ppe" rows="2" class="work-textarea"
+                            placeholder="예) 안전화, 안전모, 보호장갑"></textarea>
+                </td>
+              </tr>
+              </tbody>
+            </table>
+
+          </form>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <footer style="margin-top: 24px;">
+    <p>Copyrightⓒ 0000 corp. All rights reserved.</p>
+  </footer>
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <th:block th:replace="/common/approve_box :: approve_box"></th:block>
+  <th:block th:replace="/common/ax5_uploader :: ax5_uploader"></th:block>
+  <th:block th:replace="/common/upload_one_image_box :: upload_one_image_box"></th:block>
+  <th:block th:replace="/common/popup_select_user_code :: popup_select_user_code"></th:block>
+
+  <script type="text/javascript">
+
+    var theGrid;
+    var viewdata;
+
+    let columns = [
+      {binding: 'id',       header: '번호',     width: 60,  align: 'center'},
+      {binding: 'sop_name', header: '품명',      width: '*', align: 'left'},
+    ];
+
+    document.readyState === 'complete' ? init() : window.onload = init;
+
+    function init() {
+      let data2 = [];
+
+      $.ajax({
+        url: '/api/sop/read',
+        type: 'GET',
+        data: {
+          sop_name: $('#txtSopName').val(),
+          sop_type: $('#cboSopType').val(),
+          spjangcd: sessionStorage.getItem('spjangcd'),
+        },
+        async: false,
+        success: function(data) { data2 = data.data; },
+        error: function(jqXHR, textStatus, errorThrown) {
+          console.error('Error fetching sop list:', textStatus, errorThrown);
+        }
+      });
+
+      viewdata = new wijmo.collections.CollectionView(data2);
+
+      theGrid = new wijmo.grid.FlexGrid('#theGrid', {
+        autoGenerateColumns: false,
+        showMarquee: true,
+        columns: columns,
+        isReadOnly: true,
+        itemsSource: viewdata
+      });
+
+      theGrid.hostElement.addEventListener('dblclick', function() {
+        let selectedItem = theGrid.selectedItems[0];
+        if (!selectedItem) return;
+        bindFormData(selectedItem);
+        setButtonState();
+      });
+
+      theGrid.rowHeaders.columns.splice(0, 1);
+
+      renderWorkItems();
+      setButtonState();
+
+      AjaxUtil.fillSelectOptions($('#cboSopType'), 'system_code', 'all',    false, 'sop_type');
+      AjaxUtil.fillSelectOptions($('#sop_type'),   'system_code', 'choose', false, 'sop_type');
+    }
+
+    /* 폼 데이터 바인딩 */
+    function bindFormData(item) {
+      $('#id').val(item.id);
+      $('#sop_type').val(item.sop_type);
+      $('#sop_name').val(item.sop_name);
+      $('#doc_no').val(item.doc_no || '');
+      $('#rev_no').val(item.rev_no || '');
+      $('#issue_date').val(item.issue_date || '');
+      $('#rev_date').val(item.rev_date || '');
+      $('#author').val(item.author || '');
+      $('#remarks').val(item.remarks || '');
+
+      $('input[name="ppe"]').prop('checked', false);
+      $('.ppe-item').removeClass('checked');
+      if (item.ppe) {
+        item.ppe.forEach(function(v) {
+          var cb = $('input[name="ppe"][value="' + v + '"]');
+          cb.prop('checked', true);
+          cb.closest('.ppe-item').addClass('checked');
+        });
+      }
+
+      if (item.work_items) {
+        item.work_items.forEach(function(wi) {
+          $('#work_method_'  + wi.seq).val(wi.work_method  || '');
+          $('#inspection_'   + wi.seq).val(wi.inspection   || '');
+          $('#work_method2_' + wi.seq).val(wi.work_method2 || '');
+          $('#inspection2_'  + wi.seq).val(wi.inspection2  || '');
+        });
+      }
+    }
+
+    /* 버튼 상태 */
+    function setButtonState() {
+      var pk = $('#id').val();
+      $('#btnNew').prop('disabled', false);
+      $('#btnSave').prop('disabled', false);
+      $('#btnDel').prop('disabled', !pk);
+
+      $('#sopForm input, #sopForm select, #sopForm textarea').each(function() {
+        $(this).prop('disabled', false);
+      });
+    }
+
+    /* 검색 */
+    function searchMainData() {
+      $.ajax({
+        url: '/api/sop/read',
+        type: 'GET',
+        data: {
+          sop_name: $('#txtSopName').val(),
+          sop_type: $('#cboSopType').val(),
+          spjangcd: sessionStorage.getItem('spjangcd'),
+        },
+        success: function(result) {
+          if (result.success) {
+            viewdata = new wijmo.collections.CollectionView(result.data);
+            theGrid.itemsSource = viewdata;
+            theGrid.refresh();
+          } else {
+            console.log('Error occurred');
+          }
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+          console.error('Error fetching sop list:', textStatus, errorThrown);
+        }
+      });
+      resetForm();
+    }
+
+    /* 폼 초기화 */
+    function resetForm() {
+      $('#sopForm')[0].reset();
+      $('#id').val('');
+      for (var i = 1; i <= 8; i++) removePhoto(i);
+      $('.ppe-item').removeClass('checked');
+      setButtonState();
+    }
+
+    /* 저장 */
+    function saveSop() {
+      if (!$('#sop_name').val().trim()) {
+        Alert.alert('', '품명을 입력해주세요.');
+        $('#sop_name').focus(); return false;
+      }
+
+      Alert.confirm('', '저장하시겠습니까?', function() {
+        var data = collectFormData();
+        AjaxUtil.postAsyncData('/api/sop/save', data, function(result) {
+          if (result.success) {
+            Alert.alert('', '저장되었습니다.');
+            searchMainData();
+          } else {
+            Alert.alert('저장 실패', result.message);
+            console.error('저장 실패:', result.message);
+          }
+        });
+      });
+    }
+
+    /* 삭제 */
+    function deleteSop() {
+      var id = $('#id').val();
+      Alert.confirm('', '삭제하시겠습니까?', function() {
+        AjaxUtil.postAsyncData('/api/sop/delete', {id: id}, function(result) {
+          if (result.success) {
+            Alert.alert('', '삭제되었습니다.');
+            searchMainData();
+          } else {
+            Alert.alert('삭제 실패', result.message);
+            console.error('삭제 실패:', result.message);
+          }
+        });
+      });
+    }
+
+    /* 폼 데이터 수집 */
+    function collectFormData() {
+      var data = {
+        id:         $('#id').val(),
+        sop_type:   $('#sop_type').val(),
+        sop_name:   $('#sop_name').val(),
+        doc_no:     $('#doc_no').val(),
+        rev_no:     $('#rev_no').val(),
+        issue_date: $('#issue_date').val(),
+        rev_date:   $('#rev_date').val(),
+        author:     $('#author').val(),
+        remarks:    $('#remarks').val(),
+        ppe:        $('input[name="ppe"]:checked').map(function() { return this.value; }).get(),
+        work_items: []
+      };
+      for (var i = 1; i <= 8; i++) {
+        data.work_items.push({
+          seq:          i,
+          work_method:  $('#work_method_'  + i).val(),
+          inspection:   $('#inspection_'   + i).val(),
+          work_method2: $('#work_method2_' + i).val(),
+          inspection2:  $('#inspection2_'  + i).val()
+          // 사진: FormData multipart 로 별도 처리
+        });
+      }
+      return data;
+    }
+
+    /* 작업항목 행 렌더링 */
+    function renderWorkItems() {
+      var html = '';
+      for (var i = 1; i <= 8; i++) {
+        html +=
+                '<tr id="item-row-' + i + '">' +
+                '<td class="item-seq-cell">' + i + '</td>' +
+                '<td><textarea name="work_method_' + i + '" id="work_method_' + i + '" rows="3" class="work-textarea" placeholder="작업 방법 입력..."></textarea></td>' +
+                '<td><textarea name="inspection_' + i + '" id="inspection_' + i + '" rows="3" class="work-textarea" placeholder="검사 항목 입력..."></textarea></td>' +
+                '<td>' +
+                '<div class="photo-upload-cell">' +
+                '<div class="photo-box" id="photoBox_' + i + '" onclick="document.getElementById(\'photoFile_' + i + '\').click()">' +
+                '<div class="photo-placeholder"><i class="fas fa-camera"></i>사진 첨부</div>' +
+                '<img id="photoPreview_' + i + '" src="" alt="">' +
+                '</div>' +
+                '<input type="file" class="photo-file-input" id="photoFile_' + i + '" accept="image/*" onchange="previewPhoto(' + i + ', this)">' +
+                '<button type="button" class="btn-photo-remove" id="photoRemove_' + i + '" onclick="removePhoto(' + i + ')"><i class="fas fa-times"></i> 제거</button>' +
+                '</div>' +
+                '</td>' +
+                '</tr>';
+      }
+      document.getElementById('workItemsBody').innerHTML = html;
+    }
+
+    /* 사진 미리보기 / 제거 */
+    function previewPhoto(idx, input) {
+      if (!input.files || !input.files[0]) return;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        $('#photoPreview_' + idx).attr('src', e.target.result).show();
+        $('#photoBox_' + idx + ' .photo-placeholder').hide();
+        $('#photoRemove_' + idx).show();
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+
+    function removePhoto(idx) {
+      $('#photoPreview_' + idx).attr('src', '').hide();
+      $('#photoBox_' + idx + ' .photo-placeholder').show();
+      $('#photoRemove_' + idx).hide();
+      $('#photoFile_' + idx).val('');
+    }
+
+    /* PPE 체크박스 시각 피드백 */
+    $(document).on('change', 'input[name="ppe"]', function() {
+      $(this).closest('.ppe-item').toggleClass('checked', this.checked);
+    });
+
+    /* 이벤트 바인딩 */
+    $(document.body).ready(function() {
+      setButtonState();
+
+      $('#btnSearch').click(function() { searchMainData(); });
+
+      $('#txtSopName').on('keypress', function(e) {
+        if (e.keyCode === 13) searchMainData();
+      });
+
+      $('#btnNew').click(function() {
+        $('#sopForm')[0].reset();
+        $('#id').val('');
+        for (var i = 1; i <= 8; i++) removePhoto(i);
+        $('.ppe-item').removeClass('checked');
+        setButtonState();
+      });
+
+      $('#btnSave').click(function() { saveSop(); });
+
+      $('#btnDel').click(function() { deleteSop(); });
+    });
+
+  </script>
+</th:block>
+
+</html>
