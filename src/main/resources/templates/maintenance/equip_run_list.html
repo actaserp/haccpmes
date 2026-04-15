@@ -423,11 +423,15 @@
                         eq.currentRunState = '가동';
                     } else if (eq.WorkCenter_id && runningGroups.has(eq.WorkCenter_id)) {
                         eq.currentRunState = '가동';
-                    } else if (runMap[eq.id] === '비가동') {
-                        eq.currentRunState = '비가동';
                     } else {
                         eq.currentRunState = '비가동';
                     }
+                });
+
+                // 가동 설비를 위로 정렬
+                equipList.sort(function (a, b) {
+                    if (a.currentRunState === b.currentRunState) return 0;
+                    return a.currentRunState === '가동' ? -1 : 1;
                 });
             }
 

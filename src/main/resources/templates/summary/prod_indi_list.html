@@ -114,10 +114,8 @@
                         const label =
                         val === '1' ? '생산수량' :
                         val === '2' ? '영업일수' :
-                        val === '3' ? '시간당생산량' :
-                        val === '4' ? '칩수' :
-                        val === '5' ? '생산칩수' :
-                        val === '6' ? '시간당칩생산량' : '';
+                        val === '3' ? '가동시간' :
+                        val === '4' ? '시간당생산량' : '';
                         cell.textContent = label;
                         cell.style.textAlign = 'center';
                     }
@@ -127,7 +125,7 @@
                         let gubn = rowData.gubn;
 
                         if (typeof value === 'number') {
-                            cell.textContent = gubn === '3'
+                            cell.textContent = gubn === '4'
                                 ? wijmo.Globalize.format(value, 'n2')
                                 : wijmo.Globalize.format(value, 'n0');
                         }
@@ -150,7 +148,7 @@
                     }
                     if (
                         rowData &&
-                        ['1', '3', '4', '5', '6'].includes(rowData.gubn) &&
+                        ['1', '2', '3'].includes(rowData.gubn) &&
                         rowData.mat_grp_name === '전체'
                     ) {
                         cell.style.fontWeight = 'bold';
@@ -165,20 +163,74 @@
             this.grid.mergeManager = new CustomMergeManager(this.grid);
         }
 
+        // searchMainData() {
+        //     let url = '/api/summary/indicator/prod_read'
+        //     let data = {
+		// 		'cboYear' : $("#cboYear").val(),
+        //         'spjangcd' : sessionStorage.getItem('spjangcd')
+		// 	}
+        //     const result = AjaxUtil.getSyncData(url, data);
+        //     if (result && result.data) {
+        //         // 품목별은 생산수량(gubn='1')만 표시
+        //         const filtered = result.data.filter(r => r.gubn === '1');
+        //         const summaryRows = this.makeSummaryRows(result.data);
+        //         this.grid.itemsSource = [...summaryRows, ...filtered];
+        //         this.grid.frozenRows = summaryRows.length;
+        //     }
+        // }
+
         searchMainData() {
-            let url = '/api/summary/indicator/prod_read'
-            let data = {
-				'cboYear' : $("#cboYear").val(),
-                'spjangcd' : sessionStorage.getItem('spjangcd')
-			}
-            const result = AjaxUtil.getSyncData(url, data);
-            if (result && result.data) {
-                const summaryRows = this.makeSummaryRows(result.data);
-                // 🔥 최상단에 고정
-                this.grid.itemsSource = [...summaryRows, ...result.data];
-                // 🔥 써머리 행 개수만큼 상단 고정
-                this.grid.frozenRows = summaryRows.length;
-            }
+            const rawData = [
+                { mat_grp_name: '바디텍메드(태현)', mat_name: 'AFIAS 0.8T', unit_name: 'EA', gubn: '1', mon_1: 28400, mon_2: 72900, mon_3: 58400, mon_4: 49800, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '바디텍메드(태현)', mat_name: 'i-Chroma 0.6T', unit_name: 'EA', gubn: '1', mon_1: 52000, mon_2: 0, mon_3: 16400, mon_4: 36000, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '더블에스테크', mat_name: '참슬 MAIN', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 0, mon_3: 500, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '더블에스테크', mat_name: '참슬 POWER', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 0, mon_3: 500, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '더블에스테크', mat_name: '참슬 TOUCH', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 0, mon_3: 500, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '에이스테크', mat_name: 'DOV-887', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 0, mon_3: 0, mon_4: 500, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '율아테크', mat_name: 'DCU', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 0, mon_3: 200, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '율아테크', mat_name: 'EZ-111', unit_name: 'EA', gubn: '1', mon_1: 200, mon_2: 0, mon_3: 0, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '율아테크', mat_name: 'EZ-1390', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 20, mon_3: 0, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '율아테크', mat_name: 'EZ-5520', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 0, mon_3: 500, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '율아테크', mat_name: 'IF BOARD', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 0, mon_3: 300, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '제일제품', mat_name: 'DC 스위치 1회로(V09)', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 3028, mon_3: 2688, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '제일제품', mat_name: 'DC 스위치 2회로(V09)', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 2976, mon_3: 3000, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '제일제품', mat_name: '중흥 1개용 환기SW', unit_name: 'EA', gubn: '1', mon_1: 2902, mon_2: 0, mon_3: 0, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '제일제품', mat_name: '파워허브 MAIN 16포트', unit_name: 'EA', gubn: '1', mon_1: 500, mon_2: 0, mon_3: 0, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '제일제품', mat_name: '파워허브 MAIN 24포트', unit_name: 'EA', gubn: '1', mon_1: 100, mon_2: 0, mon_3: 0, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '제일제품', mat_name: '파워허브 16포트 SUB', unit_name: 'EA', gubn: '1', mon_1: 400, mon_2: 100, mon_3: 0, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '제일제품', mat_name: '파워허브 24포트 SUB', unit_name: 'EA', gubn: '1', mon_1: 750, mon_2: 0, mon_3: 70, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '100G', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 105, mon_3: 0, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '1200E', unit_name: 'EA', gubn: '1', mon_1: 50, mon_2: 0, mon_3: 100, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '1200SA', unit_name: 'EA', gubn: '1', mon_1: 50, mon_2: 0, mon_3: 150, mon_4: 30, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '120G', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 105, mon_3: 0, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '200SA', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 0, mon_3: 50, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '20B', unit_name: 'EA', gubn: '1', mon_1: 225, mon_2: 0, mon_3: 99, mon_4: 144, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '300E', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 0, mon_3: 0, mon_4: 150, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '300SA', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 0, mon_3: 100, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '30B', unit_name: 'EA', gubn: '1', mon_1: 250, mon_2: 0, mon_3: 250, mon_4: 200, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '450SA', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 0, mon_3: 150, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '45B', unit_name: 'EA', gubn: '1', mon_1: 245, mon_2: 0, mon_3: 250, mon_4: 200, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '600SA', unit_name: 'EA', gubn: '1', mon_1: 100, mon_2: 0, mon_3: 150, mon_4: 150, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '60B', unit_name: 'EA', gubn: '1', mon_1: 315, mon_2: 0, mon_3: 201, mon_4: 300, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '60G', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 105, mon_3: 0, mon_4: 55, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '750E', unit_name: 'EA', gubn: '1', mon_1: 50, mon_2: 0, mon_3: 0, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '75B(80B)', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 0, mon_3: 180, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '900E', unit_name: 'EA', gubn: '1', mon_1: 50, mon_2: 0, mon_3: 150, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '900SA', unit_name: 'EA', gubn: '1', mon_1: 50, mon_2: 0, mon_3: 151, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '90B', unit_name: 'EA', gubn: '1', mon_1: 118, mon_2: 0, mon_3: 0, mon_4: 150, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: '90G', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 105, mon_3: 0, mon_4: 45, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: 'Light Control Manual', unit_name: 'EA', gubn: '1', mon_1: 600, mon_2: 0, mon_3: 1560, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '트윈스타', mat_name: 'Light Control Pro v2', unit_name: 'EA', gubn: '1', mon_1: 0, mon_2: 0, mon_3: 800, mon_4: 0, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+
+                // 영업일수
+                { mat_grp_name: '전체', mat_name: '', unit_name: '', gubn: '2', mon_1: 22, mon_2: 20, mon_3: 22, mon_4: 22, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+                { mat_grp_name: '전체', mat_name: '', unit_name: '', gubn: '3', mon_1: 10, mon_2: 10, mon_3: 10, mon_4: 10, mon_5: 0, mon_6: 0, mon_7: 0, mon_8: 0, mon_9: 0, mon_10: 0, mon_11: 0, mon_12: 0 },
+            ];
+
+            const filtered = rawData.filter(r => r.gubn === '1');
+            const summaryRows = this.makeSummaryRows(rawData);
+            this.grid.itemsSource = [...summaryRows, ...filtered];
+            this.grid.frozenRows = summaryRows.length;
         }
 
         makeSummaryRows(data) {
@@ -209,37 +261,25 @@
                     .reduce((s, r) => s + (r[key] || 0), 0)
             ));
 
-            // 시간당생산량 평균
-            rows.push(makeRow('3', '시간당생산량 평균', key => {
-                if (!hasProduction(data, key)) return 0;
-
-                const v = data
-                    .filter(r => r.gubn === '3')
-                    .map(r => r[key])
-                    .filter(v => typeof v === 'number');
-
-                return v.length
-                    ? +(v.reduce((a,b)=>a+b,0) / v.length).toFixed(2)
-                    : 0;
-            }));
-
-
-            // 생산칩수 합계
-            rows.push(makeRow('5', '생산칩수 합계', key =>
-                data.filter(r => r.gubn === '5')
-                    .reduce((s, r) => s + (r[key] || 0), 0)
+            // 영업일수 (월별 동일 — 첫 번째 gubn='2' 행 기준)
+            rows.push(makeRow('2', '영업일수', key =>
+                data.find(r => r.gubn === '2')?.[key] || 0
             ));
 
-            // 시간당칩생산량 평균
-            rows.push(makeRow('6', '시간당 칩 생산량 KPI', key => {
-                const totalChip = data
-                    .filter(r => r.gubn === '5')
+            rows.push(makeRow('3', '가동시간', key =>
+                data.find(r => r.gubn === '3')?.[key] || 0
+            ));
+
+            // 시간당생산량 = 생산수량 합계 / (영업일수 * 10)
+            rows.push(makeRow('4', '시간당생산량', key => {
+                const totalProd = data
+                    .filter(r => r.gubn === '1')
                     .reduce((s, r) => s + (r[key] || 0), 0);
 
                 const workday = data.find(r => r.gubn === '2')?.[key] || 0;
 
                 return workday > 0
-                    ? +(totalChip / 189 / 13.3).toFixed(2)
+                    ? +(totalProd / (workday * 10)).toFixed(2)
                     : 0;
             }));
 

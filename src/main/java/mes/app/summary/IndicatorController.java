@@ -4,10 +4,7 @@ import mes.domain.model.AjaxResult;
 import mes.domain.services.SqlRunner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.DayOfWeek;
 import java.time.YearMonth;
@@ -114,7 +111,7 @@ public class IndicatorController {
 			sql.append(", ROUND(")
 					.append("CASE WHEN ").append(workdays.get(i)).append(" = 0 THEN 0 ELSE ")
 					.append("SUM(CASE WHEN EXTRACT(MONTH FROM jr.\"ProductionDate\") = ").append(i)
-					.append(" THEN jr.\"GoodQty\" ELSE 0 END) / ").append(workdays.get(i)).append(" / 8 END::numeric, 2) AS mon_")
+					.append(" THEN jr.\"GoodQty\" ELSE 0 END) / ").append(workdays.get(i)).append(" / 10 END::numeric, 2) AS mon_")
 					.append(i);
 		}
 		sql.append("""
@@ -269,11 +266,13 @@ public class IndicatorController {
 		StringBuilder sql = new StringBuilder();
 		sql.append("""
 			WITH base_data AS (
-				SELECT 
+				SELECT
 					s.id AS suju_id,
 					s."Material_id" AS mat_pk,
 					EXTRACT(MONTH FROM s."JumunDate") AS mon,
 					(sh."ShipDate" - s."JumunDate") +1 AS wday,
+					s."JumunDate"  AS jum_date,
+					sh."ShipDate"  AS ship_date,
 					s."SujuQty",
 					SUM(sp."Qty") OVER (PARTITION BY s.id) AS total_qty
 				FROM suju s
@@ -283,7 +282,7 @@ public class IndicatorController {
 				  AND s."spjangcd" = :spjangcd
 			),
 			mat_data AS (
-				SELECT 
+				SELECT
 					m.id AS mat_pk,
 					fn_code_name('mat_type', mg."MaterialType") AS mat_type_name,
 					mg."Name" AS mat_grp_name,
@@ -295,7 +294,7 @@ public class IndicatorController {
 				LEFT JOIN mat_grp mg ON mg.id = m."MaterialGroup_id"
 				LEFT JOIN unit u ON u.id = m."Unit_id"
 			)
-			SELECT 
+			SELECT
 				b.mat_pk,
 				m.mat_type_name,
 				m.mat_grp_name,
@@ -306,7 +305,9 @@ public class IndicatorController {
 		""");
 
 		for (int i = 1; i <= 12; i++) {
-			sql.append("ROUND(AVG(CASE WHEN b.mon = ").append(i).append(" THEN b.wday ELSE NULL END)::numeric, 1) AS mon_").append(i);
+			sql.append("ROUND(AVG(CASE WHEN b.mon = ").append(i).append(" THEN b.wday ELSE NULL END)::numeric, 1) AS mon_").append(i).append(", ");
+			sql.append("to_char((date '1970-01-01' + interval '1 second' * AVG(CASE WHEN b.mon = ").append(i).append(" THEN EXTRACT(epoch FROM b.jum_date)  ELSE NULL END))::date, 'MM/DD') AS jum_mon_").append(i).append(", ");
+			sql.append("to_char((date '1970-01-01' + interval '1 second' * AVG(CASE WHEN b.mon = ").append(i).append(" THEN EXTRACT(epoch FROM b.ship_date) ELSE NULL END))::date, 'MM/DD') AS ship_mon_").append(i);
 			if (i < 12) sql.append(", ");
 		}
 
