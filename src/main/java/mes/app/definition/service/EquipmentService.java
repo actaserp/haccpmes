@@ -67,7 +67,7 @@ public class EquipmentService {
         if (workcenter != null) sql +=" and e.\"WorkCenter_id\"= :workcenter_id ";
         if (StringUtils.hasText(keyword)) sql +=" and upper(e.\"Name\") like concat('%%', :keyword,'%%') ";
         
-        sql += " order by e.id desc ";
+        sql += " order by e.id ";
         List<Map<String, Object>> items = this.sqlRunner.getRows(sql, dicParam);
         
         return items;

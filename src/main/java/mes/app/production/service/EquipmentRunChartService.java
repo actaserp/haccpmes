@@ -70,8 +70,13 @@ public class EquipmentRunChartService {
 					(er."StartDate" <= :date_to) AND
 					(er."EndDate" IS NULL OR er."EndDate" >= :date_from)
 				)
-				order by "Name", er."StartDate", er."EndDate"
 				""";
+
+		if (id != null) {
+			sql += " AND er.\"Equipment_id\" = :id ";
+		}
+
+		sql += " order by \"Name\", er.\"StartDate\", er.\"EndDate\" ";
 
         /*String sql = """
         		select er.id

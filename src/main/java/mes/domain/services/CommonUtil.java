@@ -124,8 +124,9 @@ public class CommonUtil {
 	}
 	
 	public static Timestamp tryTimestamp(Object data) {
+		if (data == null || data.toString().isBlank()) return null;
 		Timestamp result;
-		String dateVal = (data.toString()).length() == 10 ? data.toString() + " 00:00:00" : data.toString();
+		String dateVal = data.toString().length() == 10 ? data.toString() + " 00:00:00" : data.toString();
 
 		try {
 			result = Timestamp.valueOf(dateVal);

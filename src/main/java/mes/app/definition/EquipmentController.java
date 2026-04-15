@@ -107,6 +107,7 @@ public class EquipmentController {
 			@RequestParam(value="Depart_id", required=false) Integer Depart_id,
 			@RequestParam(value="Usage", required=false) String Usage,
 			@RequestParam(value="ASTelNumber", required=false) String ASTelNumber,
+			@RequestParam(value="ServiceCharger", required=false) String ServiceCharger,
 			@RequestParam(value="AttentionRemark", required=false) String AttentionRemark,
 			@RequestParam(value="OvenProductTemperStandard", required=false) Double OvenProductTemperStandard,
 			@RequestParam(value="OvenHeatingMnStandard", required=false) Double OvenHeatingMnStandard,
@@ -183,6 +184,7 @@ public class EquipmentController {
 		equip.setDepart_id(Depart_id);
 		equip.setUsage(Usage);
 		equip.setAstelNumber(ASTelNumber);
+		equip.setServiceCharger(ServiceCharger);
 		equip.setAttentionRemark(AttentionRemark);
 		equip.setOvenProductTemperStandard(OvenProductTemperStandard);
 		equip.setOvenHeatingMnStandard(OvenHeatingMnStandard);

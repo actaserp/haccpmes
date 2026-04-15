@@ -1,523 +1,596 @@
 <html layout:decorate="~{layout_page}">
 <head>
     <style>
-        .select2-container--open {
-            z-index: 9001;
+        .master-detail-wrap {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
         }
-
+        .master-panel {
+            flex: 0 0 300px;
+        }
+        .detail-panel {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .detail-info-card {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+        }
+        .detail-info-card .card-header {
+            background: #f4f6f9;
+            padding: 8px 14px;
+            font-weight: bold;
+            font-size: 13px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .detail-info-card .card-body {
+            padding: 10px 14px;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .info-table th {
+            width: 110px;
+            background: #f8f9fa;
+            padding: 6px 10px;
+            text-align: center;
+            border: 1px solid #ddd;
+            font-weight: normal;
+            color: #555;
+            white-space: nowrap;
+        }
+        .info-table td {
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+        }
+        .info-table input[type=text],
+        .info-table input[type=number],
+        .info-table select,
+        .info-table textarea {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            padding: 4px 6px;
+            font-size: 13px;
+            border-radius: 2px;
+        }
+        .info-table input[readonly] {
+            background: #f5f5f5;
+            color: #777;
+        }
+        .info-table textarea {
+            resize: vertical;
+            height: 48px;
+        }
+        .no-select-msg {
+            text-align: center;
+            color: #aaa;
+            padding: 40px 0;
+            font-size: 14px;
+        }
+        .history-label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #444;
+            margin-bottom: 4px;
+        }
     </style>
 </head>
 <th:block layout:fragment="content">
     <div class="layout-contents">
         <div class="page-title-wrap">
             <div class="left">
-                <h2>비가동 내역</h2>
-                <a title="북마크" class="bookmark toggle">
-                    내 메뉴
-                </a>
+                <h2>설비운영 상태관리</h2>
+                <a title="북마크" class="bookmark toggle">내 메뉴</a>
             </div>
             <ul class="page-navi">
                 <li><img src="/images/icon/ico-nav-home.svg" alt="홈아이콘"></li>
                 <li>설비 관리</li>
-                <li>비가동 내역</li>
+                <li>설비운영 상태관리</li>
             </ul>
         </div>
-        <form id="searchForm" autocomplete="off">
-            <section class="section">
-                <div class="section-top">
-                    <div class="search-wrap">
 
-                        <dl>
-                            <dt>
-                                <label>
-                                    비가동일
-                                </label>
-                            </dt>
-                            <dd>
-                                <ul class="date-box">
-                                    <li>
-                                        <input type="date" id="srchStartDt" name="srchStartDt">
-                                        <label for="srchStartDt" class="hide">시작일</label>
-                                    </li>
-                                    <li>
-                                        <input type="date" id="srchEndDt" name="srchEndDt">
-                                        <label for="srchEndDt" class="hide">종료일</label>
-                                    </li>
-                                </ul>
-                            </dd>
-                        </dl>
-
-                        <dl>
-                            <dt>
-                                <label>
-                                    설비명<span class="eq"></span>
-                                </label>
-                            </dt>
-                            <dd>
-                                <div class="srch-box">
-                                    <select id="cboEquipment" name="cboEquipment">
-
-                                    </select>
-                                </div>
-                            </dd>
-                        </dl>
-
-                        <dl>
-                            <dt>&nbsp;</dt>
-                            <dd>
+        <section class="section">
+            <div class="section-top">
+                <div class="search-wrap">
+                    <dl>
+                        <dt><label>이력 조회기간</label></dt>
+                        <dd>
+                            <ul class="date-box">
                                 <li>
-                                    <a class="btn btn-delete" title="검색" id="btnSearch">
-                                        <!--                                        class 쓰이는 곳 찾고 없으면 클래스명 수정하기-->
-                                        <img src="/images/icon/btn-srch.svg" alt="검색 아이콘">
-                                        검색
-                                    </a>
+                                    <input type="date" id="date_from" name="date_from">
+                                    <label for="date_from" class="hide">시작일</label>
                                 </li>
-                            </dd>
-                        </dl>
+                                <li>
+                                    <input type="date" id="date_to" name="date_to">
+                                    <label for="date_to" class="hide">종료일</label>
+                                </li>
+                            </ul>
+                        </dd>
+                    </dl>
+                    <dl>
+                        <dt><label>설비명</label></dt>
+                        <dd>
+                            <input type="text" id="srchKeyword" placeholder="설비명 검색" style="width:160px;border:1px solid #ccc;padding:4px 8px;border-radius:3px;">
+                        </dd>
+                    </dl>
+                    <dl>
+                        <dt>&nbsp;</dt>
+                        <dd>
+                            <li>
+                                <a class="btn btn-delete" title="검색" id="btnSearch">
+                                    <img src="/images/icon/btn-srch.svg" alt="검색 아이콘">
+                                    검색
+                                </a>
+                            </li>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
 
-                    </div>
-                    <div class="button-wrap">
-                        <ul>
-                            <li>
-                                <a class="btn btn-excell" title="신규" id="btnAdd">
-                                    <img src="/images/icon/ico-plus.svg" alt="신규 아이콘">
-                                    신규
-                                </a>
-                            </li>
-                            <li>
-                                <a class="btn btn-delete" title="삭제" id="btnDel">
-                                    <img src="/images/icon/ico-delete.svg" alt="삭제 아이콘">
-                                    삭제
-                                </a>
-                            </li>
-                            <li>
-                                <a class="btn btn-edit" title="저장" id="btnEdit">
-                                    <img src="/images/icon/ico-edit.svg" alt="저장 아이콘">
-                                    수정
-                                </a>
-                            </li>
-                        </ul>
+            <div class="master-detail-wrap">
+                <!-- 좌측: 설비 목록 -->
+                <div class="master-panel">
+                    <div class="detail-info-card">
+                        <div class="card-header">
+                            <span>설비 목록</span>
+                            <span id="lastUpdated" style="font-size:11px;font-weight:normal;color:#888;"></span>
+                        </div>
+                        <div id="equipListGrid" style="height:540px;"></div>
                     </div>
                 </div>
-                <div class="container-fluid">
-                    <div id="theGrid" style="height: 700px;"></div>
+
+                <!-- 우측: 설비 정보 편집 + 가동이력 -->
+                <div class="detail-panel">
+
+                    <!-- 설비 정보 편집 -->
+                    <div class="detail-info-card">
+                        <div class="card-header">
+                            <span>설비 정보</span>
+                            <a class="btn btn-edit y_write_auth" id="btnSaveEquip" style="display:none;">
+                                <img src="/images/icon/ico-edit.svg" alt="저장">
+                                저장
+                            </a>
+                        </div>
+                        <div class="card-body" id="equipFormWrap">
+                            <div class="no-select-msg">좌측 목록에서 설비를 선택하세요.</div>
+                        </div>
+                    </div>
+
+                    <!-- 비가동 이력 -->
+                    <div class="detail-info-card">
+                        <div class="card-header">비가동 이력</div>
+                        <div style="padding:8px;">
+                            <div id="historyNoData" style="display:none;text-align:center;color:#aaa;padding:30px 0;font-size:13px;">해당 기간 비가동 이력 없음 (계속 가동 중)</div>
+                            <div id="historyGrid" style="height:230px;"></div>
+                        </div>
+                    </div>
 
                 </div>
-
-                <!--        <div class="grid_box">-->
-
-                <!--            <div class="h-640" data-ax5grid="sujuGrid" ></div>-->
-                <!--        </div>-->
-            </section>
-        </form>
-
+            </div>
+        </section>
     </div>
 
-
-    <script type="text/x-tmpl" id="addDataPopup">
-        <div class="content_wrap popup" id="div_excel_upload">
-        <form id="equipmentStopForm">
-            <div class="table-wrap">
-                <table class="write-table">
-                    <input type="hidden" id="id" name="id" value="">
-                    <tbody>
-                        <tr>
-                            <th style="text-align: center">
-                                <label for="start_date">시작일</label>
-                            </th>
-                            <td>
-                                <input type="date" id="start_date" name="start_date">
-                            </td>
-                            <th style="text-align: center">
-                                <label for="DueDate">시작시간</label>
-                            </th>
-                            <td>
-                                <input type="text" id="StartTime" name="StartTime">
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <th style="text-align: center">
-                                <label for="end_date">종료일</label>
-                            </th>
-                            <td>
-                                <input type="date" id="end_date" name="end_date">
-                            </td>
-                            <th style="text-align: center">
-                                <label for="EndTime">종료시간</label>
-                            </th>
-                            <td>
-                                <input type="text" id="EndTime" name="EndTime">
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <th style="text-align: center">
-                                <label for="end_date">설비</label>
-                            </th>
-                            <td>
-                               <select id="Equipment_id" name="Equipment_id" ></select>
-                            </td>
-                            <th style="text-align: center">
-                                <label for="RunState">비가동유형</label>
-                            </th>
-                            <td>
-                                <select id="StopCause_id" name="StopCause_id" ></select>
-                            </td>
-                        </tr>
-
-
-                        <tr>
-                            <th style="text-align: center">
-                                <label for="description">비고</label>
-                            </th>
-                            <td colspan="3">
-                                <textarea id="Description" name="Description"></textarea>
-                                <input type="hidden" id="RunState" name="RunState" value="stop"/>
-                            </td>
-                        </tr>
-
-                    </tbody>
-                </table>
+    <!-- 설비 정보 폼 템플릿 -->
+    <script type="text/x-tmpl" id="equipInfoForm">
+        <form id="equipEditForm">
+            <input type="hidden" id="ef_id" name="id">
+            <input type="hidden" id="ef_Code" name="Code">
+            <input type="hidden" id="ef_WorkCenter_id" name="WorkCenter_id">
+            <input type="hidden" id="ef_EquipmentGroup_id" name="EquipmentGroup_id">
+            <input type="hidden" id="ef_Model" name="Model">
+            <input type="hidden" id="ef_Maker" name="Maker">
+            <input type="hidden" id="ef_SerialNumber" name="SerialNumber">
+            <input type="hidden" id="ef_ManageNumber" name="ManageNumber">
+            <input type="hidden" id="ef_SupplierName" name="SupplierName">
+            <input type="hidden" id="ef_ProductionYear" name="ProductionYear">
+            <input type="hidden" id="ef_PurchaseDate" name="PurchaseDate">
+            <input type="hidden" id="ef_InstallDate" name="InstallDate">
+            <input type="hidden" id="ef_DisposalDate" name="DisposalDate">
+            <input type="hidden" id="ef_PurchaseCost" name="PurchaseCost">
+            <input type="hidden" id="ef_InputDate" name="InputDate">
+            <input type="hidden" id="ef_Depart_id" name="Depart_id">
+            <input type="hidden" id="ef_OvenProductTemperStandard" name="OvenProductTemperStandard">
+            <input type="hidden" id="ef_OvenHeatingMnStandard" name="OvenHeatingMnStandard">
+            <div style="margin-bottom:8px;">
+                <span style="font-size:12px;color:#888;">현재 가동상태 : </span>
+                <span id="ef_currentRunStateBadge" style="font-size:13px;font-weight:bold;"></span>
             </div>
-
-            <div class="popup-button">
-
-                    <button type="button" class="btn-popup y_write_auth" id="btnSave">저장</button>
-                    <button type="button" class="btn-popup" id="modal-close-button">닫기</button>
-
-            </div>
-            </form>
-
-        </div>
+            <table class="info-table">
+                <tbody>
+                    <tr>
+                        <th>설비명</th>
+                        <td><input type="text" id="ef_Name" name="Name" readonly></td>
+                        <th>설비코드</th>
+                        <td><input type="text" id="ef_CodeDisp" readonly></td>
+                    </tr>
+                    <tr>
+                        <th>등록 상태</th>
+                        <td>
+                            <select id="ef_Status" name="Status">
+                                <option value="">선택</option>
+                                <option value="A">운영중</option>
+                                <option value="S">정지</option>
+                                <option value="D">폐기</option>
+                            </select>
+                        </td>
+                        <th>가동률관리</th>
+                        <td>
+                            <select id="ef_OperationRateYN" name="OperationRateYN">
+                                <option value="">선택</option>
+                                <option value="Y">Y</option>
+                                <option value="N">N</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>담당자</th>
+                        <td><input type="text" id="ef_Manager" name="Manager"></td>
+                        <th>AS 전화번호</th>
+                        <td><input type="text" id="ef_ASTelNumber" name="ASTelNumber"></td>
+                    </tr>
+                    <tr>
+                        <th>서비스담당자</th>
+                        <td><input type="text" id="ef_ServiceCharger" name="ServiceCharger"></td>
+                        <th>용도</th>
+                        <td><input type="text" id="ef_Usage" name="Usage"></td>
+                    </tr>
+                    <tr>
+                        <th>전압</th>
+                        <td><input type="text" id="ef_Voltage" name="Voltage"></td>
+                        <th>소비전력(W)</th>
+                        <td><input type="number" id="ef_PowerWatt" name="PowerWatt"></td>
+                    </tr>
+                    <tr>
+                        <th>주의사항</th>
+                        <td colspan="3"><textarea id="ef_AttentionRemark" name="AttentionRemark"></textarea></td>
+                    </tr>
+                    <tr>
+                        <th>비고</th>
+                        <td colspan="3"><textarea id="ef_Description" name="Description"></textarea></td>
+                    </tr>
+                </tbody>
+            </table>
+        </form>
     </script>
 </th:block>
 
 <th:block layout:fragment="scripts">
-    <th:block th:replace="/common/columns_setting :: columns_setting" ></th:block>
+    <th:block th:replace="/common/columns_setting :: columns_setting"></th:block>
     <script type="text/javascript">
         class mainPage {
             constructor() {
-                this.grid = null;
-                this.baseUrl = '/api/production/equipment_run_chart';
-                 this.options = null;
-                this.viewData = new wijmo.collections.CollectionView();
+                this.equipGrid = null;
+                this.historyGrid = null;
+                this.equipViewData = new wijmo.collections.CollectionView();
+                this.historyViewData = new wijmo.collections.CollectionView();
+                this.selectedEquipId = null;
+                this.autoRefreshTimer = null;
                 this.init();
-
-
             }
 
             init() {
                 let _this = this;
 
-                this.grid = new wijmo.grid.FlexGrid('#theGrid', {
+                // 설비 목록 그리드
+                this.equipGrid = new wijmo.grid.FlexGrid('#equipListGrid', {
                     selectionMode: wijmo.grid.SelectionMode.Row,
                     headersVisibility: wijmo.grid.HeadersVisibility.Column,
                     autoGenerateColumns: false,
                     showMarquee: true,
                     isReadOnly: true,
                     columns: [
-                        {binding: 'Name', header: '설비', width: '*', align : 'left'},
-                        {binding: 'start_date', header: '시작일자', width: '*', align: 'center'},
-                        {binding: 'StartTime', header: '시작시간', width: '*', align: 'left'},
-                        {binding: 'end_date', header: '종료일자', width: '*', align: 'center'},
-                        {binding: 'EndTime', header: '종료시간', width: '*', align: 'center'},
-                        {binding: 'GapTime', header: '소요시간(분)', width: '*', align: 'center'},
-                        {binding: 'StopCauseName', header: '비가동유형', width: '*', align: 'center'},
-                        {binding: 'Description', header: '비고', width: '*', align: 'left'},
+                        { binding: 'id', header: 'ID', visible: false },
+                        { binding: 'currentRunState', header: '현재상태', width: 70, align: 'center' },
+                        { binding: 'Name', header: '설비명', width: '*', align: 'left' },
+                        { binding: 'Manager', header: '담당자', width: 70, align: 'center' },
                     ],
-                    itemsSource: this.viewData,
-                });
-                new FlexGridContextMenu(this.grid);
-                this.grid.downloadFileName = '비가동 내역';
-                this.grid.hostElement.addEventListener('dblclick', (e) => {
-                    let hitTest = this.grid.hitTest(e);
-                    if (hitTest.cellType === wijmo.grid.CellType.Cell) {
-                        let row = hitTest.row;
-                        let item = this.grid.rows[row].dataItem;
-                        console.log('zz', item.id);
-
-
-                        //$("#stop_cause_name").val(item.stop_cause_name);
-                        //$("#description").val(item.description);
+                    itemsSource: this.equipViewData,
+                    formatItem: function (s, e) {
+                        if (e.panel.cellType !== wijmo.grid.CellType.Cell) return;
+                        let item = s.rows[e.row].dataItem;
+                        if (!item) return;
+                        let col = s.columns[e.col];
+                        if (col.binding === 'currentRunState') {
+                            e.cell.innerHTML = '';
+                            let dot = document.createElement('span');
+                            if (item.currentRunState === '가동') {
+                                dot.textContent = '● 가동';
+                                dot.style.cssText = 'color:#27ae60;font-weight:bold;font-size:12px;';
+                            } else if (item.currentRunState === '비가동') {
+                                dot.textContent = '● 비가동';
+                                dot.style.cssText = 'color:#e74c3c;font-weight:bold;font-size:12px;';
+                            } else {
+                                dot.textContent = '● 비가동';
+                                dot.style.cssText = 'color:#e74c3c;font-weight:bold;font-size:12px;';
+                            }
+                            e.cell.appendChild(dot);
+                        }
                     }
                 });
-                AjaxUtil.fillSelectOptions($('#cboEquipment'), 'equipment', 'all', false);
+                new FlexGridContextMenu(this.equipGrid);
 
+                // 설비 행 클릭 시 상세 로드
+                this.equipGrid.selectionChanged.addHandler(function (s) {
+                    if (s.selectedItems && s.selectedItems.length > 0) {
+                        let item = s.selectedItems[0];
+                        _this.loadEquipDetail(item.id);
+                        _this.loadHistory(item.id);
+                    }
+                });
+
+                // 비가동 이력 그리드
+                this.historyGrid = new wijmo.grid.FlexGrid('#historyGrid', {
+                    selectionMode: wijmo.grid.SelectionMode.Row,
+                    headersVisibility: wijmo.grid.HeadersVisibility.Column,
+                    autoGenerateColumns: false,
+                    showMarquee: true,
+                    isReadOnly: true,
+                    columns: [
+                        { binding: 'start_date', header: '시작일', width: 95, align: 'center' },
+                        { binding: 'StartTime', header: '시작시간', width: 75, align: 'center' },
+                        { binding: 'end_date', header: '종료일', width: 95, align: 'center' },
+                        { binding: 'EndTime', header: '종료시간', width: 75, align: 'center' },
+                        { binding: 'GapTime', header: '비가동(분)', width: 85, align: 'center' },
+                        { binding: 'StopCauseName', header: '비가동유형', width: '*', align: 'left' },
+                        { binding: 'Description', header: '비고', width: '*', align: 'left' },
+                    ],
+                    itemsSource: this.historyViewData,
+                });
+                new FlexGridContextMenu(this.historyGrid);
             }
 
-            searchMainData() {
-                let _this = this;
-                let srchStartDt = $('#srchStartDt').val();
-                let srchEndDt = $('#srchEndDt').val();
-                let cboEquipment = $('#cboEquipment').val();
-                let url = '/api/production/equipment_stop_history';
-                let param = {
-                    'action' : 'read',
-                    'date_from' : srchStartDt,
-                    'date_to' : srchEndDt,
-                    'equipment' : cboEquipment,
-                };
+            // 설비 목록 + 현재 가동상태 조회 (검색 버튼 클릭 시 전체 리셋)
+            searchEquipList() {
+                let keyword = $('#srchKeyword').val();
+                let param = {};
+                if (keyword) param.equipment = keyword;
 
-                let result = AjaxUtil.getSyncData(url + '/read', param);
-                if (result.data != null) {
-                    _this.viewData.sourceCollection = result.data;
+                let equipResult = AjaxUtil.getSyncData('/api/definition/equipment/read', param);
+                if (!equipResult || !equipResult.data) return;
+
+                let equipList = equipResult.data;
+                this._mergeRunState(equipList);
+
+                this.equipViewData.sourceCollection = equipList;
+
+                // 우측 초기화
+                this.selectedEquipId = null;
+                $('#equipFormWrap').html('<div class="no-select-msg">좌측 목록에서 설비를 선택하세요.</div>');
+                $('#btnSaveEquip').hide();
+                this.historyViewData.sourceCollection = [];
+
+                this._updateTimestamp();
+            }
+
+            // 가동상태만 조용히 갱신 (선택/편집 상태 유지)
+            refreshRunState() {
+                let items = this.equipViewData.sourceCollection;
+                if (!items || items.length === 0) return;
+
+                this._mergeRunState(items);
+                this.equipViewData.refresh();
+                this._updateTimestamp();
+
+                // 선택된 설비가 있으면 이력도 갱신
+                if (this.selectedEquipId) {
+                    this.loadHistory(this.selectedEquipId);
                 }
             }
 
-            showDataBind() {
-                let id = this.grid.selectedItems.length > 0 ? this.grid.selectedItems[0].id : null;
-                //let $form = $('#equipmentStopForm');
-                //let id = $form.find('#id').val();
-                if (id) {
-                    page.addDataBind(id, true);
+            // equ_run 현재 상태를 설비 목록에 병합
+            _mergeRunState(equipList) {
+                let today = CommonUtil.getYYYYMMDD();
+                let runResult = AjaxUtil.getSyncData('/api/production/equipment_run_chart/read', {
+                    date_from: today,
+                    date_to: today,
+                });
+
+                // equipment_id → 가동여부 맵
+                let runMap = {};
+                if (runResult && runResult.data) {
+                    runResult.data.forEach(function (row) {
+                        let eid = row.Equipment_id;
+                        if (!eid) return;
+                        if (!row.EndDate && row.RunState !== 'stop') {
+                            runMap[eid] = '가동';
+                        } else if (runMap[eid] !== '가동') {
+                            runMap[eid] = runMap[eid] || '비가동';
+                        }
+                    });
                 }
-                else {
-                    Alert.alert('', '비가동 내역을 선택하세요.');
+
+                // 그룹 단위로 하나라도 가동중이면 그룹 전체 가동으로 표시
+                let runningGroups = new Set();
+                equipList.forEach(function (eq) {
+                    if (eq.WorkCenter_id && runMap[eq.id] === '가동') {
+                        runningGroups.add(eq.WorkCenter_id);
+                    }
+                });
+
+                equipList.forEach(function (eq) {
+                    if (runMap[eq.id] === '가동') {
+                        eq.currentRunState = '가동';
+                    } else if (eq.WorkCenter_id && runningGroups.has(eq.WorkCenter_id)) {
+                        eq.currentRunState = '가동';
+                    } else if (runMap[eq.id] === '비가동') {
+                        eq.currentRunState = '비가동';
+                    } else {
+                        eq.currentRunState = '비가동';
+                    }
+                });
+            }
+
+            _updateTimestamp() {
+                let now = new Date();
+                let pad = function(n) { return n < 10 ? '0' + n : n; };
+                let ts = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds()) + ' 갱신';
+                $('#lastUpdated').text(ts);
+            }
+
+            // 설비 상세 → 우측 폼에 렌더링
+            loadEquipDetail(equipId) {
+                this.selectedEquipId = equipId;
+
+                let detail = AjaxUtil.getSyncData('/api/definition/equipment/detail', { id: equipId });
+                if (!detail || !detail.data) return;
+
+                let d = detail.data;
+                let html = tmpl('equipInfoForm', {});
+                $('#equipFormWrap').html(html);
+                $('#btnSaveEquip').show();
+
+                $('#ef_id').val(d.id || '');
+                $('#ef_Code').val(d.Code || '');
+                $('#ef_CodeDisp').val(d.Code || '');
+                $('#ef_Name').val(d.Name || '');
+                $('#ef_WorkCenter_id').val(d.WorkCenter_id || '');
+                $('#ef_EquipmentGroup_id').val(d.EquipmentGroup_id || '');
+                $('#ef_Model').val(d.Model || '');
+                $('#ef_Maker').val(d.Maker || '');
+                $('#ef_SerialNumber').val(d.SerialNumber || '');
+                $('#ef_ManageNumber').val(d.ManageNumber || '');
+                $('#ef_SupplierName').val(d.SupplierName || '');
+                $('#ef_ProductionYear').val(d.ProductionYear || '');
+                $('#ef_PurchaseDate').val(d.PurchaseDate || '');
+                $('#ef_InstallDate').val(d.InstallDate || '');
+                $('#ef_DisposalDate').val(d.DisposalDate || '');
+                $('#ef_PurchaseCost').val(d.PurchaseCost || '');
+                $('#ef_InputDate').val(d.InputDate || '');
+                $('#ef_Depart_id').val(d.Depart_id || '');
+                $('#ef_OvenProductTemperStandard').val(d.OvenProductTemperStandard || '');
+                $('#ef_OvenHeatingMnStandard').val(d.OvenHeatingMnStandard || '');
+                $('#ef_Status').val(d.Status || '');
+                $('#ef_OperationRateYN').val(d.OperationRateYN || '');
+                $('#ef_Manager').val(d.Manager || '');
+                $('#ef_ASTelNumber').val(d.ASTelNumber || '');
+                $('#ef_ServiceCharger').val(d.ServiceCharger || '');
+                $('#ef_Usage').val(d.Usage || '');
+                $('#ef_Voltage').val(d.Voltage || '');
+                $('#ef_PowerWatt').val(d.PowerWatt || '');
+                $('#ef_AttentionRemark').val(d.AttentionRemark || '');
+                $('#ef_Description').val(d.Description || '');
+
+                // 현재 가동상태 배지 표시
+                let equipItem = null;
+                let rows = this.equipGrid.rows;
+                for (let i = 0; i < rows.length; i++) {
+                    if (rows[i].dataItem && rows[i].dataItem.id == equipId) {
+                        equipItem = rows[i].dataItem;
+                        break;
+                    }
+                }
+                let $badge = $('#ef_currentRunStateBadge');
+                let state = equipItem ? equipItem.currentRunState : '비가동';
+                if (state === '가동') {
+                    $badge.text('● 가동 중').css('color', '#27ae60');
+                } else {
+                    $badge.text('● 비가동').css('color', '#e74c3c');
                 }
             }
 
-            editDataBind() {
-                let id = this.grid.selectedItems.length > 0 ? this.grid.selectedItems[0].id : null;
-                //let $form = $('#equipmentStopForm');
-                //let id = $form.find('#id').val();
-                if (id) {
-                    page.addDataBind(id, false);
-                }
-                else {
-                    Alert.alert('', '비가동 내역을 선택하세요.');
+            // 비가동 이력 조회
+            loadHistory(equipId) {
+                let startDate = $('#date_from').val();
+                let endDate = $('#date_to').val();
+                let result = AjaxUtil.getSyncData('/api/production/equipment_run_chart/read', {
+                    date_from: startDate,
+                    date_to: endDate,
+                    id: equipId,
+                });
+
+                let allData = (result && result.data) ? result.data : [];
+                let stopData = allData.filter(function (row) { return row.RunState === 'stop'; });
+
+                this.historyViewData.sourceCollection = stopData;
+
+                // 가동 기록은 있는데 비가동이 하나도 없으면 → 해당 기간 내내 가동 중
+                if (allData.length > 0 && stopData.length === 0) {
+                    $('#historyGrid').hide();
+                    $('#historyNoData').show();
+                } else {
+                    $('#historyNoData').hide();
+                    $('#historyGrid').show();
                 }
             }
 
-            delDataBind() {
-                let id = this.grid.selectedItems.length > 0 ? this.grid.selectedItems[0].id : null;
-                //let $form = $('#equipmentStopForm');
-                //let id = $form.find('#id').val();
-                if (!id) {
+            // 설비 정보 저장
+            saveEquipInfo() {
+                if (!this.selectedEquipId) {
+                    Alert.alert('', '설비를 선택하세요.');
                     return;
                 }
-
-                let url = '/api/production/equipment_stop_history/delData';
-
-                let param = {
-                    id : id,
-                };
-
+                let data = FormUtil.extractForm($('#equipEditForm'));
+                if (!data.Name) {
+                    Alert.alert('', '설비명을 확인해주세요.');
+                    return;
+                }
+                let _this = this;
                 let fnSuccess = function (res) {
                     if (!res.success) {
-                        Alert.alert('', res.message);
+                        Alert.alert('', res.message || '저장에 실패했습니다.');
                     } else {
-                        Notify.success('삭제되었습니다');
-                        page.searchMainData();
+                        Notify.success('저장되었습니다.');
+                        _this.refreshRunState();
+                        setTimeout(function () { _this.selectEquipById(_this.selectedEquipId); }, 200);
                     }
                 };
-
-                Alert.confirm('', '해당내역을 삭제하시겠습니까?',
-                    function () {
-                        AjaxUtil.postAsyncData(url, param, fnSuccess);
-                    },
-                    function () { }
-                )
-
+                AjaxUtil.postAsyncData('/api/definition/equipment/save', data, fnSuccess);
             }
 
-            addDataBind(id, chkDisabled) {
-                let _this = this;
-                let content = tmpl('addDataPopup', {});
-                let $content = $(content);
-                let form = $('#equipmentStopForm');
-
-                modalContainer = new PopupDraggable('비가동 내역');
-                modalContainer.open({ width: 980, height: 490, $content });
-                $('#srchDtPopup').ax5DatePicker({ direction: 'top' });
-                popup = new equipmentStopPopup();
-
-                let $Equipment_id = $content.find('#Equipment_id');
-                let $StopCause_id = $content.find('#StopCause_id');
-
-                AjaxUtil.fillSelectOptions($Equipment_id, 'equipment', 'choose',  false);
-                AjaxUtil.fillSelectOptions($StopCause_id, 'stop_cause', 'choose', false);
-                $content.find('#Equipment_id').change(function () {
-                    let equip_pk = $Equipment_id.val();
-                    if (equip_pk) {
-                        AjaxUtil.fillSelectOptions($StopCause_id, 'stop_cause', 'choose', '', 'equipment', equip_pk);
+            // id로 그리드 행 재선택
+            selectEquipById(equipId) {
+                let rows = this.equipGrid.rows;
+                for (let i = 0; i < rows.length; i++) {
+                    if (rows[i].dataItem && rows[i].dataItem.id == equipId) {
+                        this.equipGrid.select(i, 0);
+                        break;
                     }
-                });
-
-                if (chkDisabled) {
-                    $content.find('input, select, textarea, #btnSave').prop('disabled', chkDisabled);
-                    $content.find('.input-group-addon').hide();
-                }
-                if (!chkDisabled) {
-                    $content.find('input, select, textarea').prop('disabled', chkDisabled);
-                }
-
-                $('#srchStartDtPopup').ax5DatePicker({ direction: 'top' });
-                $('#srchEndDtPopup').ax5DatePicker({ direction: 'top' });
-
-                $content.find('#start_date').val(CommonUtil.getYYYYMMDD());
-                $content.find('#end_date').val(CommonUtil.getYYYYMMDD());
-
-                $content.find('#StartTime').timepicker({
-                    show2400: true,
-                    timeFormat: 'H:i',
-                }).val('09:00');
-                $content.find('#EndTime').timepicker({
-                    show2400: true,
-                    timeFormat: 'H:i'
-                }).val('18:00');
-
-                $content.find('#btnSave').on('click', function () {
-                    popup.saveData(form, modalContainer.modal);
-                });
-
-                if (id) {
-                    $content.find('#id').val(id);
-                    popup.fillData(id);
                 }
             }
 
-        }
-
-        class equipmentStopPopup {
-            constructor() {
-                this.grid = null;
-                this.init();
-            }
-
-            init() {
+            // 자동갱신 시작/중지
+            startAutoRefresh(intervalSec) {
                 let _this = this;
-
+                this.stopAutoRefresh();
+                this.autoRefreshTimer = setInterval(function () {
+                    _this.refreshRunState();
+                }, intervalSec * 1000);
             }
 
-            fillData(id) {
-                let url = '/api/production/equipment_stop_history';
-                let param = {
-                    action: 'detail',
-                    id: id,
-                };
-
-                let result = AjaxUtil.getSyncData(url + '/detail', param);
-                if (result.data != null) {
-                    $("#start_date").val(result.data.start_date);
-                    $("#end_date").val(result.data.end_date);
-                    $('#Equipment_id').val(result.data.Equipment_id);
-                    $('#Equipment_id').trigger('change');
-                    $('#StartTime').val(result.data.StartTime);
-                    $('#EndTime').val(result.data.EndTime);
-                    $('#Description').val(result.data.Description);
-                    $('#StopCause_id').val(result.data.StopCause_id);
-                }
-            }
-
-            saveData(form, modal) {
-                let _this = this;
-
-                let url = '/api/production/equipment_stop_history/addData';
-                let data = FormUtil.extractForm($('#equipmentStopForm'));
-
-                // valid chcek
-                if (!data.start_date || !data.end_date || !data.StartTime || !data.EndTime) {
-                    Alert.alert('', '일자와 시간을 입력해주세요.');
-                    return;
-                } else if (!data.Equipment_id) {
-                    Alert.alert('', '설비를 선택해주세요.');
-                    return;
-                } else if (!data.RunState) {
-                    Alert.alert('', '상태를 선택해주세요.');
-                    return;
-                }
-
-                // 비가동 유형 필수 선택?
-                //if (data.RunState == 'X') {
-                //    if (!data.StopCause_id) {
-                //        Alert.alert('', '비가동유형을 선택해주세요.');
-                //        return;
-                //    }
-                //}
-
-                let startDateTime = Date.parse(data.start_date + ' ' + data.StartTime);
-                let endDateTime = Date.parse(data.end_date + ' ' + data.EndTime);
-
-                if (startDateTime > endDateTime) {
-                    Alert.alert('', '시작/종료일을 확인해주세요.');
-                    return;
-                }
-
-                let result = AjaxUtil.postSyncData(url, data);
-                if (result.data != null) {
-                    Notify.success('저장되었습니다');
-                    page.searchMainData();
-                    modal.close();
+            stopAutoRefresh() {
+                if (this.autoRefreshTimer) {
+                    clearInterval(this.autoRefreshTimer);
+                    this.autoRefreshTimer = null;
                 }
             }
         }
-
 
         let page = null;
-        let popup = null;
-        let modalContainer = null;
 
-        $(document.body).ready(function (e) {
+        $(document.body).ready(function () {
             page = new mainPage();
-            picker.bind({
-                target: $('[data-ax5picker="multi"]'),
-                direction: "top",
-                locale: {
-                    format: 'YYYY-MM-DD'
-                },
-                content: {
-                    width:  214,  // 130, //270,
-                    margin: 10,
-                    type: 'date',
 
-                    config: {
-                        control: {
-                            left: '<i class="fa fa-arrow-left"></i>',   //fa-chevron-left
-                            yearTmpl: '%s',
-                            monthTmpl: '%s',
-                            right: '<i class="fa fa-arrow-right"></i>'
-                        },
-                        lang: {
-                            yearTmpl: "%s년",
-                            months: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'],
-                            dayTmpl: "%s"
-                        }
-                    }
-                },
-                btns: {
-                    /*ok: {
-                        label: "조회", theme: "default", onClick: function () {
-                            this.self.close();
-                            page.searchDataBind();
+            let today = CommonUtil.getYYYYMMDD();
+            $('#date_from').val(today);
+            $('#date_to').val(today);
 
+            $('#btnSearch').click(function () { page.searchEquipList(); });
+            $('#btnSaveEquip').click(function () { page.saveEquipInfo(); });
 
-                        }
-                    }*/
-                },
-                onStateChanged: function () {
-
-                }
-            });
-
-            $('#srchStartDt').val(CommonUtil.getYYYYMMDD(-1));
-            $('#srchEndDt').val(CommonUtil.getYYYYMMDD());
-
-            // 검색
-            $('#btnSearch').click(function (e) { page.searchMainData(); });
-            // 추가
-            $('#btnAdd').click(function (e) { page.addDataBind(); });
-            // 보기
-            $('#btnShow').click(function (e) { page.showDataBind(); });
-            // 변경
-            $('#btnEdit').click(function (e) { page.editDataBind(); });
-            // 삭제
-            $('#btnDel').click(function (e) { page.delDataBind(); });
-
-            page.searchMainData();
-
+            page.searchEquipList();
+            page.startAutoRefresh(30); // 30초마다 가동상태 자동 갱신
         });
-
     </script>
 </th:block>
 </html>

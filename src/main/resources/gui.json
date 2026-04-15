@@ -88,7 +88,7 @@
   "wm_equip": { "name": "설비정보", "templates": { "default": "definition/equipment.html" } },
   "wm_stop_cause": { "name": "비가동유형", "templates": { "default": "definition/stop_cause.html" } },
   "wm_equip_maint_a": { "name": "설비 유지보수 관리", "templates": { "default": "maintenance/equip_maint_a.html" } },
-  "wm_equip_run_list": { "name": "설비 운영 현황", "templates": { "default": "maintenance/equip_run_chart_a.html" } },
+  "wm_equip_run_list": { "name": "설비 운영 현황", "templates": { "default": "maintenance/equip_run_list.html" } },
 
   "wm_prod_indi_list": { "name": "생산량 지표", "templates": { "default": "summary/prod_indi_list.html" } },
   "wm_short_indi_list": { "name": "납기 단축 지표", "templates": { "default": "summary/short_indi_list.html" } },
