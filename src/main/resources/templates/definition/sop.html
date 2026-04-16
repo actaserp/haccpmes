@@ -151,6 +151,12 @@
                   <i class="fas fa-trash"></i>삭제
                 </button>
               </li>
+              <li>
+                <button type="button" class="btn-excellt btn-default" id="btnDownload"
+                        style="float:none; height: 36px; width:115px;" disabled>
+                  <i class="fas fa-file-excel"></i>다운로드
+                </button>
+              </li>
             </ul>
           </div>
         </div>
@@ -308,34 +314,49 @@
 
     /* 폼 데이터 바인딩 */
     function bindFormData(item) {
-      $('#id').val(item.id);
-      $('#sop_type').val(item.sop_type);
-      $('#sop_name').val(item.sop_name);
-      $('#doc_no').val(item.doc_no || '');
-      $('#rev_no').val(item.rev_no || '');
-      $('#issue_date').val(item.issue_date || '');
-      $('#rev_date').val(item.rev_date || '');
-      $('#author').val(item.author || '');
-      $('#remarks').val(item.remarks || '');
+      // 상세 데이터 별도 조회 (사진 경로 포함)
+      $.ajax({
+        url: '/api/sop/detail',
+        type: 'GET',
+        data: { id: item.id },
+        async: false,
+        success: function(result) {
+          var d = result.data;
+          if (!d) return;
 
-      $('input[name="ppe"]').prop('checked', false);
-      $('.ppe-item').removeClass('checked');
-      if (item.ppe) {
-        item.ppe.forEach(function(v) {
-          var cb = $('input[name="ppe"][value="' + v + '"]');
-          cb.prop('checked', true);
-          cb.closest('.ppe-item').addClass('checked');
-        });
-      }
+          $('#id').val(d.id);
+          $('#sop_name').val(d.sop_name || '');
+          $('#issue_date').val(d.issue_date ? d.issue_date.substring(0, 10) : '');
+          $('#rev_date').val(d.rev_date   ? d.rev_date.substring(0, 10)   : '');
+          $('#remarks').val(d.remarks || '');
+          $('#ppe').val(d.ppe || '');
+          $('#issue_date').val(d._created ? d._created.substring(0, 10) : '');
+          $('#rev_date').val(d._updated  ? d._updated.substring(0, 10)  : '');
 
-      if (item.work_items) {
-        item.work_items.forEach(function(wi) {
-          $('#work_method_'  + wi.seq).val(wi.work_method  || '');
-          $('#inspection_'   + wi.seq).val(wi.inspection   || '');
-          $('#work_method2_' + wi.seq).val(wi.work_method2 || '');
-          $('#inspection2_'  + wi.seq).val(wi.inspection2  || '');
-        });
-      }
+          // 작업항목 + 사진
+          for (var i = 1; i <= 8; i++) {
+            $('#work_method_' + i).val(d['work_method_' + i] || '');
+            $('#inspection_'  + i).val(d['inspection_'  + i] || '');
+
+            // 사진 미리보기 복원
+            var path = d['photo_path_' + i];
+            var uuid = d['photo_uuid_' + i];
+            if (path && uuid) {
+              // path와 uuid를 파라미터로 넘겨서 서버에서 스트리밍
+              var imgUrl = '/api/sop/photo?path=' + encodeURIComponent(path)
+                      + '&uuid=' + encodeURIComponent(uuid);
+              $('#photoPreview_' + i).attr('src', imgUrl).show();
+              $('#photoBox_'     + i + ' .photo-placeholder').hide();
+              $('#photoRemove_'  + i).show();
+            } else {
+              removePhoto(i);
+            }
+          }
+        },
+        error: function() {
+          console.error('상세 조회 실패');
+        }
+      });
     }
 
     /* 버튼 상태 */
@@ -344,6 +365,7 @@
       $('#btnNew').prop('disabled', false);
       $('#btnSave').prop('disabled', false);
       $('#btnDel').prop('disabled', !pk);
+      $('#btnDownload').prop('disabled', !pk);
 
       $('#sopForm input, #sopForm select, #sopForm textarea').each(function() {
         $(this).prop('disabled', false);
@@ -381,7 +403,7 @@
       $('#sopForm')[0].reset();
       $('#id').val('');
       for (var i = 1; i <= 8; i++) removePhoto(i);
-      $('.ppe-item').removeClass('checked');
+      // $('.ppe-item').removeClass('checked');  ← 삭제
       setButtonState();
     }
 
@@ -393,14 +415,44 @@
       }
 
       Alert.confirm('', '저장하시겠습니까?', function() {
-        var data = collectFormData();
-        AjaxUtil.postAsyncData('/api/sop/save', data, function(result) {
-          if (result.success) {
-            Alert.alert('', '저장되었습니다.');
-            searchMainData();
-          } else {
-            Alert.alert('저장 실패', result.message);
-            console.error('저장 실패:', result.message);
+        var csrfInput = $('body > input[type="hidden"]');
+        var csrfName  = csrfInput.attr('name');   // "_csrf"
+        var csrfValue = csrfInput.val();
+
+        var formData = new FormData();
+        formData.append('id',         $('#id').val());
+        formData.append('sop_name',   $('#sop_name').val());
+        // formData.append('issue_date', $('#issue_date').val());
+        // formData.append('rev_date',   $('#rev_date').val());
+        formData.append('remarks',    $('#remarks').val());
+        formData.append('ppe',        $('#ppe').val());
+        formData.append('spjangcd',   sessionStorage.getItem('spjangcd'));
+        formData.append(csrfName,     csrfValue);  // CSRF 추가
+
+        for (var i = 1; i <= 8; i++) {
+          formData.append('work_method_' + i, $('#work_method_' + i).val());
+          formData.append('inspection_'  + i, $('#inspection_'  + i).val());
+
+          var file = $('#photoFile_' + i)[0].files[0];
+          if (file) formData.append('photo_' + i, file);
+        }
+
+        $.ajax({
+          url: '/api/sop/save',
+          type: 'POST',
+          data: formData,
+          processData: false,
+          contentType: false,
+          success: function(result) {
+            if (result.success) {
+              Alert.alert('', '저장되었습니다.');
+              searchMainData();
+            } else {
+              Alert.alert('저장 실패', result.message);
+            }
+          },
+          error: function(jqXHR, textStatus, errorThrown) {
+            console.error('저장 오류:', textStatus, errorThrown);
           }
         });
       });
@@ -420,34 +472,6 @@
           }
         });
       });
-    }
-
-    /* 폼 데이터 수집 */
-    function collectFormData() {
-      var data = {
-        id:         $('#id').val(),
-        sop_type:   $('#sop_type').val(),
-        sop_name:   $('#sop_name').val(),
-        doc_no:     $('#doc_no').val(),
-        rev_no:     $('#rev_no').val(),
-        issue_date: $('#issue_date').val(),
-        rev_date:   $('#rev_date').val(),
-        author:     $('#author').val(),
-        remarks:    $('#remarks').val(),
-        ppe:        $('input[name="ppe"]:checked').map(function() { return this.value; }).get(),
-        work_items: []
-      };
-      for (var i = 1; i <= 8; i++) {
-        data.work_items.push({
-          seq:          i,
-          work_method:  $('#work_method_'  + i).val(),
-          inspection:   $('#inspection_'   + i).val(),
-          work_method2: $('#work_method2_' + i).val(),
-          inspection2:  $('#inspection2_'  + i).val()
-          // 사진: FormData multipart 로 별도 처리
-        });
-      }
-      return data;
     }
 
     /* 작업항목 행 렌더링 */
@@ -493,10 +517,18 @@
       $('#photoFile_' + idx).val('');
     }
 
-    /* PPE 체크박스 시각 피드백 */
-    $(document).on('change', 'input[name="ppe"]', function() {
-      $(this).closest('.ppe-item').toggleClass('checked', this.checked);
-    });
+    function downloadSop() {
+      var id = $('#id').val();
+      if (!id) return;
+
+      // 숨겨진 <a> 태그로 다운로드 (화면 이동 없음)
+      var a = document.createElement('a');
+      a.href = '/api/sop/download?id=' + id;
+      a.download = '작업표준서.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
 
     /* 이벤트 바인딩 */
     $(document.body).ready(function() {
@@ -512,14 +544,18 @@
         $('#sopForm')[0].reset();
         $('#id').val('');
         for (var i = 1; i <= 8; i++) removePhoto(i);
-        $('.ppe-item').removeClass('checked');
+        // $('.ppe-item').removeClass('checked');  ← 삭제
         setButtonState();
       });
 
       $('#btnSave').click(function() { saveSop(); });
 
       $('#btnDel').click(function() { deleteSop(); });
+
+      $('#btnDownload').click(function() { downloadSop(); });
     });
+
+
 
   </script>
 </th:block>
