@@ -1,5 +1,6 @@
 package mes.app.production.service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -245,20 +246,20 @@ public class ProductionResultService {
 
         String sql = """
                 select jr.id
-                         , jr."WorkOrderNumber" as order_num
-                         , to_char(jr."ProductionDate", 'yyyy-mm-dd') as prod_date
-                         , jr."LotNumber" as lot_num
+                         , jr."WorkOrderNumber" as order_num  --작지번호
+                         , to_char(jr."ProductionDate", 'yyyy-mm-dd') as prod_date  --생산일
+                         , jr."LotNumber" as lot_num   
                          , to_char(jr."StartTime", 'hh24:mi') as start_time
                          , to_char(jr."EndTime", 'hh24:mi') as end_time
                          , wc.id as workcenter_id, wc."Name" as workcenter
                          , jr."ShiftCode" as shift_code, sh."Name" as shift_name
                          , jr."WorkIndex" as work_idx    
-                         , fn_code_name('job_state', jr."State") as job_state
+                         , fn_code_name('job_state', jr."State") as job_state  --작업상태
                          , jr."State" as state
                          , jr."WorkerCount" as worker_count
                          , m.id as mat_pk
-                         , m."Code" as mat_code
-                         , m."Name" as mat_name
+                         , m."Code" as mat_code --품목코드
+                         , m."Name" as mat_name --품목명
                          , fn_code_name('mat_type', mg."MaterialType") as mat_type
                          , m."LotSize" as lot_size
                          , m."Weight" as weight
@@ -739,5 +740,28 @@ public class ProductionResultService {
         float qty = Float.parseFloat(items.get("defect_qty").toString());
 
         return qty;
+    }
+
+    public Map<String, Object> getJobResDefectSum(Integer jrPk) {
+        MapSqlParameterSource dicParam = new MapSqlParameterSource();
+        dicParam.addValue("jrPk", jrPk);
+
+        // job_res_defect 테이블에서 해당 jrPk의 DefectQty 합계를 구함
+        String sql = """
+                 SELECT coalesce(sum("DefectQty"), 0) as defect_qty
+                 FROM job_res_defect
+                 WHERE "JobResponse_id" = :jrPk
+                 """;
+
+        try {
+            // 단일 행 조회 (합계이므로 항상 1행 반환)
+            Map<String, Object> result = this.sqlRunner.getRow(sql, dicParam);
+            return result;
+        } catch (Exception e) {
+            // 에러 발생 시 0으로 초기화된 맵 반환
+            Map<String, Object> errorMap = new HashMap<>();
+            errorMap.put("defect_qty", 0);
+            return errorMap;
+        }
     }
 }

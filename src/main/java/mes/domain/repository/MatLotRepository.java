@@ -33,4 +33,5 @@ public interface MatLotRepository extends JpaRepository<MaterialLot, Integer>{
 
     boolean existsByMaterialBarCodeAndMaterialIdNot(String barcode, Integer materialId);
 
+    MaterialLot findBySourceTableNameAndSourceDataPk(String sourceTableName, Integer sourceDataPk);
 }
