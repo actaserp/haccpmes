@@ -187,6 +187,35 @@
                             </dd>
                         </dl>
                     </div>
+                    <div class="search-wrap">
+                        <dl>
+                            <dt>
+                                <label>
+                                    작업자 <span style="color: tomato">*</span>
+                                </label>
+                            </dt>
+                            <dd>
+                                <select class="" id="person_id" name="person_id"></select>
+                            </dd>
+                        </dl>
+
+                        <dl>
+                            <dt>
+                                <label>
+                                    장비 <span style="color: tomato">*</span>
+                                </label>
+                            </dt>
+                            <dd>
+                                <select class="" id="vehicle_id" name="vehicle_id">
+                                    <option value="">선택</option>
+                                    <option value="1">1톤</option>
+                                    <option value="2">2.5톤</option>
+                                    <option value="3">5톤</option>
+                                    <option value="4">15톤</option>
+                                </select>
+                            </dd>
+                        </dl>
+                    </div>
 
                     <div class="button-wrap">
                         <ul>
@@ -768,6 +797,7 @@
 
             AjaxUtil.fillSelectOptions($('#cboMatGroup'), 'material_group', 'all', '', 'product,semi,sangpum');
             AjaxUtil.fillSelectOptions($('#cboMaterial'), 'material', 'all', '', null);
+            AjaxUtil.fillSelectOptions($('#person_id'), 'person', 'all', '', null);
 
             $('#cboMatGroup').change(function (e) {
                 let mat_grp_pk = $('#cboMatGroup').val();
