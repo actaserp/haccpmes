@@ -463,8 +463,11 @@
                                         </tr>
                                         <tr>
                                             <th><label for="order_qty">지시량</label></th>
-                                            <td colspan="3"><input type="number" id="order_qty" name="order_qty"
+                                            <td><input type="number" id="order_qty" name="order_qty"
                                                                    class="background-order" readonly/></td>
+                                            <th><label for="worker">작업자</label></th>
+                                            <td><select id="worker" name="worker"></select></td>
+<!--                                            <td><input type="text" id="worker" name="worker" disabled/></td>-->
                                         </tr>
                                         <tr>
                                             <th><label for="good_qty">양품량</label></th>
@@ -1252,6 +1255,7 @@
 
                 // form내부
                 AjaxUtil.fillSelectOptions($('#shift_code'), 'shift', 'choose', false); // 근무조
+                AjaxUtil.fillSelectOptions($('#worker'), 'person', 'choose', false); // 작업자
                 // AjaxUtil.fillSelectOptions($('#workcenter_id'), 'workcenter', 'choose', false); // 워크센터
 
                 $('#workcenter_id').off('change').on('change', function () {
@@ -1358,6 +1362,7 @@
                         $('#btnDeleteChasu').attr('disabled', 'disabled');
                         $('#btnWorkStop').attr('disabled', 'disabled');
                         $('#btnWorkStop').text('일시중지');
+                        $('#worker').removeAttr('disabled');
                     } else if (state === 'stopped') {
                         $('#btnWorkStart').attr('disabled', 'disabled');
                         $('#btnSave').removeAttr('disabled');
@@ -1370,6 +1375,7 @@
                         $('#btnWorkFinish').attr('disabled', 'disabled');
                         $('#btnWorkStop').removeAttr('disabled');
                         $('#btnWorkStop').text('재가동');
+                        $('#worker').removeAttr('disabled');
                     } else if (state === 'working') {
                         $('#btnWorkStart').attr('disabled', 'disabled');
                         $('#btnWorkStop').removeAttr('disabled');
@@ -1385,6 +1391,7 @@
                         $('#btnAddMat').removeAttr('disabled');
                         $('#btnLOTbarcode').attr('disabled', false);
                         $('#btnWorkStop').text('일시중지');
+                        $('#worker').removeAttr('disabled');
 
                     } else if (state === 'finished') {
                         $('#btnWorkStart').attr('disabled', 'disabled');
@@ -1394,6 +1401,7 @@
                         $('#btnDel').attr('disabled', 'disabled');
                         $('#btnWorkFinish').attr('disabled', 'disabled');
                         $('#btnFinishCancel').removeAttr('disabled');
+                        $('#worker').removeAttr('disabled');
                     } else {
                         $('#btnWorkStart').removeAttr('disabled');
                         $('#btnSave').removeAttr('disabled');
@@ -1407,6 +1415,7 @@
                         $('#btnWorkStop').attr('disabled', 'disabled');
                         $('#btnWorkStop').text('일시중지');
                         $('#btnDefectSave').attr('disabled', 'disabled');
+                        $('#worker').removeAttr('disabled');
                     }
                 }
             }

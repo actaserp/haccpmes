@@ -50,10 +50,12 @@ public class ProdOrderEditService {
 	                , fn_code_name('mat_type', mg."MaterialType") as mat_type_name
 	                , s."State"
 	                , s."Description" as description
+	                , c."OurManager" as our_manager
 	                from suju s
 	                inner join material m on m.id = s."Material_id"
 	                inner join mat_grp mg on mg.id = m."MaterialGroup_id"
 	                left join unit u on m."Unit_id" = u.id
+	                left join company c on c.id = s."Company_id"
 	                where 1 = 1 and mg."MaterialType"!='sangpum'
 	                and s.spjangcd = :spjangcd
 	                and s.confirm = '1'
@@ -109,6 +111,7 @@ public class ProdOrderEditService {
 	            , 0 as "AdditionalQty"
 	            , s.description
 	            , s."StateName", s."State"
+	            , s.our_manager
 	            from s 
 	            left join q on q.suju_id = s.id
 	            where 1 = 1

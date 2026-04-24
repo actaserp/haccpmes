@@ -1,0 +1,200 @@
+<th:block th:fragment="popup_suju_list">
+  <script type="text/x-tmpl" id="popup_sujuListSearchTemplate">
+
+    <div class="content_wrap popup">
+
+        <section class="section" style="padding-top: 10px;">
+            <div class="section-top">
+                <div class="search-wrap">
+                    <dl>
+                        <dt>
+                            <label for="cboDateKind">
+                                검색 구분<span class="eq"></span>
+                            </label>
+                        </dt>
+                        <dd>
+                            <div class="srch-box">
+                                <select id="cboDateKind" name="cboDateKind">
+                                    <option value="sales">수주일</option>
+                                    <option value="delivery">납기일</option>
+                                </select>
+                            </div>
+                        </dd>
+                    </dl>
+                    <dl>
+                        <dt>
+                            조회기간<span class="eq">*</span>
+                        </dt>
+                        <dd>
+                            <ul class="date-box">
+                                <li>
+                                    <input type="date" id="srchStartDt" name="srchStartDt">
+                                    <label for="srchStartDt" class="hide">시작일</label>
+                                </li>
+                                <li>
+                                    <input type="date" id="srchEndDt" name="srchEndDt">
+                                    <label for="srchEndDt" class="hide">종료일</label>
+                                </li>
+                            </ul>
+                        </dd>
+                    </dl>
+
+                    <dl>
+                        <dt>&nbsp;</dt>
+                        <dd>
+                            <li>
+                                <a class="btn btn-delete" title="검색" id="btnSearch">
+                                    <!--                                        class 쓰이는 곳 찾고 없으면 클래스명 수정하기-->
+                                    <img src="/images/icon/btn-srch.svg" alt="검색 아이콘">
+                                    검색
+                                </a>
+                            </li>
+                        </dd>
+                    </dl>
+                </div>
+                <div class="container-fluid">
+                    <div id="sujuGrid" style="height: 300px;"></div>
+                </div>
+            </div>
+
+        </section>
+
+
+            <div class="popup-button">
+                <button type="button" class="btn-popup" id="btnCompSelect" ><span data-commonCd="선택">선택</span></button>
+                <button type="button" class="btn-popup" id="btn-search-close"><span data-commonCd="닫기">닫기</span></button>
+            </div>
+
+
+    </div>
+  </script>
+
+  <script type="text/javascript">
+
+   class PopSujuListComponent {
+    constructor(ele) {
+
+     this.ele = ele;
+     this.grid = null;
+     this.viewData = new wijmo.collections.CollectionView();
+     this.selectedItem = null;
+     this.callback = null;
+     this.modalContainer = new PopupDraggable('수주 선택');
+     this.$btnCompSearch = null;
+     this.$btnCompSelect = null;
+     this.$BankName = null;
+     this.$accountNumber = null;
+
+    }
+
+    searchDataBind() {
+     let _this = this;
+     let url = '/api/sales/suju/read';
+     let date_kind = $('#cboDateKind').val();
+     let start = $('#srchStartDt').val();
+     let end = $('#srchEndDt').val();
+
+     let data = {
+      'date_kind': date_kind,
+      'start': start,
+      'end': end,
+      'action': 'read'
+     };
+
+     let result = AjaxUtil.getSyncData(url, data);
+
+     if (result && Array.isArray(result.data)) {
+      _this.viewData.sourceCollection = result.data;
+     } else {
+      _this.viewData.sourceCollection = [];
+     }
+
+     this.selectedItem = null;
+    }
+
+    selectData(item) {
+     if (typeof this.callback !== 'undefined' && this.callback != null) {
+      this.callback(item);
+     }
+     this.close();
+    }
+    show(callback) {
+     let _this = this;
+     this.callback = callback;
+
+     let content = tmpl('popup_sujuListSearchTemplate', {});
+     let $content = $(content);
+     this.modalContainer.open({ width: 800, height: 500, $content });
+
+     let today = new Date();
+     let monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+     $content.find('#srchStartDt').val(CommonUtil.formatYYYYMMDD(monthStart));
+     $content.find('#srchEndDt').val(CommonUtil.formatYYYYMMDD(today));
+
+     this.grid = new wijmo.grid.FlexGrid('#sujuGrid', {
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      autoGenerateColumns: false,
+      showMarquee: true,
+      isReadOnly: true,
+      keyActionEnter: wijmo.grid.KeyAction.None,
+      columns: [
+       { binding: 'suju_id', header: 'suju_id', width: 150, align: 'center', visible: false },
+       { binding: 'JumunNumber', header: '수주번호', width: 150, align: 'center' },
+       { binding: 'CompanyName', header: '판매처', width: 150, align: 'left' },
+       { binding: 'product_name', header: '제품명', width: '*', align: 'left' },
+       { binding: 'JumunDate', header: '수주일', width: 100, align: 'center' },
+      ],
+      itemsSource: this.viewData,
+     });
+
+     this.grid.rowHeaders.columns.splice(0, 1);
+     new FlexGridContextMenu(this.grid);
+     this.grid.downloadFileName = '수주 목록';
+
+     // 검색 버튼
+     $content.find('#btnSearch').click(function () {
+      _this.searchDataBind();
+     });
+
+     // 팝업 열릴 때 즉시 조회
+     _this.searchDataBind();
+
+     // 선택 버튼
+     $content.find('#btnCompSelect').click(function () {
+      let items = _this.grid.selectedItems;
+      if (items.length === 0) return false;
+      _this.selectData(items[0]);
+     });
+
+     // 닫기 버튼
+     $content.find('#btn-search-close').on('click', function () {
+      _this.close();
+     });
+
+     // 더블클릭 선택
+     this.grid.hostElement.addEventListener('dblclick', function () {
+      let items = _this.grid.selectedItems;
+      if (items.length === 0) return false;
+      _this.selectData(items[0]);
+     });
+
+     // 엔터키 선택
+     this.grid.hostElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.keyCode === 13) {
+       setTimeout(() => {
+        const selected = _this.grid.selectedItems;
+        if (selected.length > 0) {
+         _this.selectData(selected[0]);
+        }
+       }, 0);
+      }
+     });
+    }
+
+    close() {
+     this.modalContainer.close();
+    }
+   }
+
+  </script>
+</th:block>

@@ -124,6 +124,13 @@
                       </td>
                     </tr>
                     <tr>
+                      <th><label for="sujunm">수주명</label></th>
+                      <td colspan="3">
+                        <input type="text" id="sujunm" name="sujunm" class="wp100" placeholder="해당 칸을 클릭해서 수주를 선택하세요.">
+                        <input type="hidden" id="suju_id">
+                      </td>
+                    </tr>
+                    <tr>
                       <th><label for="balcltnm">발주처</label></th>
                       <td colspan="3">
                         <input type="text" id="balcltnm" name="balcltnm" class="wp100" placeholder="해당 칸을 클릭해서 발주처를 선택하세요.">
@@ -168,6 +175,7 @@
   <th:block th:replace="/common/multiform_material :: multiform_material"></th:block>
   <th:block th:replace="/common/popup_company :: popup_company"></th:block>
   <th:block th:replace="/common/popup_account :: popup_account"/>
+  <th:block th:replace="/common/popup_suju_list :: popup_suju_list"/>
 
   <script type="text/javascript">
     class ProjectRegistrationPage {
@@ -271,7 +279,9 @@
           eddate: $('#eddate').val(),
           contdate: $('#contdate').val(),
           remark: $('#remark').val(),
-          spjangcd: this.spjangcd.val()
+          spjangcd: this.spjangcd.val(),
+         sujunm: $('#sujunm').val(),       // 추가
+         suju_id: $('#suju_id').val(),
         };
 
         // ✅ 콜백 기반 confirm 사용
@@ -377,6 +387,7 @@
         e.preventDefault();
         $('#CategoryForm')[0].reset();
         $('#balcltcd').val('');
+       $('#suju_id').val('');
 
         const today = new Date();
         const todayStr = formatToDashYMD(today);
@@ -404,6 +415,7 @@
           $('#cboCompanyHidden').val('');
         }
       });
+
       $('#balcltnm').click(function () {
         const poppage = new PopCompComponent();
         const $poppage = $(poppage);
@@ -419,6 +431,22 @@
           $('#balcltcd').val('');
         }
       });
+
+     // 수주명 클릭 시 수주 팝업 오픈
+     $('#sujunm').click(function () {
+      const poppage = new PopSujuListComponent();
+      const searchcallback = function (item) {
+       $('#sujunm').val(item.CompanyName + ' / ' + item.product_name); // 원하는 표시 형식으로 조정
+       $('#suju_id').val(item.suju_id);
+      };
+      poppage.show(searchcallback);
+     });
+
+     $('#sujunm').on('input', function () {
+      if ($(this).val().trim() === '') {
+       $('#suju_id').val('');
+      }
+     });
 
 
     })

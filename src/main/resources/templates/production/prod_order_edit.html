@@ -156,6 +156,11 @@
                         <div class="button-wrap">
                             <ul>
                                 <li>
+                                    <a class="btn" title="생산지시서 출력" id="btnJobResPrint">
+                                        생산지시서 출력
+                                    </a>
+                                </li>
+                                <li>
                                     <a class="btn btn-edit" title="작업 지시 수정" id="btnJobResDetail">
                                         <img src="/images/icon/ico-edit.svg" alt="수정 아이콘">
                                         작업 지시 수정
@@ -276,6 +281,7 @@
 <th:block layout:fragment="scripts">
     <!--    <th:block th:replace="/common/columns_setting :: columns_setting"></th:block>-->
     <!--    <script type="text/javascript" src="/js/grid.js"></script>-->
+    <th:block th:replace="/production/print_report :: print_report"></th:block>
     <script type="text/javascript">
 
         class ProductionOrder {
@@ -379,6 +385,7 @@
                         {binding: 'JumunDate', header: '수주일', width: 110, align: 'center', isReadOnly: true},
                         {binding: 'DueDate', header: '납기일', width: 110, align: 'center', isReadOnly: true},
                         {binding: 'CompanyName', header: '판매처', width: 120, align: 'left', isReadOnly: true},
+                        {binding: 'our_manager', header: '업체담당자', width: 120, align: 'left', isReadOnly: true},
                         {binding: 'mat_type_name', header: '제품구분', width: 80, align: 'center', isReadOnly: true},
                         {binding: 'MaterialGroupName', header: '제품그룹', width: 90, align: 'left', isReadOnly: true},
                         {binding: 'mat_code', header: '제품코드', width: 80, align: 'center', isReadOnly: true},
@@ -931,6 +938,107 @@
                         _this.showJobResDetail(result.data);
                     };
                     AjaxUtil.getAsyncData(url, data, fnsuccess);
+                });
+
+                $('#btnJobResPrint').click(function (e) {
+                    let allData = _this.jobResGrid?.collectionView?.items || [];
+                    console.log('btnJobResPrint allData', allData);
+
+                    // ✅ 조건 필터링: 지시량 0이거나 취소 상태 제외
+                    let items = allData.filter(item =>
+                        (parseFloat(item.OrderQty) || 0) > 0 &&
+                        (item.StateName !== '취소')
+                    );
+
+                    if (items.length === 0) {
+                        Alert.alert('', '출력할 데이터가 없습니다.');
+                        return;
+                    }
+
+                    let allHtml = `
+                        <html>
+                        <head>
+                            <title>생산지시서 출력</title>
+                            <style>
+                                body { font-family: 'Malgun Gothic'; margin: 20px; }
+                                @media print {
+                                    .print-page { page-break-after: always; }
+                                }
+                                /* ✅ 프린트 시 색상 유지 */
+                                @media print {
+                                    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                                }
+                            </style>
+                        </head>
+                        <body>
+                    `;
+
+                    for (const item of items) {
+                        const date = item.ProductionDate || '';
+                        const [y, m, d] = (date.includes('-') ? date.split('-') : ['', '', '']);
+
+                        const parentLen = parseFloat(item.standard || 0) || 0;   // 길이
+                        const parentQty = parseFloat(item.OrderQty || 0) || 0;   // 수량
+                        const parentTotal = parentLen * parentQty;
+                        const rawNote = item.Description || item.description || '';
+
+                        // ✅ 하위항목 길이×수량 합계
+                        const detailTotal = (item.items || []).reduce((sum, v) => {
+                            const len = parseFloat(v.Standard || 0) || 0;
+                            const qty = parseFloat(v.Qty || 0) || 0;
+                            return sum + (len * qty);
+                        }, 0);
+
+                        const data = {
+                            title: '생 산 지 시 서',
+                            WorkOrderNumber: item.WorkOrderNumber,
+                            CompanyName: item.CompanyName,
+                            ProductionDate: date,
+                            WorkcenterName: item.WorkcenterName,
+                            DueDate: item.DueDate,
+                            our_manager: item.our_manager,
+
+                            // ✅ 변경 1: mat_name에 인라인 스타일로 색 지정
+                            mat_name: `<span style="color:red; font-weight:bold;">${item.mat_name}</span>`,
+
+                            standard: item.standard,
+                            unit_name: item.unit_name,
+                            OrderQty: item.OrderQty,
+                            ShiftName: item.ShiftName,
+                            month: m,
+                            day: d,
+                            items: item.items || [],
+                            totalMeter: parentTotal + detailTotal,
+                            note: `<span style="color:blue; font-weight:bold;">${rawNote}</span>`
+                        };
+
+                        // 기존 tmpl 호출
+                        let html = tmpl('print_report', data);
+
+                        // ✅ 변경 2: tmpl이 <span>을 이스케이프했을 경우 복원
+                        html = html
+                        .replace(/&lt;/g, '<')
+                        .replace(/&gt;/g, '>')
+                        .replace(/&quot;/g, '"')
+                        .replace(/&#39;/g, "'")
+                        .replace(/&amp;/g, '&');
+
+                        allHtml += `<div class="print-page">${html}</div>`;
+                    }
+
+                    allHtml += `</body></html>`;
+
+                    const printWindow = window.open('', '_blank', 'width=850,height=1000');
+                    printWindow.document.open();
+                    printWindow.document.write(allHtml);
+                    printWindow.document.close();
+
+                    printWindow.onload = function () {
+                        // ✅ 프린트 전 스타일 적용 보장
+                        printWindow.focus();
+                        printWindow.print();
+                        setTimeout(() => printWindow.close(), 300);
+                    };
                 });
             }
 

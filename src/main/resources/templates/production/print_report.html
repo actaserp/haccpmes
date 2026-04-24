@@ -1,0 +1,124 @@
+<th:block th:fragment="print_report">
+    <script type="text/x-tmpl" id="print_report">
+
+        <div style="width:750px; margin:0 auto; font-family:'Malgun Gothic'; padding:10px;">
+
+          <!-- 상단 -->
+          <table style="width:100%; border-collapse:collapse;border:3px solid #000; border-bottom:0;">
+            <tr>
+              <td style="width:200px; text-align:center; border:1px solid #000; height:28px;">거래일자</td>
+              <td rowspan="2" style="width:450px; text-align:center; font-size:20px; font-weight:bold; border:1px solid #000;">{%= o.title %}</td>
+              <td rowspan="2" style="border:1px solid #000; height:28px;"></td>
+            </tr>
+            <tr>
+              <td style="text-align:center; border:1px solid #000; height:28px;">{%= o.ProductionDate %}</td>
+
+            </tr>
+          </table>
+
+          <table style="width:100%; border-collapse:collapse; border:3px solid #000; border-bottom:0;">
+            <tr>
+              <td style="width:200px; text-align:center; border:1px solid #000; height:28px;">상호</td>
+              <td style="width:450px; text-align:center; border:1px solid #000; height:28px;">{%= o.CompanyName %}</td>
+              <td style="border:1px solid #000; height:28px;"></td>
+            </tr>
+            <tr>
+              <td style="text-align:center; border:1px solid #000; height:28px;">출고 예정일</td>
+              <td style="text-align:center; border:1px solid #000; height:28px;">{%= o.DueDate || '' %}</td>
+              <td style="border:1px solid #000; height:28px;"></td>
+            </tr>
+            <!--<tr>
+              <td style="text-align:center; border:1px solid #000; height:28px;">전화번호</td>
+              <td style="border:1px solid #000; height:28px;">{%= o.phoneNumber || '' %}</td>
+              <td style="border:1px solid #000; height:28px;"></td>
+            </tr>-->
+            <tr>
+              <td style="text-align:center; border:1px solid #000; height:28px;">작업지시번호</td>
+               <td style="text-align:center; border:1px solid #000; height:28px;">{%= o.WorkOrderNumber || '' %}</td>
+              <td style="border:1px solid #000; height:28px;"></td>
+            </tr>
+            <tr>
+              <td style="text-align:center; border:1px solid #000; height:28px;">업체 담당자</td>
+              <td style="text-align:center; border:1px solid #000; height:28px;">{%= o.our_manager || '' %}</td>
+              <td style="border:1px solid #000; height:28px;"></td>
+            </tr>
+            <tr>
+            </tr>
+            <tr>
+              <td style="text-align:center; border:1px solid #000; height:60px;">특이사항</td>
+              <td style="border:1px solid #000; height:28px;">{%= o.note || '' %}</td>
+              <td style="border:1px solid #000; height:28px;"></td>
+            </tr>
+          </table>
+
+          <!-- 품목 리스트 -->
+          <table style="width:100%; border-collapse:collapse; border:3px solid #000; border-bottom:0;">
+            <thead>
+              <tr style="background:#f4f4f4;">
+                <th style="width: 50px; border:1px solid #000; height:28px;">월</th>
+                <th style="width: 50px; border:1px solid #000; height:28px;">일</th>
+                <th style="width: 250px; border:1px solid #000; width:200px; height:28px;">품명</th>
+                <!--<th style="width: 100px; border:1px solid #000; height:28px;">색상</th>
+                <th style="width: 100px; border:1px solid #000; height:28px;">두께</th>-->
+                <th style="width: 100px; border:1px solid #000; height:28px;">단위</th>
+                <th style="width: 100px; border:1px solid #000; height:28px;">수량</th>
+                <th style="width: 50px; border:1px solid #000; height:28px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {%
+                const date = (o.ProductionDate || '').split('-');
+                const month = date[1];
+                const day = date[2];
+                const items = o.items || [];
+
+                // ✅ rows를 외부에서 주면 그걸 쓰고, 없으면 기본 10
+                const rows = (o.rows != null) ? Number(o.rows) : 10;
+              %}
+              <!-- 부모행 -->
+              <tr>
+                <td style="border:1px solid #000; text-align:center; height:28px;">{%= month %}</td>
+                <td style="border:1px solid #000; text-align:center; height:28px;">{%= day %}</td>
+                <td style="border:1px solid #000; text-align:center; height:28px;">{%= o.mat_name %}</td>
+                <!--<td style="border:1px solid #000; text-align:center; height:28px;">&nbsp;</td>
+                <td style="border:1px solid #000; text-align:center; height:28px;">&nbsp;</td>-->
+                <td style="border:1px solid #000; text-align:center; height:28px;">{%= o.unit_name %}</td>
+                <td style="border:1px solid #000; text-align:center; height:28px;">{%= o.OrderQty %}</td>
+                <td style="border:1px solid #000; height:28px;">&nbsp;</td>
+              </tr>
+
+              <!-- 하위항목 -->
+              {%
+                for (var i = 0; i < Math.max(items.length, rows); i++) {
+                  const row = items[i];
+              %}
+                <tr>
+                  <td style="border:1px solid #000; height:28px;">&nbsp;</td>
+                  <td style="border:1px solid #000; height:28px;">&nbsp;</td>
+                  <td style="border:1px solid #000; height:28px;">&nbsp;</td>
+                 <!-- <td style="border:1px solid #000; height:28px;">&nbsp;</td>
+                  <td style="border:1px solid #000; height:28px;">&nbsp;</td>-->
+                  <td style="border:1px solid #000; text-align:center; height:28px;">{%= row ? o.unit_name : '' %}</td>
+                  <td style="border:1px solid #000; text-align:center; height:28px;">{%= row ? row.Qty : '' %}</td>
+                  <td style="border:1px solid #000; height:28px;">&nbsp;</td>
+                </tr>
+              {% } %}
+            </tbody>
+          </table>
+
+          <!-- 하단 -->
+          <table style="width:100%; border-collapse:collapse; border:3px solid #000;">
+            <tr>
+              <td style="width:100px; text-align:center; border:1px solid #000; height:50px;">총중량</td>
+              <td style="width:150px; text-align:center; border:1px solid #000; height:50px;">&nbsp;</td>
+              <td style="width:100px; text-align:center; border:1px solid #000; height:50px;">총M수</td>
+              <td style="width:150px; text-align:center; border:1px solid #000; height:50px;">{%= o.totalMeter || '' %}</td>
+              <td style="width:100px; text-align:center; border:1px solid #000; height:50px;">배송기사</td>
+              <td style="border:1px solid #000; text-align:center; height:50px;">&nbsp;</td>
+            </tr>
+          </table>
+
+        </div>
+
+    </script>
+</th:block>
