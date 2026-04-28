@@ -474,6 +474,7 @@
 
             }
 
+
             searchMain() {
                 let source = $('#cboSource').val();
                 let data = FormUtil.extractForm($('#searchForm'));
@@ -962,6 +963,13 @@
 
             page.searchMain();
             AjaxUtil.fillSelectOptions($('#company_id'), 'company', 'choose', '', 'sale,sale-purchase');
+
+            $('#keyword').on('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // 새로고침 방지
+                    page.searchMain(); // 검색 실행
+                }
+            });
         })
     </script>
 
