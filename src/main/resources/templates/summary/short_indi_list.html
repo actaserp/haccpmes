@@ -90,7 +90,6 @@
                     }
                     if (e.panel.cellType === wijmo.grid.CellType.Cell) {
                         let item = sender.rows[e.row].dataItem;
-                        let colName = sender.columns[e.col].binding;
                         // 스타일 전체 초기화
                         e.cell.style.backgroundColor = '';
                         e.cell.style.fontWeight = '';
@@ -101,7 +100,24 @@
 
                         if (!item) return;
 
-                        // 납기일수 행은 숫자 소수점 1자리로 표시
+                        // ★ 요약행은 먼저 처리하고 return으로 빠져나옴
+                        if (item._isSum) {
+                            e.cell.style.fontWeight = 'bold';
+                            e.cell.style.color = '#7b5800';
+                            return;
+                        }
+                        if (item._isCnt) {
+                            e.cell.style.fontWeight = 'bold';
+                            e.cell.style.color = '#5c2d7a';
+                            return;
+                        }
+                        if (item._isAvg) {
+                            e.cell.style.fontWeight = 'bold';
+                            e.cell.style.color = '#1a6496';
+                            return;
+                        }
+
+                        // 납기일수 소수점 표시
                         if (item._type === '납기일수') {
                             let col = sender.columns[e.col];
                             if (col.binding && col.binding.startsWith('mon_')) {
@@ -112,22 +128,13 @@
                             }
                         }
 
-                        // 구분별 배경색
+                        // 일반 행 구분별 배경색
                         if (item._type === '수주일') {
                             e.cell.style.backgroundColor = '#f0f7ff';
                         } else if (item._type === '출고일') {
                             e.cell.style.backgroundColor = '#f0fff4';
                         } else if (item._type === '납기일수') {
                             e.cell.style.borderBottom = '2px solid #ddd';
-                        }
-
-                        // 평균행 강조
-                        if (item._isAvg) {
-                            e.cell.style.fontWeight = 'bold';
-                            e.cell.style.color = '#1a6496';
-                            if (item._type === '수주일')   e.cell.style.backgroundColor = '#cce3f7';
-                            if (item._type === '출고일')   e.cell.style.backgroundColor = '#c8f0d8';
-                            if (item._type === '납기일수') e.cell.style.backgroundColor = '#eaf4fb';
                         }
                     }
                 },
@@ -280,18 +287,25 @@
             });
 
             // 4. 상단 평균행 계산
-            let avgLead = { mat_grp_name: '평균', mat_name: '', standard1: '', unit_name: '', _type: '납기일수', _isAvg: true };
+            // 4. 상단 평균행 계산
+            let avgLead   = { mat_grp_name: '평균',     mat_name: '', standard1: '', unit_name: '', _type: '평균', _isAvg: true };
+            let sumLead   = { mat_grp_name: '납기합계', mat_name: '', standard1: '', unit_name: '', _type: '납기합계', _isSum: true };
+            let cntLead   = { mat_grp_name: '대상품목', mat_name: '', standard1: '', unit_name: '', _type: '대상품목', _isCnt: true };
+
             for (let m = 1; m <= 12; m++) {
                 let leadValues = expanded
                     .filter(row => row._type === '납기일수' && row['mon_' + m] !== null)
                     .map(row => row['mon_' + m]);
 
-                avgLead['mon_' + m] = leadValues.length > 0
-                    ? (leadValues.reduce((a, b) => a + b, 0) / leadValues.length).toFixed(1)
-                    : null;
+                const total = leadValues.reduce((a, b) => a + b, 0);
+                const count = leadValues.length;
+
+                sumLead['mon_' + m] = count > 0 ? total : null;
+                cntLead['mon_' + m] = count > 0 ? count : null;
+                avgLead['mon_' + m] = count > 0 ? (total / count).toFixed(1) : null;
             }
 
-            this.grid.itemsSource = [avgLead, ...expanded];
+            this.grid.itemsSource = [sumLead, cntLead, avgLead, ...expanded];
         }
     }
 
