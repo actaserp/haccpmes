@@ -156,12 +156,21 @@ class FlexGridContextMenu {
                             break;
                         // export
                         case 'X_CSV':
-                            let rng = new wijmo.grid.CellRange(0, 0, grid.rows.length - 1, grid.columns.length - 1),
-                                csv = grid.getClipString(rng, wijmo.grid.ClipStringOptions.CSV, true, false);
-                            wijmo.saveFile(csv, downloadFileName + '.csv');
+                            if (grid._customCsvExport) {
+                                grid._customCsvExport(downloadFileName);
+                            } else {
+                                let rng = new wijmo.grid.CellRange(0, 0, grid.rows.length - 1, grid.columns.length - 1),
+                                    csv = grid.getClipString(rng, wijmo.grid.ClipStringOptions.CSV, true, false);
+                                wijmo.saveFile(csv, downloadFileName + '.csv');
+                            }
                             break;
                         case 'X_XLSX':
-                            wijmo.grid.xlsx.FlexGridXlsxConverter.saveAsync(grid, null, downloadFileName + '.xlsx').catch(err => console.error('Error exporting to Excel:', err));
+                            if (grid._customXlsxExport) {
+                                grid._customXlsxExport(downloadFileName);
+                            } else {
+                                wijmo.grid.xlsx.FlexGridXlsxConverter.saveAsync(grid, null, downloadFileName + '.xlsx')
+                                    .catch(err => console.error('Error exporting to Excel:', err));
+                            }
                             break;
                         case 'X_PDF':
                             wijmo.grid.pdf.FlexGridPdfConverter.export(grid, downloadFileName + '.pdf', {
