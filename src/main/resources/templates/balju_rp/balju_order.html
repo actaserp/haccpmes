@@ -508,17 +508,24 @@
         ];
 
         formatFields.forEach(selector => {
-          // ⬇️ 최소 변경: keyup → input.format (네임스페이스로 분리)
           $row.find(selector)
-            .off('input.format')
-            .on('input.format', function () {
-              formatNumberInput($(this).val(), this);
-            });
+                  .off('input.format')
+                  .on('input.format', function () {
+                    // 단가 필드만 소수점 허용
+                    if ($(this).attr('name')?.startsWith('BaljuUnitPrice_')) {
+                      formatDecimalInput($(this).val(), this);
+                    } else {
+                      formatNumberInput($(this).val(), this);
+                    }
+                  });
 
-          // 초기 값 포맷 유지
           $row.find(selector).each(function () {
             if ($(this).val()) {
-              formatNumberInput($(this).val(), this);
+              if ($(this).attr('name')?.startsWith('BaljuUnitPrice_')) {
+                formatDecimalInput($(this).val(), this);
+              } else {
+                formatNumberInput($(this).val(), this);
+              }
             }
           });
         });
@@ -527,7 +534,12 @@
           formatFields.forEach(selector => {
             const $el = $row.find(selector);
             if ($el.length) {
-              formatNumberInput($el.val(), $el[0]);
+              // ✅ 단가 필드는 소수점 허용 포맷 사용
+              if (selector === 'input[name^="BaljuUnitPrice_"]') {
+                formatDecimalInput($el.val(), $el[0]);
+              } else {
+                formatNumberInput($el.val(), $el[0]);
+              }
             }
           });
         }
@@ -1071,11 +1083,10 @@
               const item = result.data[0];
               const unitPrice = item.UnitPrice || 0;
               $unitPrice.val(unitPrice);
+              formatDecimalInput(unitPrice.toString(), $unitPrice[0]); // ✅ 추가
               $supply.val(unitPrice);
               $vat.val('');
-
               row.find('input[name^="originalUnitPrice_"]').val(unitPrice);
-
             } else {
               $unitPrice.val('');
               $supply.val('');
@@ -1587,9 +1598,23 @@
 
 
     function formatNumberInput(inputValue, targetSelector) {
-      let cleaned = inputValue.replace(/[^0-9]/g, '').replace(/,/g, '');// 숫자만 남기기
-      let formatted = cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, ',');// 쉼표 넣기
-      $(targetSelector).val(formatted);// 값 넣기
+      let cleaned = inputValue.replace(/[^0-9]/g, '').replace(/,/g, '');
+      let formatted = cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      $(targetSelector).val(formatted);
+    }
+
+    // 단가 전용 - 소수점 허용
+    function formatDecimalInput(inputValue, targetSelector) {
+      // 숫자와 소수점만 허용, 소수점 중복 방지
+      let cleaned = inputValue.replace(/[^0-9.]/g, '');
+      const parts = cleaned.split('.');
+      if (parts.length > 2) {
+        cleaned = parts[0] + '.' + parts.slice(1).join('');
+      }
+      // 정수 부분에만 콤마
+      const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      const result = parts.length > 1 ? intPart + '.' + parts[1] : intPart;
+      $(targetSelector).val(result);
     }
 
     function calculateAmount({ row: $row, $content }) {
@@ -1611,32 +1636,27 @@
       if (isSupplyEdited || isVatEdited) {
         const sVal = parseFloat($supply.val().replace(/,/g, '') || '0');
 
-        // 면세면 VAT=0, 아니면 숫자로 파싱
         let vVal = ($vat.val() === '면세')
                 ? 0
                 : round0(parseFloat($vat.val().replace(/,/g, '') || '0'));
 
         if (!isVatExempt && isVatIncluded && !isVatEdited) {
-          // 공급가만 입력 + VAT 포함 → 자동 계산
-          vat = sVal * 0.1;
+          vat = round0(sVal * 0.1);         // ✅ round0 추가
           supplyPrice = round0(sVal);
           totalPrice = round0(supplyPrice + vat);
 
         } else if (!isVatExempt && !isVatIncluded && !isVatEdited) {
-          // 공급가만 입력 + VAT 별도 → 자동 계산
-          vat = sVal * 0.1;
+          vat = round0(sVal * 0.1);         // ✅ round0 추가
           supplyPrice = round0(sVal);
           totalPrice = round0(supplyPrice + vat);
 
         } else {
-          // 수동 입력
           supplyPrice = round0(sVal);
           vat = vVal;
           totalPrice = round0(supplyPrice + vat);
         }
 
       } else {
-        // 자동 계산
         if (isVatExempt) {
           supplyPrice = round0(unitPrice * qty);
           vat = 0;
@@ -1645,31 +1665,21 @@
         } else if (isVatIncluded) {
           totalPrice = round0(unitPrice * qty);
           supplyPrice = round0(totalPrice * 10 / 11);
-          vat = totalPrice - supplyPrice;
+          vat = round0(totalPrice - supplyPrice);  // ✅ round0 추가
 
         } else {
           supplyPrice = round0(unitPrice * qty);
-          vat = supplyPrice * 0.1;
+          vat = round0(supplyPrice * 0.1);         // ✅ round0 추가
           totalPrice = round0(supplyPrice + vat);
         }
       }
 
-
-      // 값 반영 및 포맷
-      // $unitPrice.val(unitPrice);
-      // formatNumberInput(unitPrice.toString(), $unitPrice);
-
       $supply.val(supplyPrice);
-      // formatNumberInput(supplyPrice.toString(), $supply);
-
       $vat.val(vat === 0 && isVatExempt ? '면세' : vat);
-      // if (!isVatExempt) formatNumberInput(vat.toString(), $vat);
 
       if ($row.data('totalEdited') !== true) {
         $total.val(totalPrice);
-        // formatNumberInput(totalPrice.toString(), $total);
       }
-
     }
 
     function round0(val) {
