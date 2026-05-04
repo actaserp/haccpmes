@@ -415,6 +415,13 @@
               format: 'n0',
               isReadOnly: false, // 편집 가능
             },
+            {
+              binding: 'defect_remark',
+              header: '비고',
+              width: '*',
+              align: 'center',
+              isReadOnly: false, // 편집 가능
+            }
           ],
           itemsSource: new wijmo.collections.CollectionView([]), // 빈 데이터로 초기화
           itemFormatter: (panel, row, col, cell) => {
@@ -426,7 +433,7 @@
             }
             if (panel.cellType === wijmo.grid.CellType.ColumnHeader) {
               // 컬럼 스타일 적용
-              if (column.binding === 'defect_qty') {
+              if (column.binding === 'defect_qty' || column.binding === 'defect_remark') {
                 cell.style.color = '#5567ff';
               }
             }
@@ -447,7 +454,8 @@
               defect_type_id: r.defect_type_id,
               defect_type: r.defect_type,
               defect_qty: r.defect_qty || 0,
-              inspection_qty: r.inspection_qty || 0
+              inspection_qty: r.inspection_qty || 0,
+              defect_remark: r.defect_remark ?? null,
             }));
             _this.defectGrid.itemsSource.sourceCollection = list;
             _this.defectGrid.itemsSource.refresh();
@@ -502,7 +510,8 @@
             },
             lines: (gridItems || []).map(r => ({
               defectTypeId: r.defect_type_id,
-              defectQty: toInt(r.defect_qty)
+              defectQty: toInt(r.defect_qty),
+              defect_remark: r.defect_remark ?? null,
             }))
           };
 

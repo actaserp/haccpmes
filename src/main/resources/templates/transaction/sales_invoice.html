@@ -890,6 +890,90 @@
                 new FlexGridContextMenu(this.grid);
                 this.grid.downloadFileName = '매출 계산서 내역';
 
+                // export 데이터 생성 공통 함수
+                const buildExportRows = async () => {
+                    const view = this.grid.collectionView;
+                    const items = view ? view.sourceCollection : [];
+
+                    if (!items || items.length === 0) {
+                        Notify.error('데이터가 없습니다.');
+                        return [];
+                    }
+
+                    // Promise.all로 병렬 fetch 후 결과를 모아서 flat
+                    const results = await Promise.all(items.map(async (item) => {
+                        const res = await fetch(`${this.url}/invoice_detail?misnum=${item.misnum}`);
+                        const json = await res.json();
+
+                        return json.data.detailList.map((d, index) => ({
+                            misdate:        index === 0 ? item.misdate : '',
+                            misnum:         index === 0 ? item.misnum : '',
+                            ivercorpnum:    index === 0 ? item.ivercorpnum : '',
+                            ivercorpnm:     index === 0 ? item.ivercorpnm : '',
+                            statecode_name: index === 0 ? item.statecode_name : '',
+                            totalamt:       index === 0 ? item.totalamt : '',
+                            supplycost:     index === 0 ? item.supplycost : '',
+                            taxtotal:       index === 0 ? item.taxtotal : '',
+                            // 품목 정보는 모든 row
+                            item_name:      d.ItemName,
+                            spec:           d.Spec,
+                            qty:            d.Qty,
+                            unit_cost:      d.UnitCost,
+                            supply_cost:    d.SupplyCost,
+                            tax:            d.Tax,
+                            remark:         d.Remark,
+                        }));
+                    }));
+
+                    return results.flat();  // 2차원 배열을 1차원으로
+                };
+
+                const buildExportGrid = (exportRows) => {
+                    return new wijmo.grid.FlexGrid(document.createElement('div'), {
+                        autoGenerateColumns: false,
+                        columns: [
+                            {binding: 'misdate',        header: '작성일자',   width: 100, align: 'center'},
+                            {binding: 'misnum',         header: '작성번호',   width: 90},
+                            {binding: 'ivercorpnum',    header: '사업자번호', width: 120, align: 'center'},
+                            {binding: 'ivercorpnm',     header: '상호',       width: 130},
+                            {binding: 'statecode_name', header: '상태',       width: 80,  align: 'center'},
+                            {binding: 'totalamt',       header: '합계금액',   width: 110, align: 'right', format: 'n0'},
+                            {binding: 'supplycost',     header: '공급가액',   width: 110, align: 'right', format: 'n0'},
+                            {binding: 'taxtotal',       header: '세액',       width: 100, align: 'right', format: 'n0'},
+                            {binding: 'item_name',      header: '품명',       width: 120},
+                            {binding: 'spec',           header: '규격',       width: 100},
+                            {binding: 'qty',            header: '수량',       width: 70,  align: 'right', format: 'n0'},
+                            {binding: 'unit_cost',      header: '단가',       width: 100, align: 'right', format: 'n0'},
+                            {binding: 'supply_cost',    header: '공급가액',   width: 110, align: 'right', format: 'n0'},
+                            {binding: 'tax',            header: '세액',       width: 100, align: 'right', format: 'n0'},
+                            {binding: 'remark',         header: '비고',       width: 150},
+                        ],
+                        itemsSource: new wijmo.collections.CollectionView(exportRows)
+                    });
+                };
+
+// CSV export
+                this.grid._customCsvExport = async (fileName) => {
+                    const exportRows = await buildExportRows();
+                    const exportGrid = buildExportGrid(exportRows);
+
+                    const rng = new wijmo.grid.CellRange(0, 0, exportGrid.rows.length - 1, exportGrid.columns.length - 1);
+                    const csv = exportGrid.getClipString(rng, wijmo.grid.ClipStringOptions.CSV, true, false);
+                    wijmo.saveFile(csv, fileName + '.csv');
+
+                    Notify.success('CSV 파일이 저장되었습니다.');
+                };
+
+// XLSX export
+                this.grid._customXlsxExport = async (fileName) => {
+                    const exportRows = await buildExportRows();
+                    const exportGrid = buildExportGrid(exportRows);
+
+                    await wijmo.grid.xlsx.FlexGridXlsxConverter.saveAsync(exportGrid, null, fileName + '.xlsx');
+
+                    Notify.success('Excel 파일이 저장되었습니다.');
+                };
+
                 this.grid.beginningEdit.addHandler(function (s, e) {
                     const col = s.columns[e.col];
                     const row = s.rows[e.row];

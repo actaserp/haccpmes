@@ -31,7 +31,8 @@ public class TestDailyReportService {
         i."DefectType_id" as defect_pk,
         i."InspectionQty" as inspection_qty,
         i."DefectQty" as defect_qty,
-        i."InspectionDate" 
+        i."InspectionDate",
+        i."Description" AS defect_remark
         from inspection_reports i
         JOIN defect_type dt ON dt.id = i."DefectType_id"
         where "InspectionDate" BETWEEN CAST(:date_from AS date) AND CAST(:date_to AS date)
@@ -101,7 +102,8 @@ public class TestDailyReportService {
       select 
         ir."DefectType_id" ,
         ir."DefectQty" ,
-        ir."InspectionQty" as inspection_qty
+        ir."InspectionQty" as inspection_qty,
+        ir."Description" as defect_remark
       from inspection_reports ir
       where ir."InspectionDate" = to_date(:inspection_date, 'YYYY-MM-DD')
       and ir."WorkCenter_id" = :work_id
@@ -136,6 +138,7 @@ public class TestDailyReportService {
 
       d.put("inspection_qty", r != null ? r.get("inspection_qty") : 0);
       d.put("defect_qty",     r != null ? r.get("DefectQty")      : 0);
+      d.put("defect_remark",  r != null ? r.get("defect_remark")  : null);
     }
 
     return defects;
@@ -166,10 +169,10 @@ public class TestDailyReportService {
       insert into inspection_reports
       (_created, _creater_id, "ProcessOrder", "LotIndex",
        "DefectQty", "DefectType_id", spjangcd,
-       "InspectionDate", "WorkCenter_id", "InspectionQty")
+       "InspectionDate", "WorkCenter_id", "InspectionQty", "Description")
       values (now(), :creater_id, :process_order, :lot_index,
               :defect_qty, :defect_type_id, :spjangcd,
-              :inspection_date, :work_center_id, :inspection_qty)
+              :inspection_date, :work_center_id, :inspection_qty, :description)
     """;
 
     short processOrder = 0, lotIndex = 0;
@@ -180,6 +183,8 @@ public class TestDailyReportService {
     // (선택) 중복 defectTypeId 병합 방지: 같은 타입이 여러번 오면 합산
     // 필요 없으면 이 블록 제거하고 바로 for문으로 진행
     Map<Integer, Double> merged = new LinkedHashMap<>();
+    Map<Integer, String> remarks = new LinkedHashMap<>();
+
     for (var line : lines) {
       Integer typeId = toInteger(line.get("defectTypeId"));
       if (typeId == null) continue; // 타입 없는 행만 스킵
@@ -187,6 +192,11 @@ public class TestDailyReportService {
       Double q = toDouble(line.get("defectQty"));
       double qty = (q == null || q < 0) ? 0d : q; // null/음수 → 0으로 저장
       merged.merge(typeId, qty, Double::sum);
+
+      String remark = (String) line.get("defect_remark");
+      if (remark != null && !remark.isBlank()) {
+        remarks.merge(typeId, remark, (a, b) -> a + ", " + b); // 여러 개면 이어붙이기
+      }
     }
 
     for (var entry : merged.entrySet()) {
@@ -199,7 +209,8 @@ public class TestDailyReportService {
           .addValue("spjangcd", spjangcd)
           .addValue("inspection_date", java.sql.Date.valueOf(inspectionDate))
           .addValue("work_center_id", workCenterId)
-          .addValue("inspection_qty", headerQty);
+          .addValue("inspection_qty", headerQty)
+          .addValue("description", remarks.get(entry.getKey()));
       sqlRunner.execute(insSql, p);
     }
   }
