@@ -199,7 +199,22 @@
           itemFormatter: (panel, row, col, cell) => {
             if (panel.cellType === wijmo.grid.CellType.Cell) {
               cell.contentEditable = false; // 직접 입력 방지
+
+              const binding = panel.columns[col].binding; // "day_5"
+              if (/^day_\d+$/.test(binding)) {
+                const item = panel.rows[row].dataItem;
+                const hasRemark = item && item[`remark_${binding}`]; // remark_day_5
+
+                if (hasRemark) {
+                  cell.style.backgroundColor = '#ff9800';
+                  cell.style.color = '#000';
+                } else {
+                  cell.style.backgroundColor = '';
+                  cell.style.color = '';
+                }
+              }
             }
+
           },
 
           columns: allColumns,
@@ -581,6 +596,7 @@
             // 누적 처리 (같은 날 중복 데이터 있을 경우 대비)
             grouped[key][`day_${day}`] = (grouped[key][`day_${day}`] || 0) + row.defect_qty;
             grouped[key][`total_day_${day}`] = (grouped[key][`total_day_${day}`] || 0) + row.inspection_qty;
+            grouped[key][`remark_day_${day}`] = row.defect_remark || null;
           });
 
           const converted = Object.values(grouped);
