@@ -1,0 +1,971 @@
+<html layout:decorate="~{layout_page}">
+<head>
+    <style>
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+
+            #printArea, #printArea * {
+                visibility: visible;
+            }
+
+            #printArea {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                padding: 10mm 12mm;
+                box-sizing: border-box;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+        }
+
+        .insp-form-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .insp-row-table input[type="text"],
+        .nowork-table input[type="text"],
+        .insp-form-table input[type="text"],
+        .insp-form-table input[type="date"] {
+            height: 32px;
+        }
+
+        .insp-row-table textarea,
+        .nowork-table textarea {
+            height: 32px;
+            min-height: 32px;
+        }
+
+        .insp-form-table th,
+        .insp-form-table td {
+            border: 1px solid #aaa;
+            padding: 5px 7px;
+            white-space: nowrap;
+        }
+
+        .insp-form-table th {
+            background: #EDEFF5;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .insp-row-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .insp-row-table th,
+        .insp-row-table td {
+            border: 1px solid #aaa;
+            padding: 4px 5px;
+            text-align: center;
+        }
+
+        .insp-row-table th {
+            background: #EDEFF5;
+            font-weight: bold;
+        }
+
+        .insp-row-table input[type="text"] {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 3px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+
+        .insp-row-table textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 3px;
+            border: 1px solid #ccc;
+            resize: vertical;
+            min-height: 30px;
+        }
+
+        .insp-row-table tfoot td {
+            background: #f5f5dc;
+            font-weight: bold;
+        }
+
+        .nowork-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .nowork-table th,
+        .nowork-table td {
+            border: 1px solid #aaa;
+            padding: 4px 5px;
+            text-align: center;
+        }
+
+        .nowork-table th {
+            background: #EDEFF5;
+            font-weight: bold;
+        }
+
+        .nowork-table input[type="text"] {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 3px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+
+        .nowork-table textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 3px;
+            border: 1px solid #ccc;
+            resize: vertical;
+            min-height: 30px;
+        }
+
+        .nowork-table tfoot td {
+            background: #f5f5dc;
+            font-weight: bold;
+        }
+
+        /* 좌/우 구분선 강조 */
+        .nowork-table .col-divider {
+            border-left: 2px solid #888 !important;
+        }
+
+        .approval-table {
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .approval-table th,
+        .approval-table td {
+            border: 1px solid #aaa;
+            padding: 4px 8px;
+            text-align: center;
+            min-width: 60px;
+            min-height: 36px;
+        }
+
+        .approval-table th {
+            background: #EDEFF5;
+            font-weight: bold;
+        }
+
+        .insp-popup-wrap {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .insp-scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 15px;
+        }
+
+        .insp-popup-footer {
+            flex-shrink: 0;
+            padding: 8px 15px;
+            background: #fff;
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+        }
+
+        .section-label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #444;
+            margin: 12px 0 4px;
+        }
+
+        .btn-row-ctrl {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border: 1px solid #B3B3B3;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .btn-row-ctrl img {
+            width: 11px;
+            height: 11px;
+        }
+
+        #printArea {
+            display: none;
+        }
+
+        textarea {
+            height: auto;
+        }
+
+        .insp-form-table td {
+            text-align: left; /* 추가 */
+        }
+
+        .insp-popup-wrap {
+            height: 100% !important;
+            min-height: 0;
+        }
+    </style>
+</head>
+<th:block layout:fragment="content">
+
+    <div class="layout-contents">
+        <div class="page-title-wrap">
+            <div class="left">
+                <h2>검사일보</h2>
+                <a title="북마크" class="bookmark toggle">내 메뉴</a>
+            </div>
+            <ul class="page-navi">
+                <li><img src="/images/icon/ico-nav-home.svg" alt="홈아이콘"></li>
+                <li>검사관리</li>
+                <li>검사일보</li>
+            </ul>
+        </div>
+
+        <section class="section">
+            <div class="section-top">
+                <div class="search-wrap">
+                    <dl>
+                        <dt>조회기간<span class="eq">*</span></dt>
+                        <dd>
+                            <ul class="date-box">
+                                <li>
+                                    <input type="date" id="srchStartDt" name="srchStartDt">
+                                    <label for="srchStartDt" class="hide">시작일</label>
+                                </li>
+                                <li>
+                                    <input type="date" id="srchEndDt" name="srchEndDt">
+                                    <label for="srchEndDt" class="hide">종료일</label>
+                                </li>
+                            </ul>
+                        </dd>
+                    </dl>
+                    <dl>
+                        <dt>&nbsp;</dt>
+                        <dd>
+                            <li>
+                                <a class="btn btn-delete" title="검색" id="btnSearch">
+                                    <img src="/images/icon/btn-srch.svg" alt="검색 아이콘">검색
+                                </a>
+                            </li>
+                        </dd>
+                    </dl>
+                </div>
+                <div class="button-wrap">
+                    <ul>
+                        <li>
+                            <a class="btn btn-excell" title="등록" id="btnAddNew">
+                                <img src="/images/icon/ico-plus.svg" alt="등록 아이콘">등록
+                            </a>
+                        </li>
+                        <li>
+                            <a class="btn btn-delete" title="삭제" id="btnDelete">
+                                <img src="/images/icon/ico-delete.svg" alt="삭제 아이콘">삭제
+                            </a>
+                        </li>
+                        <li>
+                            <a class="btn btn-edit" title="수정" id="btnEdit">
+                                <img src="/images/icon/ico-edit.svg" alt="수정 아이콘">수정
+                            </a>
+                        </li>
+                        <li>
+                            <a class="btn" title="출력" id="btnPrint">출력</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="container-fluid">
+                <div id="theGrid" style="height: 700px;"></div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 등록/수정 팝업 템플릿 -->
+    <script type="text/x-tmpl" id="inspectionTemplate">
+        <div class="insp-popup-wrap" id="inspPopupRoot">
+            <div class="insp-scroll-area">
+
+                <!-- 헤더: 작업일자 / 작성자만 -->
+                <form id="inspHeadForm">
+                    <input type="hidden" id="insp_id" name="id">
+                    <table class="insp-form-table">
+                        <tbody>
+                            <tr>
+                                <th style="width:100px;">작업일자 *</th>
+                                <td>
+                                    <input type="date" id="insp_report_date" name="report_date" style="width:160px;">
+                                    <span id="insp_day_of_week" style="margin-left:8px; font-weight:bold;"></span>
+                                </td>
+                                <th style="width:80px;">작성자</th>
+                                <td>
+                                    <input type="text" id="insp_writer" name="writer" style="width:140px;" placeholder="작성자명">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </form>
+
+                <!-- 검사 내역 테이블 -->
+                <table class="insp-row-table">
+                    <colgroup>
+                        <col style="width:5%">   <!-- 구분 -->
+                        <col style="width:25%">  <!-- 생산MODEL -->
+                        <col style="width:25%">  <!-- PCB NO -->
+                        <col style="width:7%">   <!-- 검사수 -->
+                        <col style="width:7%">   <!-- 검사대기 -->
+                        <col style="width:7%">   <!-- 납품대기 -->
+                        <col style="width:7%">   <!-- 불량수리 -->
+                        <col style="width:13%">  <!-- 특기사항 -->
+                        <col style="width:4%">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>구분</th>
+                            <th>생산MODEL</th>
+                            <th>PCB NO</th>
+                            <th>검사수</th>
+                            <th>검사대기</th>
+                            <th>납품대기</th>
+                            <th>불량수리</th>
+                            <th>특기사항</th>
+                            <th>
+                                <a class="btn-row-ctrl" id="btnAddInspRow" title="행 추가">
+                                    <img src="/images/icon/ico-plus.svg" alt="추가">
+                                </a>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="inspRowBody">
+                        <tr class="insp-row-template" style="display:none;">
+                            <td>
+                                <div style="display:flex; gap:2px; align-items:center; justify-content:center;">
+                                    <input type="number" name="gubun_month" min="1" max="12" placeholder="월" style="width:40px; height:32px; text-align:center; padding:2px;">
+                                    <input type="number" name="gubun_day" min="1" max="31" placeholder="일" style="width:42px; height:32px; text-align:center; padding:2px;">
+                                </div>
+                            </td>
+                            <td><textarea name="production_model" rows="1" style="width:100%;height:32px;box-sizing:border-box;resize:vertical;"></textarea></td>
+                            <td><textarea name="pcb_no" rows="1" style="width:100%;height:32px;box-sizing:border-box;resize:vertical;"></textarea></td>
+                            <td><input type="text" name="inspection_count" class="num-input"></td>
+                            <td><input type="text" name="inspection_wait"  class="num-input"></td>
+                            <td><input type="text" name="delivery_wait"    class="num-input"></td>
+                            <td><input type="text" name="repair_defect"    class="num-input"></td>
+                            <td><textarea name="remarks" rows="1"></textarea></td>
+                            <td>
+                                <a class="btn-row-ctrl" title="삭제" onclick="removeInspRow(this)">
+                                    <img src="/images/icon/ico-delete.svg" alt="삭제">
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" style="text-align:center;">총 검사수</td>
+                            <td id="totalInspCount">0</td>
+                            <td id="totalInspWait">0</td>
+                            <td id="totalDeliveryWait">0</td>
+                            <td id="totalRepairDefect">0</td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <!-- 무작업 내용 테이블 (좌/우 2열) -->
+                <table class="nowork-table" style="margin-top:16px;">
+                    <colgroup>
+                        <col style="width:5%">
+                        <col style="width:10%">
+                        <col style="width:8%">
+                        <col style="width:27%">
+                        <col style="width:5%">
+                        <col style="width:10%">
+                        <col style="width:8%">
+                        <col style="width:22%">
+                        <col style="width:4%">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>구분</th>
+                            <th>정지시간</th>
+                            <th>공수(분)</th>
+                            <th>무작업내용</th>
+                            <th class="col-divider">구분</th>
+                            <th>정지시간</th>
+                            <th>공수(분)</th>
+                            <th>무작업내용</th>
+                            <th>
+                                <a class="btn-row-ctrl" id="btnAddNoWork" title="행 추가">
+                                    <img src="/images/icon/ico-plus.svg" alt="추가">
+                                </a>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="noWorkBody">
+                        <tr class="nowork-row-template" style="display:none;">
+                            <td>
+                                <div style="display:flex; gap:2px; align-items:center; justify-content:center;">
+                                    <input type="number" name="left_gubun_month" min="1" max="12" placeholder="월" style="width:40px; height:32px; text-align:center; padding:2px;">
+                                    <input type="number" name="left_gubun_day" min="1" max="31" placeholder="일" style="width:42px; height:32px; text-align:center; padding:2px;">
+                                </div>
+                            </td>
+                            <td><input type="text" name="left_stop_time"        placeholder="시간"></td>
+                            <td><input type="text" name="left_man_hour"         class="num-input" placeholder="0"></td>
+                            <td><textarea          name="left_no_work_content"  rows="1"></textarea></td>
+                            <td class="col-divider">
+                                <div style="display:flex; gap:2px; align-items:center; justify-content:center;">
+                                    <input type="number" name="right_gubun_month" min="1" max="12" placeholder="월" style="width:40px; height:32px; text-align:center; padding:2px;">
+                                    <input type="number" name="right_gubun_day" min="1" max="31" placeholder="일" style="width:42px; height:32px; text-align:center; padding:2px;">
+                                </div>
+                            </td>
+                            <td><input type="text" name="right_stop_time"       placeholder="시간"></td>
+                            <td><input type="text" name="right_man_hour"        class="num-input" placeholder="0"></td>
+                            <td><textarea          name="right_no_work_content" rows="1"></textarea></td>
+                            <td>
+                                <a class="btn-row-ctrl" title="삭제" onclick="removeNoWorkRow(this)">
+                                    <img src="/images/icon/ico-delete.svg" alt="삭제">
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="7" style="text-align:right;">총공수</td>
+                            <td id="totalManHour">0</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+            </div><!-- /insp-scroll-area -->
+
+            <div class="insp-popup-footer no-print">
+                <button type="button" class="btn-popup y_write_auth" id="btnInspSave">저장</button>
+                <button type="button" class="btn-popup" id="modal-close-button">닫기</button>
+            </div>
+        </div>
+    </script>
+
+    <div id="printArea"></div>
+
+</th:block>
+
+<th:block layout:fragment="scripts">
+    <script type="text/javascript">
+
+        class InspectionReportPage {
+            constructor() {
+                this.url = '/api/quality/inspection-report';
+                this.grid = null;
+                this.viewData = new wijmo.collections.CollectionView();
+                this.init();
+            }
+
+            init() {
+                let _this = this;
+
+                this.grid = new wijmo.grid.FlexGrid('#theGrid', {
+                    selectionMode: wijmo.grid.SelectionMode.Row,
+                    headersVisibility: wijmo.grid.HeadersVisibility.Column,
+                    autoGenerateColumns: false,
+                    showMarquee: true,
+                    isReadOnly: true,
+                    formatItem: (s, e) => {
+                        if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader)
+                            e.cell.style.textAlign = 'center';
+                    },
+                    columns: [
+                        {binding: 'report_date', header: '작업일자', width: 130, align: 'center'},
+                        {binding: 'writer', header: '작성자', width: 120, align: 'center'},
+                        {binding: 'total_inspection', header: '총 검사수', width: 110, align: 'right'},
+                        {binding: 'total_wait', header: '총 검사대기', width: 110, align: 'right'},
+                        {binding: 'total_delivery_wait', header: '총 납품대기', width: 110, align: 'right'},
+                        {binding: 'total_defect', header: '총 불량수리', width: 110, align: 'right'},
+                    ],
+                    itemsSource: this.viewData,
+                });
+
+                new FlexGridContextMenu(this.grid);
+                this.grid.downloadFileName = '검사일보';
+
+                this.grid.hostElement.addEventListener('dblclick', function () {
+                    if (_this.grid.selectedItems.length > 0) $('#btnEdit').trigger('click');
+                });
+
+                $('#btnAddNew').click(function () {
+                    _this.showForm({mode: 'new'});
+                });
+
+                $('#btnEdit').click(function () {
+                    const sel = _this.grid.selectedItems;
+                    if (sel.length !== 1) {
+                        Alert.alert('', '선택된 데이터가 없습니다.');
+                        return;
+                    }
+                    AjaxUtil.getAsyncData(_this.url + '/detail', {id: sel[0].id}, function (res) {
+                        res.data.mode = 'edit';
+                        _this.showForm(res.data);
+                    });
+                });
+
+                $('#btnDelete').click(function () {
+                    const sel = _this.grid.selectedItems;
+                    if (sel.length === 0) {
+                        Alert.alert('', '삭제할 항목을 선택해주세요.');
+                        return;
+                    }
+                    Alert.confirm('', '삭제하시겠습니까?', function () {
+                        AjaxUtil.postAsyncData(_this.url + '/delete', {id: sel[0].id}, function (res) {
+                            if (res.success) {
+                                Notify.success('삭제되었습니다.');
+                                _this.search();
+                            } else Alert.alert('', res.message || '삭제 실패');
+                        });
+                    });
+                });
+
+                $('#btnPrint').click(function () {
+                    const sel = _this.grid.selectedItems;
+                    if (sel.length === 0) {
+                        Alert.alert('', '출력할 항목을 선택해주세요.');
+                        return;
+                    }
+                    AjaxUtil.getAsyncData(_this.url + '/detail', {id: sel[0].id}, function (res) {
+                        _this.printReport(res.data);
+                    });
+                });
+
+                $('#btnSearch').click(function () {
+                    _this.search();
+                });
+            }
+
+            search() {
+                let _this = this;
+                AjaxUtil.getAsyncData(this.url + '/read', {
+                    start: $('#srchStartDt').val(),
+                    end: $('#srchEndDt').val(),
+                    spjangcd: sessionStorage.getItem('spjangcd') || ''
+                }, function (res) {
+                    if (res) _this.viewData.sourceCollection = res.data;
+                });
+            }
+
+            showForm(data) {
+                let _this = this;
+                let $content = $(tmpl('inspectionTemplate', data));
+                let modal = new PopupDraggable(data.mode === 'new' ? '검사일보 등록' : '검사일보 수정');
+                modal.open({width: 1150, height: 650, $content});
+
+                const $rowBody = $content.find('#inspRowBody');
+                const $noWorkBody = $content.find('#noWorkBody');
+
+                $content.on('change', '#insp_report_date', function () {
+                    const days = ['일', '월', '화', '수', '목', '금', '토'];
+                    const d = new Date($(this).val());
+                    $content.find('#insp_day_of_week').text(isNaN(d) ? '' : days[d.getDay()] + '요일');
+                });
+
+                if (data.mode === 'new') {
+                    $content.find('#insp_report_date').val(CommonUtil.getYYYYMMDD());
+                    $content.find('#insp_report_date').trigger('change');
+                }
+
+                // 기존 데이터 바인딩
+                if (data.mode === 'edit') {
+                    $content.find('#insp_id').val(data.id || '');
+                    $content.find('#insp_report_date').val(data.report_date || '');
+                    $content.find('#insp_writer').val(data.writer || '');
+
+                    (data.rows || []).forEach(r => addInspRow($rowBody, r));
+                    (data.noWork || []).forEach(nw => addNoWorkRow($noWorkBody, nw));
+                }
+
+                // 기본 빈 행
+                if ($rowBody.find('tr:not(.insp-row-template)').length === 0) {
+                    for (let i = 0; i < 5; i++) addInspRow($rowBody);
+                }
+                if ($noWorkBody.find('tr:not(.nowork-row-template)').length === 0) {
+                    for (let i = 0; i < 1; i++) addNoWorkRow($noWorkBody);
+                }
+
+                calcTotals($content);
+
+                // 합계 자동 계산
+                $content.on('input', '.num-input', function () {
+                    calcTotals($content);
+                });
+
+                $content.find('#btnAddInspRow').click(function () {
+                    addInspRow($rowBody);
+                    calcTotals($content);
+                });
+                $content.find('#btnAddNoWork').click(function () {
+                    addNoWorkRow($noWorkBody);
+                });
+
+                // 저장
+                $content.find('#btnInspSave').off('click').on('click', function() {
+                    const reportDate = $content.find('#insp_report_date').val();
+                    if (!reportDate) {
+                        Alert.alert('', '작업일자를 입력해주세요.');
+                        return;
+                    }
+
+                    const rows = [];
+                    $rowBody.find('tr:not(.insp-row-template):visible').each(function () {
+                        const $r = $(this);
+
+                        const hasData = $r.find('[name=production_model]').val().trim() ||
+                            $r.find('[name=pcb_no]').val().trim()           ||
+                            $r.find('[name=inspection_count]').val().trim() ||
+                            $r.find('[name=inspection_wait]').val().trim()  ||
+                            $r.find('[name=delivery_wait]').val().trim()    ||
+                            $r.find('[name=repair_defect]').val().trim()    ||
+                            $r.find('[name=remarks]').val().trim();
+
+                        if (!hasData) return;
+
+                        rows.push({
+                            gubun: $r.find('[name=gubun_month]').val() + '/' + $r.find('[name=gubun_day]').val(),
+                            production_model: $r.find('[name=production_model]').val(),
+                            pcb_no: $r.find('[name=pcb_no]').val(),
+                            inspection_count: $r.find('[name=inspection_count]').val(),
+                            inspection_wait: $r.find('[name=inspection_wait]').val(),
+                            delivery_wait: $r.find('[name=delivery_wait]').val(),
+                            repair_defect: $r.find('[name=repair_defect]').val(),
+                            remarks: $r.find('[name=remarks]').val(),
+                        });
+                    });
+
+                    const noWork = [];
+                    $noWorkBody.find('tr:not(.nowork-row-template):visible').each(function () {
+                        const $r = $(this);
+
+                        const hasData = $r.find('[name=left_stop_time]').val().trim()        ||
+                            $r.find('[name=left_man_hour]').val().trim()         ||
+                            $r.find('[name=left_no_work_content]').val().trim()  ||
+                            $r.find('[name=right_stop_time]').val().trim()       ||
+                            $r.find('[name=right_man_hour]').val().trim()        ||
+                            $r.find('[name=right_no_work_content]').val().trim();
+
+                        if (!hasData) return;
+
+                        noWork.push({
+                            left_gubun:  $r.find('[name=left_gubun_month]').val() + '/' + $r.find('[name=left_gubun_day]').val(),
+                            left_stop_time: $r.find('[name=left_stop_time]').val(),
+                            left_man_hour: $r.find('[name=left_man_hour]').val(),
+                            left_no_work_content: $r.find('[name=left_no_work_content]').val(),
+                            right_gubun: $r.find('[name=right_gubun_month]').val() + '/' + $r.find('[name=right_gubun_day]').val(),
+                            right_stop_time: $r.find('[name=right_stop_time]').val(),
+                            right_man_hour: $r.find('[name=right_man_hour]').val(),
+                            right_no_work_content: $r.find('[name=right_no_work_content]').val(),
+                        });
+                    });
+
+                    Alert.confirm('', '저장하시겠습니까?', function () {
+                        AjaxUtil.postJsonData(_this.url + '/save', {
+                            id: $content.find('#insp_id').val(),
+                            report_date: reportDate,
+                            writer: $content.find('#insp_writer').val(),
+                            spjangcd: sessionStorage.getItem('spjangcd') || '',
+                            rows,
+                            noWork,
+                        }, function (res) {
+                            if (res.success) {
+                                Notify.success('저장되었습니다.');
+                                _this.search();
+                                modal.close();
+                            } else {
+                                Alert.alert('저장 실패', res.message || '알 수 없는 오류');
+                            }
+                        });
+                    });
+                });
+            }
+
+            printReport(data) {
+                const rows = data.rows || [];
+                const noWork = data.noWork || [];
+
+                let rowsHtml = '';
+                let totalInsp = 0, totalWait = 0, totalDelivery = 0, totalRepair = 0;
+                rows.forEach(r => {
+                    totalInsp     += parseInt(r.inspection_count) || 0;
+                    totalWait     += parseInt(r.inspection_wait)  || 0;
+                    totalDelivery += parseInt(r.delivery_wait)    || 0;
+                    totalRepair   += parseInt(r.repair_defect)    || 0;
+                    rowsHtml += `<tr class="data-row">
+    <td>${r.gubun || ''}</td>
+    <td style="text-align:left;">${escapeForPrint(r.production_model)}</td>
+    <td style="text-align:left;">${escapeForPrint(r.pcb_no)}</td>
+    <td>${r.inspection_count || ''}</td>
+    <td>${r.inspection_wait  || ''}</td>
+    <td>${r.delivery_wait    || ''}</td>
+    <td>${r.repair_defect    || ''}</td>
+    <td style="text-align:left;">${escapeForPrint(r.remarks)}</td>
+</tr>`;
+                });
+
+                let nwHtml = '';
+                let totalManHour = 0;
+                const maxNW = noWork.length;
+                for (let i = 0; i < maxNW; i++) {
+                    const nw = noWork[i] || {};
+                    totalManHour += parseFloat(nw.left_man_hour)  || 0;
+                    totalManHour += parseFloat(nw.right_man_hour) || 0;
+                    nwHtml += `<tr class="data-row">
+    <td>${nw.left_gubun  || ''}</td>
+    <td>${nw.left_stop_time || ''}</td>
+    <td>${nw.left_man_hour  || ''}</td>
+    <td style="text-align:left;">${escapeForPrint(nw.left_no_work_content)}</td>
+    <td style="border-left:2px solid #555;">${nw.right_gubun || ''}</td>
+    <td>${nw.right_stop_time || ''}</td>
+    <td>${nw.right_man_hour  || ''}</td>
+    <td style="text-align:left;">${escapeForPrint(nw.right_no_work_content)}</td>
+</tr>`;
+                }
+
+                const html = `
+                    <style>
+                        @page { size: A4 landscape; margin: 6mm 8mm; }
+                        body  { font-family: 'Malgun Gothic', sans-serif; font-size: 8.5pt; margin:0; }
+                        table { border-collapse: collapse; width: 100%; }
+th, td {
+    border: 1px solid #555;
+    padding: 0px 3px;
+    text-align: center;
+    line-height: 1.0;
+    font-size: 10pt;
+}
+tr {
+    height: 24px;
+    max-height: 24px;
+}
+tr.data-row td {
+    height: auto;
+    max-height: none;
+}
+                        th { background: #EDEFF5; font-weight: bold; }
+                        .title { text-align:center; font-size:22pt; font-weight:bold; letter-spacing:8px; margin:0 0 4px; }
+                        .hd-row { font-size:10pt; margin: 2px 0; }
+                        .hd-row span { margin-right:20px; }
+                        .sec-lbl { font-size:10pt; font-weight:bold; margin: 4px 0 1px; }
+                        tfoot td { background:#f5f5dc; font-weight:bold; }
+                        .approval-row th,td {
+                            height: 30px !important;
+                            max-height: none !important;
+                        }
+                    </style>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <div style="width:150px;"></div>
+                        <div class="title">검 사 일 보</div>
+                        <table style="width:150px; table-layout:fixed; border-collapse:collapse;">
+                            <tr class="approval-row">
+                                <th style="width:100px; height:10px; font-size:8pt;">작성</th>
+                                <th style="width:100px; font-size:8pt;">검토</th>
+                                <th style="width:100px; font-size:8pt;">승인</th>
+                            </tr>
+                            <tr class="approval-row">
+                                <td style="height:10px;"></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="hd-row">
+                        <span>■ 작업일자 : ${data.report_date || ''}</span>
+                        <span>작성자 : ${data.writer || ''}</span>
+                    </div>
+
+                    <table style="margin-top:10px;">
+                        <colgroup>
+                            <col style="width:6%"><col style="width:18%"><col style="width:18%">
+                            <col style="width:8%"><col style="width:8%"><col style="width:8%">
+                            <col style="width:8%"><col style="width:26%">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>구분</th><th>생산MODEL</th><th>PCB NO</th>
+                                <th>검사수</th><th>검사대기</th><th>납품대기</th><th>불량수리</th><th>특기사항</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                        <tfoot>
+                            <tr class="data-row">
+                                <td colspan="3">총 검사수</td>
+                                <td>${totalInsp}</td>
+                                <td>${totalWait}</td>
+                                <td>${totalDelivery}</td>
+                                <td>${totalRepair}</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <table style="margin-top:10px;">
+                        <colgroup>
+                            <col style="width:5%"><col style="width:10%"><col style="width:8%"><col style="width:27%">
+                            <col style="width:5%"><col style="width:10%"><col style="width:8%"><col style="width:27%">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>구분</th><th>정지시간</th><th>공수(분)</th><th>무작업내용</th>
+                                <th style="border-left:2px solid #555;">구분</th><th>정지시간</th><th>공수(분)</th><th>무작업내용</th>
+                            </tr>
+                        </thead>
+                        <tbody>${nwHtml}</tbody>
+                        <tfoot>
+                            <tr class="data-row">
+                                <td colspan="6" style="text-align:right;">총공수</td>
+                                <td>${totalManHour}</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    <div style="text-align:right; font-size:8pt; margin-top:2px;">동영전자</div>`;
+
+                $('#printArea').html(html).show();
+                window.print();
+                $('#printArea').hide().html('');
+            }
+        }
+
+        // 합계 계산
+        // calcTotals() 수정
+        function calcTotals($content) {
+            let total = 0, wait = 0, delivery = 0, repair = 0;
+            $content.find('#inspRowBody tr:not(.insp-row-template):visible').each(function () {
+                total += parseInt($(this).find('[name=inspection_count]').val()) || 0;
+                wait += parseInt($(this).find('[name=inspection_wait]').val()) || 0;
+                delivery += parseInt($(this).find('[name=delivery_wait]').val()) || 0;
+                repair += parseInt($(this).find('[name=repair_defect]').val()) || 0;
+            });
+            $content.find('#totalInspCount').text(total);
+            $content.find('#totalInspWait').text(wait);
+            $content.find('#totalDeliveryWait').text(delivery);
+            $content.find('#totalRepairDefect').text(repair);
+
+            let manHour = 0;
+            $content.find('#noWorkBody tr:not(.nowork-row-template):visible').each(function () {
+                manHour += (parseFloat($(this).find('[name=left_man_hour]').val()) || 0);
+                manHour += (parseFloat($(this).find('[name=right_man_hour]').val()) || 0);
+            });
+            $content.find('#totalManHour').text(manHour || 0);
+        }
+
+        function addInspRow($tbody, data) {
+            const $row = $tbody.find('.insp-row-template').clone().removeClass('insp-row-template').show();
+
+            const today = new Date();
+            if (data?.gubun) {
+                const parts = String(data.gubun).split('/');
+                $row.find('[name=gubun_month]').val(parts[0] || today.getMonth() + 1);
+                $row.find('[name=gubun_day]').val(parts[1]   || today.getDate());
+            } else {
+                $row.find('[name=gubun_month]').val(today.getMonth() + 1);
+                $row.find('[name=gubun_day]').val(today.getDate());
+            }
+
+            if (data) {
+                $row.find('[name=production_model]').val(data.production_model || '');
+                $row.find('[name=pcb_no]').val(data.pcb_no || '');
+                $row.find('[name=inspection_count]').val(data.inspection_count || '');
+                $row.find('[name=inspection_wait]').val(data.inspection_wait || '');
+                $row.find('[name=delivery_wait]').val(data.delivery_wait || '');
+                $row.find('[name=repair_defect]').val(data.repair_defect || '');
+                $row.find('[name=remarks]').val(data.remarks || '');
+            }
+            $tbody.append($row);
+        }
+
+        function addNoWorkRow($tbody, data) {
+            const $row = $tbody.find('.nowork-row-template').clone().removeClass('nowork-row-template').show();
+
+            const today = new Date();
+
+            if (data?.left_gubun) {
+                const parts = String(data.left_gubun).split('/');
+                $row.find('[name=left_gubun_month]').val(parts[0] || today.getMonth() + 1);
+                $row.find('[name=left_gubun_day]').val(parts[1]   || today.getDate());
+            } else {
+                $row.find('[name=left_gubun_month]').val(today.getMonth() + 1);
+                $row.find('[name=left_gubun_day]').val(today.getDate());
+            }
+
+            if (data?.right_gubun) {
+                const parts = String(data.right_gubun).split('/');
+                $row.find('[name=right_gubun_month]').val(parts[0] || today.getMonth() + 1);
+                $row.find('[name=right_gubun_day]').val(parts[1]   || today.getDate());
+            } else {
+                $row.find('[name=right_gubun_month]').val(today.getMonth() + 1);
+                $row.find('[name=right_gubun_day]').val(today.getDate());
+            }
+
+            if (data) {
+                $row.find('[name=left_stop_time]').val(data.left_stop_time || '');
+                $row.find('[name=left_man_hour]').val(data.left_man_hour || '');
+                $row.find('[name=left_no_work_content]').val(data.left_no_work_content || '');
+                $row.find('[name=right_stop_time]').val(data.right_stop_time || '');
+                $row.find('[name=right_man_hour]').val(data.right_man_hour || '');
+                $row.find('[name=right_no_work_content]').val(data.right_no_work_content || '');
+            }
+            $tbody.append($row);
+        }
+
+        function escapeForPrint(val) {
+            return (val || '').replace(/\n/g, '<br>').trim();
+        }
+
+        function removeInspRow(el) {
+            const $tbody = $(el).closest('tbody');
+            if ($tbody.find('tr:not(.insp-row-template)').length <= 1) {
+                $(el).closest('tr').find('input, textarea').val('');
+            } else {
+                $(el).closest('tr').remove();
+            }
+            calcTotals($(el).closest('.insp-popup-wrap'));
+        }
+
+        function removeNoWorkRow(el) {
+            const $tbody = $(el).closest('tbody');
+            if ($tbody.find('tr:not(.nowork-row-template)').length <= 1) {
+                $(el).closest('tr').find('input, textarea').val('');
+            } else {
+                $(el).closest('tr').remove();
+            }
+        }
+
+
+        let page = null;
+        $(document).ready(function () {
+            page = new InspectionReportPage();
+            $('#srchStartDt').val(CommonUtil.getYYYYMMDD(-30));
+            $('#srchEndDt').val(CommonUtil.getYYYYMMDD());
+            page.search();
+        });
+
+    </script>
+</th:block>
+<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+</html>
