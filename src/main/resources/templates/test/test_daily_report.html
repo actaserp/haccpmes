@@ -75,6 +75,13 @@
       <div class="container-fluid">
         <div id="theGrid" style=""></div>
       </div>
+      <div id="gridSummary" style="margin-top: 10px; padding: 0 4px; font-size: 13px; color: #333;">
+        전체 검사수 : <span id="summaryTotalQty" style="font-weight: bold;">-</span>
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        전체 불량수 : <span id="summaryDefectQty" style="font-weight: bold;">-</span>
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        전체 PPM : <span id="summaryPpm" style="font-weight: bold;">-</span>
+      </div>
     </section>
   </div>
 
@@ -236,7 +243,7 @@
         this.grid.columnFooters.rows.push(new wijmo.grid.Row()); // 불량수 row
         this.grid.columnFooters.rows.push(new wijmo.grid.Row()); // ppm row
 
-// ✅ 2. footer 내용 설정 (데이터 로딩 이후 처리)
+        // ✅ 2. footer 내용 설정 (데이터 로딩 이후 처리)
         this.grid.loadedRows.addHandler(() => {
           const footerPanel = this.grid.columnFooters;
 
@@ -283,6 +290,37 @@
           rowTotalQty.dataItem = totalQtyData;
           rowDefectQty.dataItem = defectQtyData;
           rowPpm.dataItem = ppmData;
+
+          // 기존 footer 로직 아래에 추가
+          let grandTotalInspection = 0;
+          let grandTotalDefect = 0;
+
+          // ✅ 검사수는 날짜별로 1번만 - 불량행 루프 밖에서 처리
+          dayColumns.forEach(col => {
+            const field = col.binding; // day_1
+            const totalKey = `total_${field}`; // total_day_1
+
+            // 어떤 행이든 첫 번째로 값 있는 행 기준으로 가져옴
+            const anyItem = this.viewData.items.find(item => item[totalKey] > 0);
+            if (anyItem) {
+              grandTotalInspection += anyItem[totalKey];
+            }
+          });
+
+          // ✅ 불량수는 모든 행 합산
+          this.viewData.items.forEach(item => {
+            dayColumns.forEach(col => {
+              grandTotalDefect += item[col.binding] || 0;
+            });
+          });
+
+          const grandPpm = grandTotalInspection > 0
+                  ? Math.round((grandTotalDefect / grandTotalInspection) * 1_000_000)
+                  : 0;
+
+          $('#summaryTotalQty').text(grandTotalInspection > 0 ? grandTotalInspection.toLocaleString() : '-');
+          $('#summaryDefectQty').text(grandTotalDefect > 0 ? grandTotalDefect.toLocaleString() : '-');
+          $('#summaryPpm').text(grandPpm > 0 ? grandPpm.toLocaleString() : '-');
         });
 
         this.$btnAddNew.off('click').on('click', function (e) {
