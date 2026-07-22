@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.security.core.Authentication;
 import org.springframework.util.LinkedCaseInsensitiveMap;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,23 +28,23 @@ import mes.domain.services.SqlRunner;
 @RestController
 @RequestMapping("/api/production/equipment_run_chart")
 public class EquipmentRunChartController {
-	
+
 	@Autowired
 	SqlRunner sqlRunner;
-	
+
 	@Autowired
 	EquipmentRunChartService equipmentRunChartService;
-	
+
 	@Autowired
 	EquRunRepository equRunRepository;
 
 	// 차트 searchMainData
 	@GetMapping("/read")
 	public AjaxResult getEquipmentRunChart(
-			@RequestParam(value="date_from", required=false) String date_from, 
-    		@RequestParam(value="date_to", required=false) String date_to,
-    		@RequestParam(value="id", required=false) Integer id,
-    		@RequestParam(value="runType", required=false) String runType,
+			@RequestParam(value="date_from", required=false) String date_from,
+			@RequestParam(value="date_to", required=false) String date_to,
+			@RequestParam(value="id", required=false) Integer id,
+			@RequestParam(value="runType", required=false) String runType,
 			@RequestParam String spjangcd) {
 
 		List<Map<String, Object>> items = this.equipmentRunChartService.getEquipmentRunChart(date_from, date_to, id, runType, spjangcd);
@@ -56,6 +57,12 @@ public class EquipmentRunChartController {
 		for(Map.Entry<String, List<Map<String, Object>>> entry : GroupByNameItems.entrySet()){
 
 			List<Map<String, Object>> groupItems = entry.getValue();
+
+			// 비가동(GapTime) 계산은 '앞 가동의 종료 → 다음 가동의 시작' 순서에 의존하므로
+			// StartDate 오름차순 정렬 필수. 정렬이 없으면 종료<시작이 되어 음수(-)가 나옴.
+			groupItems.sort(Comparator.comparing(
+					m -> (Timestamp) m.get("StartDate"),
+					Comparator.nullsLast(Comparator.naturalOrder())));
 
 			for (int i = 0; i < groupItems.size(); i++) {
 				Map<String, Object> uptime = groupItems.get(i);
@@ -111,23 +118,91 @@ public class EquipmentRunChartController {
 		}
 
 		AjaxResult result2 = new AjaxResult();
-        result2.data = result;
+		result2.data = result;
 		return result2;
 	}
-	
+
 	/*// 차트 fillData
 	@GetMapping("/readData")
 	public AjaxResult getEquipmentRunChart(
     		@RequestParam(value="id", required=false) Integer id,
     		@RequestParam(value="runType", required=false) String runType,
 			HttpServletRequest request) {
-		
-		List<Map<String, Object>> items = this.equipmentRunChartService.getEquipmentRunChart(null, null, id, runType);      
+
+		List<Map<String, Object>> items = this.equipmentRunChartService.getEquipmentRunChart(null, null, id, runType);
         AjaxResult result = new AjaxResult();
-        result.data = items;        
+        result.data = items;
 		return result;
 	}*/
-	
+
+	// 선택 작지의 공정별 설비 수집 (equ_collect, work_order_no 기준)
+	// 실제 PLC 연동 시와 동일 구조: 작지 1건 → 그 공정 통과 설비별 수집.
+	// job_res는 읽지 않음(작지번호만 파라미터로 받음).
+	@GetMapping("/collect_by_wo")
+	public AjaxResult getCollectByWo(
+			@RequestParam(value="work_order_no", required=false) String work_order_no,
+			@RequestParam String spjangcd) {
+
+		MapSqlParameterSource p = new MapSqlParameterSource();
+		p.addValue("work_order_no", work_order_no);
+		p.addValue("spjangcd", spjangcd);
+
+		String sql =
+				"SELECT c.equipment_code, e.\"Name\" AS equipment_name, c.process_seq, " +
+						"       c.input_qty, c.prod_qty, c.defect_qty, c.place_count, " +
+						"       c.part_loss_rate, c.temp_c, c.n2_ppm, c.run_min, c.stop_min " +
+						"FROM equ_collect c " +
+						"JOIN equ e ON e.id = c.equipment_id " +
+						"WHERE c.work_order_no = :work_order_no AND c.spjangcd = :spjangcd " +
+						"ORDER BY c.process_seq, c.equipment_code";
+
+		List<Map<String, Object>> data = this.sqlRunner.getRows(sql, p);
+		AjaxResult result = new AjaxResult();
+		result.data = data;
+		return result;
+	}
+
+	// 설비 로우데이터: 생산일(수집일) 목록 - 조회 드롭다운용
+	@GetMapping("/raw_dates")
+	public AjaxResult getRawDates(
+			@RequestParam(value="equipment_code", required=false) String equipment_code) {
+		MapSqlParameterSource p = new MapSqlParameterSource();
+		p.addValue("equipment_code", equipment_code);
+		String sql =
+				"SELECT DISTINCT to_char(collect_dt, 'yyyy-mm-dd') AS collect_date " +
+						"FROM equ_raw " +
+						"WHERE (:equipment_code IS NULL OR equipment_code = :equipment_code) " +
+						"ORDER BY 1 DESC";
+		AjaxResult r = new AjaxResult();
+		r.data = this.sqlRunner.getRows(sql, p);
+		return r;
+	}
+
+	// 설비 로우데이터: 특정 설비 + 기간(date_from~date_to)의 1분주기 원시 로그
+	@GetMapping("/raw")
+	public AjaxResult getRaw(
+			@RequestParam(value="equipment_code", required=false) String equipment_code,
+			@RequestParam(value="date_from", required=false) String date_from,
+			@RequestParam(value="date_to", required=false) String date_to) {
+		MapSqlParameterSource p = new MapSqlParameterSource();
+		p.addValue("equipment_code", equipment_code);
+		p.addValue("date_from", date_from);
+		p.addValue("date_to", date_to);
+		String sql =
+				"SELECT equipment_code, to_char(collect_dt,'yyyy-mm-dd') AS collect_date, " +
+						"       to_char(collect_dt,'HH24:MI') AS collect_time, collect_dt, " +
+						"       eq_mode, eq_status, job_name, pcb_in, pcb_out, temp_c, n2_ppm, " +
+						"       place_count, defect_qty, part_loss_rate, cv_speed " +
+						"FROM equ_raw " +
+						"WHERE equipment_code = :equipment_code " +
+						"  AND collect_dt >= CAST(:date_from AS date) " +
+						"  AND collect_dt <  CAST(:date_to AS date) + interval '1 day' " +
+						"ORDER BY collect_dt";
+		AjaxResult r = new AjaxResult();
+		r.data = this.sqlRunner.getRows(sql, p);
+		return r;
+	}
+
 	// saveData
 	@PostMapping("/addData")
 	public AjaxResult addDataEquipmentRunChart (
@@ -143,14 +218,14 @@ public class EquipmentRunChartController {
 			@RequestParam(value="StopCause_id", required=false) Integer StopCause_id,
 			HttpServletRequest request,
 			Authentication auth) {
-		
+
 		AjaxResult result = new AjaxResult();
 
 		User user = (User)auth.getPrincipal();
-		
+
 		Timestamp startDate = Timestamp.valueOf(start_date + ' ' + StartTime + ":59");
 		Timestamp endDate = Timestamp.valueOf(end_date + ' ' + EndTime + ":59");
-		
+
 		EquRun er = null;
 
 		List<Map<String, Object>> overlappinged = equipmentRunChartService.OverlappingTimeQuery(startDate, endDate, Equipment_id, spjangcd);//현재 겹치는 시간은 안됨. 설비가 겹치는 시간대로 가동되는건 말이 안되기 때문
@@ -176,7 +251,7 @@ public class EquipmentRunChartController {
 		} else {
 			er = this.equRunRepository.getEquRunById(id);
 		}
-		
+
 		er.setEquipmentId(Equipment_id);
 		er.setStartDate(startDate);
 		er.setEndDate(endDate);
@@ -187,18 +262,18 @@ public class EquipmentRunChartController {
 		er.setSpjangcd(spjangcd);
 
 		this.equRunRepository.save(er);
-		
+
 		result.success = true;
 		result.message = "저장하였습니다.";
 		result.data = er.getId();
 	    return result;*/
 	}
-	
+
 	// delDataBind
 	@PostMapping("/delData")
 	public AjaxResult deleteEquipmentRunChart(
 			@RequestParam("id") Integer id) {
-		
+
 		this.equRunRepository.deleteById(id);
 		AjaxResult result = new AjaxResult();
 		return result;

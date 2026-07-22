@@ -16,7 +16,7 @@ import mes.domain.services.SqlRunner;
 
 @Service
 public class EquipmentRunChartService {
-	
+
 	@Autowired
 	SqlRunner sqlRunner;
 
@@ -42,6 +42,7 @@ public class EquipmentRunChartService {
 			select
 				er."id" as id,
 				er."RunState",
+				er."Type" as "Type",
 				er."StartDate" as "StartDate",
 				er."EndDate" as "EndDate",
 				to_char(er."StartDate", 'yyyy-mm-dd') as start_date,
@@ -105,13 +106,13 @@ public class EquipmentRunChartService {
 	            --and er."RunState" = :runType
 	            """;*/
 
-        
+
         /*if (id != null) {
         	sql += " and er.id = :id ";
 		}else {
-	        dicParam.addValue("date_from", CommonUtil.tryTimestamp(date_from));   
+	        dicParam.addValue("date_from", CommonUtil.tryTimestamp(date_from));
 	        dicParam.addValue("date_to", Timestamp.valueOf(date_to + " 23:59:59"));
-			
+
 			sql += """
 	        		AND (
 	        			(er."StartDate" <= :date_to) AND
@@ -119,15 +120,15 @@ public class EquipmentRunChartService {
 	        		)
      """;
 		}
-		
+
 		sql += " order by e.\"Name\", er.\"StartDate\", er.\"EndDate\"";
-  			    
+
         List<Map<String, Object>> items = this.sqlRunner.getRows(sql, dicParam);*/
 
 		List<Map<String, Object>> items = this.sqlRunner.getRows(sql, dicParam);
 
 
-        return items;
+		return items;
 	}
 
 	public List<Map<String, Object>> OverlappingTimeQuery(Timestamp startDate, Timestamp endDate, Integer equipmentId, String spjangcd) {

@@ -464,10 +464,10 @@
                                         <tr>
                                             <th><label for="order_qty">지시량</label></th>
                                             <td><input type="number" id="order_qty" name="order_qty"
-                                                                   class="background-order" readonly/></td>
+                                                       class="background-order" readonly/></td>
                                             <th><label for="worker">작업자</label></th>
                                             <td><select id="worker" name="worker"></select></td>
-<!--                                            <td><input type="text" id="worker" name="worker" disabled/></td>-->
+                                            <!--                                            <td><input type="text" id="worker" name="worker" disabled/></td>-->
                                         </tr>
                                         <tr>
                                             <th><label for="good_qty">양품량</label></th>
@@ -521,6 +521,14 @@
                             </div>
                             <div class="container-fluid">
                                 <div id="chasu-grid"></div>
+                            </div>
+                            <div class="grid_box" style="margin-top:12px;">
+                                <div class="title_box">
+                                    공정별 설비 집계
+                                </div>
+                                <div class="container-fluid">
+                                    <div id="lot-collect-grid" style="height: 160px;"></div>
+                                </div>
                             </div>
                         </div>
                     </section>
@@ -1122,6 +1130,37 @@
                 });
 
 
+                // 공정별 설비 집계(참고) 그리드 - 읽기전용, 실적과 별개
+                this.lotCollectGrid = new wijmo.grid.FlexGrid('#lot-collect-grid', {
+                    autoGenerateColumns: false,
+                    isReadOnly: true,
+                    selectionMode: wijmo.grid.SelectionMode.None,
+                    headersVisibility: wijmo.grid.HeadersVisibility.Column,
+                    columns: [
+                        {binding: 'equipment_name', header: '설비', width: 150, align: 'left'},
+                        {binding: 'input_qty', header: '투입(재공)', width: 100, align: 'right', format: 'n0'},
+                        {binding: 'prod_qty', header: '생산(통과)', width: 100, align: 'right', format: 'n0'},
+                        {binding: 'defect_qty', header: '불량수량', width: 90, align: 'right', format: 'n0'},
+                        {binding: 'place_count', header: '장착점수', width: 100, align: 'right', format: 'n0'},
+                        {binding: 'part_loss_rate', header: '부품Loss율(%)', width: 110, align: 'right', format: 'n2'},
+                        {binding: 'temp_c', header: '온도(℃)', width: 90, align: 'right', format: 'n1'},
+                        {binding: 'n2_ppm', header: 'PPM', width: 80, align: 'right', format: 'n0'},
+                        {binding: 'run_min', header: '가동(분)', width: 90, align: 'right', format: 'n0'},
+                        {binding: 'stop_min', header: '정지(분)', width: 90, align: 'right', format: 'n0'},
+                    ],
+                    itemsSource: new wijmo.collections.CollectionView([]),
+                    formatItem: (s, e) => {
+                        if (e.panel.cellType !== wijmo.grid.CellType.Cell) return;
+                        let it = s.rows[e.row].dataItem;
+                        if (!it) return;
+                        let b = s.columns[e.col].binding;
+                        let numCols = ['input_qty','prod_qty','defect_qty','place_count','part_loss_rate','temp_c','n2_ppm','run_min','stop_min'];
+                        if (numCols.indexOf(b) >= 0 && (it[b] === null || it[b] === undefined || it[b] === '')) {
+                            e.cell.textContent = '-';
+                        }
+                    }
+                });
+
                 this.inputLotGrid = new wijmo.grid.FlexGrid('#input-lot-grid', {
                     autoGenerateColumns: false,
                     selectionMode: wijmo.grid.SelectionMode.Row,
@@ -1502,8 +1541,24 @@
                     $('#ordqty').text(result.order_qty.toLocaleString());
                     $('#chasuLotSize').val(result.lot_size);
 
+                    // 공정별 설비 집계(참고) - 작지번호 기준
+                    _this.loadLotCollect(result.order_num);
+
                     this.setButtonState();
                 }
+            }
+
+            // 공정별 설비 집계(참고) 로드 - 실적과 별개, 읽기전용
+            loadLotCollect(wono) {
+                if (!this.lotCollectGrid) return;
+                let rows = [];
+                if (wono) {
+                    let res = AjaxUtil.getSyncData('/api/production/equipment_run_chart/collect_by_wo', {
+                        'work_order_no': wono,
+                    });
+                    rows = (res && res.data) ? res.data : [];
+                }
+                this.lotCollectGrid.itemsSource.sourceCollection = rows;
             }
 
             // 생산정보 저장

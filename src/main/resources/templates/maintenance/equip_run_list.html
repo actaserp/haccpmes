@@ -167,11 +167,11 @@
                         </div>
                     </div>
 
-                    <!-- 비가동 이력 -->
+                    <!-- 가동 / 비가동 이력 -->
                     <div class="detail-info-card">
-                        <div class="card-header">비가동 이력</div>
+                        <div class="card-header">가동 / 비가동 이력</div>
                         <div style="padding:8px;">
-                            <div id="historyNoData" style="display:none;text-align:center;color:#aaa;padding:30px 0;font-size:13px;">해당 기간 비가동 이력 없음 (계속 가동 중)</div>
+                            <div id="historyNoData" style="display:none;text-align:center;color:#aaa;padding:30px 0;font-size:13px;">해당 기간 이력 없음</div>
                             <div id="historyGrid" style="height:230px;"></div>
                         </div>
                     </div>
@@ -291,9 +291,9 @@
                     isReadOnly: true,
                     columns: [
                         { binding: 'id', header: 'ID', visible: false },
-                        { binding: 'currentRunState', header: '현재상태', width: 70, align: 'center' },
+                        { binding: 'currentRunState', header: '현재상태', width: 100, align: 'center' },
                         { binding: 'Name', header: '설비명', width: '*', align: 'left' },
-                        { binding: 'Manager', header: '담당자', width: 70, align: 'center' },
+                        { binding: 'Manager', header: '담당자', width: 66, align: 'center' },
                     ],
                     itemsSource: this.equipViewData,
                     formatItem: function (s, e) {
@@ -305,11 +305,8 @@
                             e.cell.innerHTML = '';
                             let dot = document.createElement('span');
                             if (item.currentRunState === '가동') {
-                                dot.textContent = '● 가동';
+                                dot.textContent = '● 가동 (수동)';
                                 dot.style.cssText = 'color:#27ae60;font-weight:bold;font-size:12px;';
-                            } else if (item.currentRunState === '비가동') {
-                                dot.textContent = '● 비가동';
-                                dot.style.cssText = 'color:#e74c3c;font-weight:bold;font-size:12px;';
                             } else {
                                 dot.textContent = '● 비가동';
                                 dot.style.cssText = 'color:#e74c3c;font-weight:bold;font-size:12px;';
@@ -337,15 +334,34 @@
                     showMarquee: true,
                     isReadOnly: true,
                     columns: [
-                        { binding: 'start_date', header: '시작일', width: 95, align: 'center' },
-                        { binding: 'StartTime', header: '시작시간', width: 75, align: 'center' },
-                        { binding: 'end_date', header: '종료일', width: 95, align: 'center' },
-                        { binding: 'EndTime', header: '종료시간', width: 75, align: 'center' },
-                        { binding: 'GapTime', header: '비가동(분)', width: 85, align: 'center' },
-                        { binding: 'StopCauseName', header: '비가동유형', width: '*', align: 'left' },
+                        { binding: '_stateLabel', header: '상태', width: 72, align: 'center' },
+                        { binding: 'start_date', header: '시작일', width: 92, align: 'center' },
+                        { binding: 'StartTime', header: '시작시간', width: 72, align: 'center' },
+                        { binding: 'end_date', header: '종료일', width: 92, align: 'center' },
+                        { binding: 'EndTime', header: '종료시간', width: 72, align: 'center' },
+                        { binding: '_durMin', header: '시간(분)', width: 78, align: 'center' },
+                        { binding: 'StopCauseName', header: '사유', width: '*', align: 'left' },
                         { binding: 'Description', header: '비고', width: '*', align: 'left' },
                     ],
                     itemsSource: this.historyViewData,
+                    formatItem: function (s, e) {
+                        if (e.panel.cellType !== wijmo.grid.CellType.Cell) return;
+                        let item = s.rows[e.row].dataItem;
+                        if (!item) return;
+                        let col = s.columns[e.col];
+                        if (col.binding === '_stateLabel') {
+                            e.cell.innerHTML = '';
+                            let sp = document.createElement('span');
+                            if (item._stateLabel === '가동') {
+                                sp.textContent = '● 가동';
+                                sp.style.cssText = 'color:#27ae60;font-weight:bold;font-size:11px;';
+                            } else {
+                                sp.textContent = '● 비가동';
+                                sp.style.cssText = 'color:#e74c3c;font-weight:bold;font-size:11px;';
+                            }
+                            e.cell.appendChild(sp);
+                        }
+                    }
                 });
                 new FlexGridContextMenu(this.historyGrid);
             }
@@ -396,7 +412,7 @@
                     date_to: today,
                 });
 
-                // equipment_id → 가동여부 맵
+                // equipment_id → 가동여부 맵 (열린 equ_run = 가동)
                 let runMap = {};
                 if (runResult && runResult.data) {
                     runResult.data.forEach(function (row) {
@@ -497,9 +513,9 @@
                 let $badge = $('#ef_currentRunStateBadge');
                 let state = equipItem ? equipItem.currentRunState : '비가동';
                 if (state === '가동') {
-                    $badge.text('● 가동 중').css('color', '#27ae60');
+                    $badge.html('<span style="color:#27ae60;">● 가동 중 (수동 작업지시)</span>');
                 } else {
-                    $badge.text('● 비가동').css('color', '#e74c3c');
+                    $badge.html('<span style="color:#e74c3c;">● 비가동</span>');
                 }
             }
 
@@ -514,12 +530,16 @@
                 });
 
                 let allData = (result && result.data) ? result.data : [];
-                let stopData = allData.filter(function (row) { return row.RunState === 'stop'; });
 
-                this.historyViewData.sourceCollection = stopData;
+                // 가동/비가동 통합 표시용 필드 생성
+                allData.forEach(function (row) {
+                    row._stateLabel = (row.RunState === 'stop') ? '비가동' : '가동';
+                    row._durMin = (row.RunState === 'stop') ? row.GapTime : row.Runtime;
+                });
 
-                // 가동 기록은 있는데 비가동이 하나도 없으면 → 해당 기간 내내 가동 중
-                if (allData.length > 0 && stopData.length === 0) {
+                this.historyViewData.sourceCollection = allData;
+
+                if (allData.length === 0) {
                     $('#historyGrid').hide();
                     $('#historyNoData').show();
                 } else {
@@ -589,8 +609,12 @@
             $('#date_from').val(today);
             $('#date_to').val(today);
 
-            $('#btnSearch').click(function () { page.searchEquipList(); });
-            $('#btnSaveEquip').click(function () { page.saveEquipInfo(); });
+            $('#btnSearch').click(function () {
+                page.searchEquipList();
+            });
+            $('#btnSaveEquip').click(function () {
+                page.saveEquipInfo();
+            });
 
             page.searchEquipList();
             page.startAutoRefresh(30); // 30초마다 가동상태 자동 갱신

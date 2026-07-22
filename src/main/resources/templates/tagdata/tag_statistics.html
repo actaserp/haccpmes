@@ -1,37 +1,21 @@
 <html layout:decorate="~{layout_page}">
 <head>
     <style>
-        .chart_border {
-            border: 1px solid blue;
-        }
-
-        .select2 {
-            margin-top: 13px;
-            height: 35px;
-        }
-
-        .select2-selection {
-            border: 1px solid rgb(208, 216, 221);
-        }
+        .raw-summary { font-size:12px; color:#666; margin:2px 0 8px 2px; }
+        .raw-summary b { color:#1e7a45; }
     </style>
 </head>
-<!--
-       데이터는 tag_dat에서 조회하는데 데이터도 없고 insert 하는 프로세스 또한 없음
-       뭥가 이상s
--->
 <th:block layout:fragment="content">
     <div class="layout-contents">
         <div class="page-title-wrap">
             <div class="left">
-                <h2>데이터 통계</h2>
-                <a title="북마크" class="bookmark toggle">
-                    내 메뉴
-                </a>
+                <h2>설비 데이터 통계</h2>
+                <a title="북마크" class="bookmark toggle">내 메뉴</a>
             </div>
             <ul class="page-navi">
                 <li><img src="/images/icon/ico-nav-home.svg" alt="홈아이콘"></li>
                 <li>공정 데이터</li>
-                <li>데이터 통계</li>
+                <li>설비 데이터 통계</li>
             </ul>
         </div>
         <section class="section">
@@ -39,144 +23,194 @@
                 <div class="section-top">
                     <div class="search-wrap">
                         <dl>
-                            <dt>
-                                <label>
-                                    시간<span class="eq"></span>
-                                </label>
-                            </dt>
+                            <dt><label>설비<span class="eq"></span></label></dt>
                             <dd>
                                 <div class="srch-box">
-                                    <input type="date" id="srchStartDt" style="width: 100px" name="srchStartDt"/>
-                                    <span class="slow_sign">~</span>
-                                    <input type="date" id="srchEndDt" style="width: 100px" name="srchEndDt"/>
+                                    <select class="form-control2" id="cboEquip" name="cboEquip"></select>
                                 </div>
                             </dd>
                         </dl>
-
                         <dl>
-                            <dt>
-                                <label>
-                                    태그 그룹<span class="eq"></span>
-                                </label>
-                            </dt>
+                            <dt><label>기간<span class="eq"></span></label></dt>
                             <dd>
-                                <select class="form-control2" id="tagGroup" name="tagGroup">
-                                </select>
+                                <div class="srch-box">
+                                    <input type="date" id="srchStartDt" style="width:120px" name="srchStartDt"/>
+                                    <span class="slow_sign">~</span>
+                                    <input type="date" id="srchEndDt" style="width:120px" name="srchEndDt"/>
+                                </div>
                             </dd>
                         </dl>
-
-                        <dl>
-                            <dt>
-                                <label>
-                                    태그
-                                </label>
-                            </dt>
-                            <dd>
-                                <select class="form-control2" id="tag" name="tag"></select>
-                            </dd>
-                        </dl>
-
                         <dl>
                             <dt>&nbsp;</dt>
                             <dd>
                                 <li>
                                     <a class="btn btn-delete" title="검색" id="btnSearch">
-                                        <!--                                        class 쓰이는 곳 찾고 없으면 클래스명 수정하기-->
-                                        <img src="/images/icon/btn-srch.svg" alt="검색 아이콘">
-                                        검색
+                                        <img src="/images/icon/btn-srch.svg" alt="검색 아이콘">검색
                                     </a>
                                 </li>
                             </dd>
                         </dl>
-
                     </div>
                 </div>
             </form>
+
+            <div class="raw-summary" id="rawSummary"></div>
             <div class="container-fluid">
-                <div id="theGrid"></div>
+                <div id="theGrid" style="height: 44vh;"></div>
             </div>
         </section>
-
     </div>
 </th:block>
 
 <th:block layout:fragment="scripts">
     <th:block th:replace="/common/columns_setting :: columns_setting"></th:block>
     <script type="text/javascript">
-        class tagDataStatistics {
+        class equipRawViewer {
             constructor() {
                 this.grid = null;
-                this.url = '/api/tagdata/tag_statistics';
+                this.chart = null;
+                this.baseUrl = '/api/production/equipment_run_chart';
                 this.viewData = new wijmo.collections.CollectionView();
+                // 조회 대상 = B라인 PLC 설비 5종 (equ_raw에 들어있는 설비)
+                this.equips = [
+                    { code: 'SPI',   name: 'B-3D SPI' },
+                    { code: 'BCM1',  name: 'B-CHIP Mounter' },
+                    { code: 'BCM2',  name: 'B-CHIP Mounter2' },
+                    { code: 'BRF',   name: 'B-ReflOW' },
+                    { code: 'BRFN2', name: 'B-N2 발생기' },
+                ];
+                this.MAX_POINTS = 1500; // 차트 최대 점(넘으면 다운샘플)
                 this.init();
             }
 
             init() {
                 let _this = this;
+
+                let $eq = $('#cboEquip');
+                this.equips.forEach(function (e) {
+                    $eq.append('<option value="' + e.code + '">' + e.name + '</option>');
+                });
+
                 this.grid = new wijmo.grid.FlexGrid('#theGrid', {
                     selectionMode: wijmo.grid.SelectionMode.Row,
                     headersVisibility: wijmo.grid.HeadersVisibility.Column,
                     autoGenerateColumns: false,
-                    showMarquee: true,
                     isReadOnly: true,
                     columns: [
-                        {binding: 'tag_code', header: '태그', width: '*', align: 'left'},
-                        {binding: 'tag_name', header: '태그명', width: '*', align: 'left'},
-                        {binding: 'count_value', header: '데이터수', width: '*', align: 'right'},
-                        {binding: 'avg_value', header: '평균', width: '*', align: 'right'},
-                        {binding: 'min_value', header: '최소', width: '*', align: 'right'},
-                        {binding: 'max_value', header: '최대', width: '*', align: 'right'},
-                        {binding: 'std_value', header: '표준편차', width: '*', align: 'right'},
+                        { binding: 'collect_date', header: '일자', width: 100, align: 'center' },
+                        { binding: 'collect_time', header: '시간', width: 70, align: 'center' },
+                        { binding: 'eq_status', header: '상태', width: 70, align: 'center' },
+                        { binding: 'eq_mode', header: '모드', width: 80, align: 'center' },
+                        { binding: 'job_name', header: 'JOB', width: 110, align: 'left' },
+                        { binding: 'pcb_in', header: '투입누적', width: 90, align: 'right', format: 'n0' },
+                        { binding: 'pcb_out', header: '생산누적', width: 90, align: 'right', format: 'n0' },
+                        { binding: 'temp_c', header: '온도(℃)', width: 85, align: 'right', format: 'n1' },
+                        { binding: 'n2_ppm', header: 'PPM', width: 75, align: 'right', format: 'n0' },
+                        { binding: 'place_count', header: '장착점수', width: 100, align: 'right', format: 'n0' },
+                        { binding: 'defect_qty', header: '불량', width: 70, align: 'right', format: 'n0' },
+                        { binding: 'part_loss_rate', header: 'Loss율(%)', width: 90, align: 'right', format: 'n2' },
+                        { binding: 'cv_speed', header: 'C/V', width: 70, align: 'right', format: 'n1' },
                     ],
                     itemsSource: this.viewData,
+                    formatItem: function (s, e) {
+                        if (e.panel.cellType !== wijmo.grid.CellType.Cell) return;
+                        let it = s.rows[e.row].dataItem;
+                        if (!it) return;
+                        let b = s.columns[e.col].binding;
+                        if (b === 'eq_status') {
+                            e.cell.style.color = (it.eq_status === 'RUN') ? '#27ae60' : '#e67e22';
+                            e.cell.style.fontWeight = 'bold';
+                            return;
+                        }
+                        let numCols = ['pcb_in', 'pcb_out', 'temp_c', 'n2_ppm', 'place_count', 'defect_qty', 'part_loss_rate', 'cv_speed'];
+                        if (numCols.indexOf(b) >= 0 && (it[b] === null || it[b] === undefined || it[b] === '')) {
+                            e.cell.textContent = '-';
+                        }
+                    }
                 });
-
-                AjaxUtil.fillSelectOptions($('#tag'), 'tag', 'all', false);
-                AjaxUtil.fillSelectOptions($('#tagGroup'), 'tag_group', 'all', false);
             }
 
             searchMainData() {
                 let _this = this;
+                let code = $('#cboEquip').val();
+                let from = $('#srchStartDt').val();
+                let to = $('#srchEndDt').val();
+                if (!code || !from || !to) {
+                    _this.viewData.sourceCollection = [];
+                    $('#rawSummary').text('');
+                    _this.renderChart([]);
+                    return;
+                }
+                if (from > to) { Alert.alert('', '시작일이 종료일보다 늦습니다.'); return; }
 
-                let srchStartDt = $('#srchStartDt').val();
-                let srchEndDt = $('#srchEndDt').val();
-                let tag_code = $('#tag').val();
-                let tag_group_pk = $('#tagGroup').val();
-
-                let url = this.url + '/read';
-                let data = {
-                    start_date: srchStartDt,
-                    end_date: srchEndDt,
-                    tag_code: tag_code,
-                    tag_group_pk: tag_group_pk,
-                };
-
-                AjaxUtil.getAsyncData(url, data, function (result) {
-                    //success
-                    _this.viewData.sourceCollection = result.data;
+                let result = AjaxUtil.getSyncData(this.baseUrl + '/raw', {
+                    'equipment_code': code,
+                    'date_from': from,
+                    'date_to': to,
                 });
+                let rows = (result && result.data) ? result.data : [];
+                _this.viewData.sourceCollection = rows;
+
+                // 요약
+                let lastOut = null, maxTemp = null, runCnt = 0, days = {};
+                rows.forEach(function (r) {
+                    if (r.pcb_out != null) lastOut = r.pcb_out;
+                    if (r.temp_c != null) maxTemp = (maxTemp === null) ? r.temp_c : Math.max(maxTemp, r.temp_c);
+                    if (r.eq_status === 'RUN') runCnt++;
+                    days[r.collect_date] = 1;
+                });
+                let name = (_this.equips.find(function (e) { return e.code === code; }) || {}).name || code;
+                let summary = name + ' · ' + from + ' ~ ' + to + ' · 생산일 ' + Object.keys(days).length + '일 · 수집 ' + rows.length.toLocaleString() + '건 · 가동 ' + runCnt.toLocaleString() + '분';
+                if (lastOut !== null) summary += ' · 마지막 생산누적 ' + lastOut.toLocaleString() + ' EA';
+                if (maxTemp !== null) summary += ' · 최고온도 ' + maxTemp + '℃';
+                $('#rawSummary').html(summary);
+
+                _this.renderChart(rows);
             }
 
-        }
+            // 추이 차트: 생산누적 + 온도. 시간축(datetime). 점 많으면 다운샘플.
+            renderChart(rows) {
+                if (typeof ApexCharts === 'undefined') return; // 라이브러리 없으면 표만
+                let step = Math.ceil(rows.length / this.MAX_POINTS) || 1;
+                let sampled = (step > 1) ? rows.filter(function (r, i) { return i % step === 0; }) : rows;
 
+                let outData = sampled.map(function (r) { return { x: new Date(r.collect_dt).getTime(), y: r.pcb_out }; });
+                let hasTemp = sampled.some(function (r) { return r.temp_c != null; });
+                let series = [{ name: '생산누적', type: 'line', data: outData }];
+                let yaxis = [{ title: { text: '생산누적(EA)' } }];
+                if (hasTemp) {
+                    series.push({ name: '온도(℃)', type: 'line', data: sampled.map(function (r) { return { x: new Date(r.collect_dt).getTime(), y: r.temp_c }; }) });
+                    yaxis.push({ opposite: true, title: { text: '온도(℃)' } });
+                }
+                let options = {
+                    series: series,
+                    chart: { height: 230, type: 'line', animations: { enabled: false }, toolbar: { show: true }, zoom: { enabled: true } },
+                    stroke: { width: 2, curve: 'straight' },
+                    dataLabels: { enabled: false },
+                    xaxis: { type: 'datetime', labels: { datetimeUTC: false } },
+                    yaxis: yaxis,
+                    legend: { position: 'top', horizontalAlign: 'left' },
+                    tooltip: { shared: true, x: { format: 'MM-dd HH:mm' } },
+                    title: { text: (step > 1 ? ('데이터가 많아 차트는 ' + Math.round(sampled.length).toLocaleString() + '점으로 다운샘플 · 표는 전체') : ''), style: { fontSize: '12px', color: '#e67e22' } }
+                };
+                if (this.chart) { this.chart.destroy(); }
+                this.chart = new ApexCharts(document.querySelector('#rawChart'), options);
+                this.chart.render();
+            }
+        }
 
         let page = null;
 
         $(document.body).ready(function (e) {
-
-            page = new tagDataStatistics();
-
-
-            $('#srchStartDt').val(CommonUtil.getYYYYMMDD(-7));
-            $('#srchEndDt').val(CommonUtil.getYYYYMMDD());
-            // 검색
-            $('#btnSearch').click(function (e) {
-                page.searchMainData();
-            });
-
+            page = new equipRawViewer();
+            // 기본 기간: 이번 달 1일 ~ 오늘
+            let today = CommonUtil.getYYYYMMDD();
+            let monthStart = today.substring(0, 7) + '-01';
+            $('#srchStartDt').val(monthStart);
+            $('#srchEndDt').val(today);
+            $('#btnSearch').click(function (e) { page.searchMainData(); });
             page.searchMainData();
         });
-
     </script>
 </th:block>
 </html>

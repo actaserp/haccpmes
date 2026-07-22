@@ -73,8 +73,8 @@
             </ul>
         </div>
 
-            <section class="section">
-                <form id="searchForm" autocomplete="off">
+        <section class="section">
+            <form id="searchForm" autocomplete="off">
                 <div class="section-top">
                     <div class="search-wrap">
 
@@ -135,17 +135,17 @@
                         </ul>
                     </div>
                 </div>
-                </form>
+            </form>
 
-                <div class="grid_box" id="divList">
-                    <div id="theGrid" style="height: 330px;"></div>
-                </div>
+            <div class="grid_box" id="divList">
+                <div id="theGrid" style="height: 330px;"></div>
+            </div>
 
-                <!--        <div class="grid_box">-->
+            <!--        <div class="grid_box">-->
 
-                <!--            <div class="h-640" data-ax5grid="sujuGrid" ></div>-->
-                <!--        </div>-->
-            </section>
+            <!--            <div class="h-640" data-ax5grid="sujuGrid" ></div>-->
+            <!--        </div>-->
+        </section>
 
 
         <section class="">
@@ -591,8 +591,10 @@
                 let result = AjaxUtil.getSyncData(_this.baseUrl + '/read', param);
 
                 if (result.data) {
+                    // 표(그리드)는 전체 로우 그대로 표시
                     _this.viewData.sourceCollection = result.data;
                     _this.grid.invalidate();
+
                     // xaxis 변경
                     this.chart.updateOptions({
                         xaxis: {
@@ -602,38 +604,38 @@
                     });
 
                     if (result.data.length != 0) {
-                        // 차트 데이터 생성    default data 는 차트 형식 잡아주는데 사용
-                        let series = [
-                            {
-                                data: []
-                            }
-                        ];
-
-                        console.log('data', result.data);
-
-                        result.data.forEach(function (e, idx) {
-                            var color = '#008FFB';
-
-                            if (e.RunState == 'R' || e.RunState == 'run') {
-                                color = '#008FFB';
-                            } else if (e.RunState == 'X' || e.RunState == 'stop') {
-                                color = '#8C8C8C';
-                            }
-
-                            series[0].data.push(
-                                {
-                                    x: e.Name,
-                                    y: [
-                                        Date.parse(e.StartDate),
-                                        e.EndDate ? Date.parse(e.EndDate) : Date.now()
-                                    ],
-                                    fillColor: color
-                                }
-                            );
+                        // 차트용 가동 바 생성 (StartDate 있는 가동구간만)
+                        let barsAll = [];
+                        result.data.forEach(function (e) {
+                            let t0 = e.StartDate ? Date.parse(e.StartDate) : NaN;
+                            if (isNaN(t0)) return; // 비가동 파생행 등 StartDate 없는 건 제외
+                            let color = (e.RunState === 'X' || e.RunState === 'stop') ? '#8C8C8C' : '#008FFB';
+                            barsAll.push({
+                                x: e.Name,
+                                y: [t0, e.EndDate ? Date.parse(e.EndDate) : Date.now()],
+                                fillColor: color
+                            });
                         });
 
-                        this.chart.updateSeries(series);
+                        // 성능: 바가 너무 많으면 브라우저가 멈추므로 최근 N건만 렌더(표는 전체 유지)
+                        const MAX_BARS = 400;
+                        let capped = barsAll.length > MAX_BARS;
+                        let bars = capped ? barsAll.slice(-MAX_BARS) : barsAll;
+
+                        // 바가 많으면 dataLabels 끔(라벨 렌더가 가장 무거움)
+                        this.chart.updateOptions({
+                            dataLabels: { enabled: bars.length <= 60 },
+                            title: {
+                                text: capped
+                                    ? ('구간이 넓어 차트는 최근 ' + MAX_BARS + '건만 표시 · 표는 전체 ' + result.data.length + '건')
+                                    : '',
+                                style: { fontSize: '12px', color: '#e67e22' }
+                            }
+                        });
+
+                        this.chart.updateSeries([{ data: bars }]);
                     } else {
+                        this.chart.updateOptions({ title: { text: '' } });
                         var series = [
                             {
                                 data: [
