@@ -8,7 +8,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import mes.app.notification.NotificationService;
 import mes.app.system.service.UserService;
+import mes.domain.entity.Notification;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -35,6 +37,9 @@ public class HomeController {
 
 	@Autowired
 	UserService userService;
+
+	@Autowired
+	NotificationService notificationService;
 
 	@RequestMapping(value= "/", method=RequestMethod.GET)
     public ModelAndView pageIndex(HttpServletRequest request, HttpSession session, HttpServletResponse response) {
@@ -94,6 +99,11 @@ public class HomeController {
 		mv.addObject("mqtt_host", mqtt_host);
 		mv.addObject("mqtt_web_port", mqtt_web_port);
 		mv.addObject("hmi_topic", hmi_topic);
+
+		// 안읽은 알람
+		List<Notification> unreadList = notificationService.getUnread(userid, spjangcd);
+		mv.addObject("unreadAlarmCount", unreadList.size());
+		mv.addObject("unreadAlarmList", unreadList);
 
 		mv.setViewName(isMobile ? "mobile/mobile_main" : "index");
 		

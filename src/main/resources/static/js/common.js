@@ -3,6 +3,19 @@
 
 'use strict';
 
+// common.js (최상단)
+window.CTX = document.querySelector('meta[name="ctx"]')?.content || '/';
+
+// 끝에 붙은 '/' 제거한 버전도 같이 준비
+window.CTX_PATH = window.CTX.replace(/\/$/, '');
+
+window.withCtx = function (url) {
+    if (!url) return url;
+    if (url.startsWith('/')) {
+        return window.CTX_PATH + url;
+    }
+    return url;
+};
 
 var JQuery = {
     extends: function () {
@@ -133,25 +146,25 @@ var Utils = {
             var sheight = screen.height - 300;
             var wsize = imgCommonPreview.width
             var hsize = imgCommonPreview.height;
-            if (wsize < 50) wsize = 50; // 가로 최소 크기 
-            if (hsize < 50) hsize = 50; // 세로 최소 크기 
-            if (wsize > swidth) wsize = swidth; // 가로 최대 크기 
+            if (wsize < 50) wsize = 50; // 가로 최소 크기
+            if (hsize < 50) hsize = 50; // 세로 최소 크기
+            if (wsize > swidth) wsize = swidth; // 가로 최대 크기
             if (hsize > sheight) hsize = sheight; // 세로 최대 크기
-            // 세로가 최대크기를 초과한경우 세로스크롤바 자리 확보 
+            // 세로가 최대크기를 초과한경우 세로스크롤바 자리 확보
             if ((wsize < swidth - scrollsize) && hsize >= sheight) wsize += scrollsize;
-            // 가로가 최대크기를 초과한경우 가로스크롤바 자리 확보 
+            // 가로가 최대크기를 초과한경우 가로스크롤바 자리 확보
             if ((hsize < sheight - scrollsize) && wsize >= swidth) hsize += scrollsize;
-            // 듀얼 모니터에서 팝업 가운데 정렬하기 
+            // 듀얼 모니터에서 팝업 가운데 정렬하기
             var mtWidth = document.body.clientWidth;
-            // 현재 브라우저가 있는 모니터의 화면 폭 사이즈 
+            // 현재 브라우저가 있는 모니터의 화면 폭 사이즈
             var mtHeight = document.body.clientHeight;
-            // 현재 브라우저가 있는 모니터의 화면 높이 사이즈 
+            // 현재 브라우저가 있는 모니터의 화면 높이 사이즈
             var scX = window.screenLeft;
-            // 현재 브라우저의 x 좌표(모니터 두 대를 합한 총 위치 기준) 
+            // 현재 브라우저의 x 좌표(모니터 두 대를 합한 총 위치 기준)
             var scY = window.screenTop;
-            // 현재 브라우저의 y 좌표(모니터 두 대를 합한 총 위치 기준) 
+            // 현재 브라우저의 y 좌표(모니터 두 대를 합한 총 위치 기준)
             var popX = scX + (mtWidth - wsize) / 2 - 50;
-            // 팝업 창을 띄울 x 위치 지정(모니터 두 대를 합한 총 위치 기준) 
+            // 팝업 창을 띄울 x 위치 지정(모니터 두 대를 합한 총 위치 기준)
             var popY = scY + (mtHeight - hsize) / 2 - 50;
             // 팝업 창을 띄울 y 위치 지정(모니터 두 대를 합한 총 위치 기준)
             var imageWin = window.open("", "", "top=" + 10 + ",left=" + popX + ",width=" + wsize + ",height=" + hsize + ",scrollbars=yes,resizable=yes,status=no");
@@ -272,34 +285,34 @@ var CommonUtil = {
         return str;
     },
     formatYYYYMMDD: function (p_date) {
-	    let m = p_date.getMonth() + 1;
-	    let day = p_date.getDate();
-	    if (m < 10) {
-	        m = "0" + m;
-	    }
-	    if (day < 10) {
-	        day = "0" + day;
-	    }
-	    var str = p_date.getFullYear() + '-' + m + '-' + day;
-	    return str;
+        let m = p_date.getMonth() + 1;
+        let day = p_date.getDate();
+        if (m < 10) {
+            m = "0" + m;
+        }
+        if (day < 10) {
+            day = "0" + day;
+        }
+        var str = p_date.getFullYear() + '-' + m + '-' + day;
+        return str;
     },
     formatYYYYMMDDhhmmss: function (p_date) {
-	    let m = this.zeoPadding(p_date.getMonth() + 1, 2);
-	    let day = this.zeoPadding(p_date.getDate(), 2);
-	    let hh = this.zeoPadding(p_date.getHours(), 2);
-	    let mm = this.zeoPadding(p_date.getMinutes(), 2);
-	    let ss = this.zeoPadding(p_date.getSeconds(), 2);
-	    
-	    var str = p_date.getFullYear() + '-' + m + '-' + day + ' ' + hh + ':' + mm + ':' + ss;
-	    return str;
+        let m = this.zeoPadding(p_date.getMonth() + 1, 2);
+        let day = this.zeoPadding(p_date.getDate(), 2);
+        let hh = this.zeoPadding(p_date.getHours(), 2);
+        let mm = this.zeoPadding(p_date.getMinutes(), 2);
+        let ss = this.zeoPadding(p_date.getSeconds(), 2);
+
+        var str = p_date.getFullYear() + '-' + m + '-' + day + ' ' + hh + ':' + mm + ':' + ss;
+        return str;
     },
     zeoPadding: function (number, length){
-		var str = '' + number;
-	    while (str.length < length) {
-	      str = '0' + str;
-	    }
-  		return str;
-	},
+        var str = '' + number;
+        while (str.length < length) {
+            str = '0' + str;
+        }
+        return str;
+    },
     //from to 숫자 입력값 유효성 체크(title 입력 필요)
     checkValidNumberRange: function (from, to) {
         if (Number(from.val()) > Number(to.val())) {
@@ -324,7 +337,7 @@ var CommonUtil = {
         return true;
     },
     CommaNumber: function (value) {
-        // 수치값인 경우 3자리 기준으로 콤마를 넣어서 출력한다. 
+        // 수치값인 경우 3자리 기준으로 콤마를 넣어서 출력한다.
         // 12345678.2345 -> 12,345,678.2345
         if (value == null)
             return null;
@@ -762,7 +775,7 @@ let FormUtil = {
                 $input.attr('name', newName);
 
                 if (nameWithoutIndex === 'VatIncluded') {
-                    // $input.prop('checked', true);
+                    $input.prop('checked', true);
                 }
             });
             $newRow.find('a[title="삭제"]').attr('id', `btnDelItem_${index}`);
@@ -1040,9 +1053,9 @@ let AjaxUtil = {
             }
             //Notify.error(message);
             Alert.alert('Error', message);
-            
+
         }
-        
+
     },
     getSyncData: function (url, p_data, fn_failure) {
         let items = null;
@@ -1054,7 +1067,7 @@ let AjaxUtil = {
             async: false,
             dataType: 'json',
             type: 'GET',
-            url: url,
+            url: withCtx(url),
             data: p_data,
             success: function (res) {
                 items = res;
@@ -1079,7 +1092,7 @@ let AjaxUtil = {
             async: true,
             dataType: 'json',
             type: 'GET',
-            url: url,
+            url: withCtx(url),
             data: param_data,
             success: function (res) {
                 fn_success(res);
@@ -1094,7 +1107,7 @@ let AjaxUtil = {
         });
     },
 
-    // POST저장시에는 성공여부를 확인하여 분기하는 루틴이 많으므로, items만 리턴할 것이 아니라 
+    // POST저장시에는 성공여부를 확인하여 분기하는 루틴이 많으므로, items만 리턴할 것이 아니라
     // 성공여부와 메시지도 리턴한다
     postSyncData: function (url, param_data, fn_failure) {
         let result = null;
@@ -1109,7 +1122,7 @@ let AjaxUtil = {
             async: false,
             dataType: 'json',
             type: 'POST',
-            url: url,
+            url: withCtx(url),
             data: param_data,
             success: function (res) {
                 result = res;
@@ -1142,7 +1155,7 @@ let AjaxUtil = {
             async: true,
             dataType: 'json',
             type: 'POST',
-            url: url,
+            url: withCtx(url),
             data: param_data,
             success: function (res) {
                 fn_success(res);
@@ -1170,7 +1183,7 @@ let AjaxUtil = {
             async: true,
             dataType: 'json',
             type: 'POST',
-            url: url,
+            url: withCtx(url),
             data: JSON.stringify(param_data), // JSON 형식으로 변환
             contentType: 'application/json',  // 반드시 설정
             headers: {
@@ -1203,7 +1216,7 @@ let AjaxUtil = {
             async: true,
             dataType: 'json',
             type: 'POST',
-            url: url,
+            url: withCtx(url),
             data: JSON.stringify(param_data), // JSON 형식으로 변환
             contentType: 'application/json; charset=UTF-8',  // 반드시 설정
             headers: {
@@ -1247,7 +1260,7 @@ let AjaxUtil = {
             async: true,
             dataType: 'json',
             type: 'POST',
-            url: url,
+            url: withCtx(url),
             contentType: 'application/json',
             data: JSON.stringify(data),
             beforeSend: function(xhr) {
@@ -1289,7 +1302,7 @@ let AjaxUtil = {
             async: false,
             dataType: 'json',
             type: 'POST',
-            url: url,
+            url: withCtx(url),
             contentType: 'application/json',
             data: JSON.stringify(data),
             beforeSend: function(xhr) {
@@ -1324,7 +1337,7 @@ let AjaxUtil = {
         $.ajax({
             async: false,
             type: 'POST',
-            url: url,
+            url: withCtx(url),
             data: form_data,
             processData: false,
             contentType: false,
@@ -1357,7 +1370,7 @@ let AjaxUtil = {
         $.ajax({
             async: true,
             type: 'POST',
-            url: url,
+            url: withCtx(url),
             data: form_data,
             processData: false,
             contentType: false,
@@ -1391,7 +1404,7 @@ let AjaxUtil = {
             data.cond3 = cond3;
         }
         let ret = AjaxUtil.getSyncData('/api/common/combo', data);
-        
+
         return ret.data == null ? []: ret.data;
     },
     getSelectDataWithNull: function (combo_type, null_option, condition1, condition2, condition3) {
@@ -1428,7 +1441,7 @@ let AjaxUtil = {
             let option = $('<option>');
             option.val(row['value']).text(row['text']);
             Object.keys(row).forEach(function (key) {
-                
+
                 if (key != 'value' && key != 'text') {
                     option.data(key, row[key]);
                 }
@@ -1573,7 +1586,10 @@ let AjaxUtil = {
         });
 
         downloadmask.open({
-            content: '<h1><img src="/img/loading.svg">로딩중...</h1>'
+            content: `<h1>
+                <img src="${withCtx('/img/loading.svg')}">
+                    로딩중...
+                </h1>`
         });
 
         fetch(url)
@@ -1588,15 +1604,15 @@ let AjaxUtil = {
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
-                //alert('your file has downloaded!'); 
+                //alert('your file has downloaded!');
                 downloadmask.close();
                 //Notify.success('다운로드 성공');
             }).catch(() => {
-                let message = '에러가 발생했습니다.관리자에게 문의 주세요.';
-                //Notify.error(message);
-                Alert.alert('Error', message);
-                downloadmask.close();
-            });
+            let message = '에러가 발생했습니다.관리자에게 문의 주세요.';
+            //Notify.error(message);
+            Alert.alert('Error', message);
+            downloadmask.close();
+        });
 
         //let url = yullin.getUrl({ api: api_url + '?' + param + '=' + val });
         //var link = document.createElement("a");
@@ -2132,7 +2148,7 @@ DataValidation.timeCheck = function (hours, minutes) {
     if (i == 0) {
         return hours + ":" + minutes;
     } else {
-            /*alert*/("Invalid Time Format.");
+        /*alert*/("Invalid Time Format.");
         return "";
     }
 }
@@ -2148,7 +2164,7 @@ DataValidation.validateTime = function (obj) {
     let sMinutes;
 
     if (timeValue == "") {
-            /*alert*/("Invalid Time format.");
+        /*alert*/("Invalid Time format.");
         obj.value = "";
         return false;
     }
@@ -2219,78 +2235,24 @@ var dynamicLinkCssPage = function (src) {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-$(document).ready(function () {
 
-    // 다국어 처리 대상
-    let _msg_resource = {
-        'valid.msg.required': '필수 항목입니다.',
-        'valid.msg.remote': '항목을 수정하세요',
-        'valid.msg.email': '유효하지 않은 E-Mail주소입니다',
-        'valid.msg.url': '유효하지 않은 URL입니다',
-        'valid.msg.date': '올바른 날짜를 입력하세요',
-        'valid.msg.dateISO': '올바른 날짜를 입력하세요',
-        'valid.msg.number': '유효한 숫자가 아닙니다',
-        'valid.msg.digits': '숫자만 입력 가능합니다',
-        'valid.msg.creditcard': '신용카드 번호가 바르지 않습니다',
-        'valid.msg.equalTo': '같은 값을 다시 입력하세요',
-        'valid.msg.extension': '올바른 확장자가 아닙니다',
-        'valid.msg.maxlength': '{0}자를 넘을 수 없습니다',
-        'valid.msg.minlength': '{0} 이상의 값을 입력하세요',
-        'valid.msg.rangelength': '문자 길이가 {0} 에서 {1} 사이의 값을 입력하세요',
-        'valid.msg.range': '{0} 에서 {1} 사이의 값을 입력하세요',
-        'valid.msg.max': '{0} 이하의 값을 입력하세요',
-        'valid.msg.min': '{0} 이상의 값을 입력하세요',
-        'valid.msg.validrange': '{0}가 {1}보다 높습니다.',
-    };
+// 자동 컨텍스트 패스 적용
+$.ajaxPrefilter(function (options, originalOptions, jqXHR) {
 
-    $.extend(
-        $.validator.messages,
-        {
-            required: ' ' + _msg_resource['valid.msg.required']
-            , remote: ' ' + _msg_resource['valid.msg.remote']
-            , email: ' ' + _msg_resource['valid.msg.email']
-            , url: ' ' + _msg_resource['valid.msg.url']
-            , date: ' ' + _msg_resource['valid.msg.date']
-            , dateISO: ' ' + _msg_resource['valid.msg.dateISO']
-            , number: ' ' + _msg_resource['valid.msg.number']
-            , digits: ' ' + _msg_resource['valid.msg.digits']
-            , creditcard: ' ' + _msg_resource['valid.msg.creditcard']
-            , equalTo: ' ' + _msg_resource['valid.msg.equalTo']
-            , extension: ' ' + _msg_resource['valid.msg.extension']
-            , maxlength: ' ' + $.validator.format(_msg_resource['valid.msg.maxlength'])
-            , minlength: ' ' + $.validator.format(_msg_resource['valid.msg.minlength'])
-            , rangelength: ' ' + $.validator.format(_msg_resource['valid.msg.rangelength'])
-            , range: ' ' + $.validator.format(_msg_resource['valid.msg.range'])
-            , max: ' ' + $.validator.format(_msg_resource['valid.msg.max'])
-            , min: ' ' + $.validator.format(_msg_resource['valid.msg.min'])
-            , validrange: ' ' + $.validator.format(_msg_resource['valid.msg.validrange'])
-        }
-    );
+    if (!options.url) return;
 
-    $.validator.setDefaults({
-        onkeyup: false,
-        onclick: false,
-        onfocusout: false,
-        focusInvalid: false,
-        showErrors: function (errorMap, errorList) {
-            if (this.numberOfInvalids()) {
-                Alert.alert('', '[' + errorList[0].message + ']' + eval('$.validator.messages.' + errorList[0].method), function () {
-                    errorList[0].element.focus();
-                });
-            }
-        }
-    });
-
-    JQuery.extends();
-    Ajax.enableErrorHandler();
-    Ajax.enableProgressBar();
-
-
-    //다국어 설정
-    if (userinfo.login_id != '') {
-        i18n.initialize();
+    // 외부 URL / CDN 제외
+    if (/^https?:\/\//i.test(options.url) || options.url.startsWith('//')) {
+        return;
     }
 
+    // 이미 컨텍스트 패스가 붙어 있으면 제외
+    if (window.CTX_PATH && options.url.startsWith(window.CTX_PATH + '/')) {
+        return;
+    }
 
-
+    // / 로 시작하는 내부 경로만 처리
+    if (options.url.startsWith('/')) {
+        options.url = window.CTX_PATH + options.url;
+    }
 });
