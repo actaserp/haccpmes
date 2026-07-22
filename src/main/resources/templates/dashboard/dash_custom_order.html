@@ -398,7 +398,22 @@
      this.url = '/api/dashboard/reflow';
      this.prevKpiSnapshot = null;
 
-    }
+     // =====================================================
+     // ✅ [추가] 알람 판정 파라미터
+     //  - DANGER_DT / WARN_DT : ΔT 위험/주의 기준(℃)
+     //  - SETTLE_TOL          : 현재값이 설정값 ±이 값 이내이면 "안정 도달"로 간주
+     //  승온/승온변경/냉각(정지) 구간에서는 ΔT를 위험/주의로 잡지 않는다.
+     // =====================================================
+     this.DANGER_DT = 10;   // (변경) 기존 6 → 10
+     this.WARN_DT = 7;    // (변경) 기존 5 → 7
+     this.SETTLE_TOL = 3;   // 안정 도달 판정 허용치(℃)
+     this.GRACE_MS = 3 * 60 * 1000;  // ✅ [추가] 설정 도달 후 이 시간동안은 ΔT 위험/주의 판정 유예(승온 직후 오버슈트 무시). 3분.
+
+     // zone side(ZT/ZB)별 "안정 도달" 상태 및 직전 설정값 추적용
+     this._zoneSettled = {};   // key: "ZT3" / "ZB9" ...
+     this._zoneLastSet = {};   // key별 직전 설정값
+     this._zoneSettledAt = {}; // ✅ [추가] key별 최초 안정도달 시각(ms) – 유예 판정용
+    }//constructor
 
     init() {
      this.bindHeaderTime();
@@ -487,7 +502,7 @@
 
      const bucketCount = Math.floor((now.getTime() - start.getTime()) / stepMs) + 1;
 
-     const buckets = Array.from({ length: bucketCount }, (_, i) => ({
+     const buckets = Array.from({length: bucketCount}, (_, i) => ({
       t: new Date(start.getTime() + i * stepMs),
       value: null
      }));
@@ -557,7 +572,7 @@
        options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } }
+        plugins: {legend: {display: false}}
        }
       });
      } else {
@@ -583,7 +598,7 @@
      const minute = _this.toKoreanMinute(now);
 
      let url = _this.url;
-     let data = { mmdd, minute, action: 'read' };
+     let data = {mmdd, minute, action: 'read'};
 
      let fnsuccess = function (result) {
       _this.loading = false;
@@ -614,6 +629,9 @@
       // ✅ 항상 최신 rows/current 저장 (차트 ticker/rolling용)
       _this._lastRows = rows;
       _this._lastCurrent = current;
+
+      // ✅ [추가] 이벤트 판정용 안정상태는 rows 전체를 시간순으로 훑어 재계산
+      _this.recomputeSettleStates(rows);
 
       // ✅ 변경 감지 기준
       const curKey = current["날 짜"] || JSON.stringify(current);
@@ -700,9 +718,9 @@
      // =========================
      // 2) 생산 KPI 카드
      // =========================
-     const inQtyRaw  = current["투입 수량"];
+     const inQtyRaw = current["투입 수량"];
      const outQtyRaw = current["생산 수량"];
-     const inQty  = this.toNum(inQtyRaw);
+     const inQty = this.toNum(inQtyRaw);
      const outQty = this.toNum(outQtyRaw);
 
      // 투입/생산
@@ -740,22 +758,22 @@
      // =========================
      // 3) HZ 카드 (현재값)
      // =========================
-     this.setText('#kpi-heat16',  current["Heat 1-6"]);
+     this.setText('#kpi-heat16', current["Heat 1-6"]);
      this.setText('#kpi-heat710', current["Heat 7-10"]);
-     this.setText('#kpi-coolhz',  current["Cool"]);
+     this.setText('#kpi-coolhz', current["Cool"]);
 
-     const n2Status   = current["N2 SYSTEM STATUS"];
+     const n2Status = current["N2 SYSTEM STATUS"];
      const n2Pressure = current["현재 압력"];
-     const n2Purity   = current["순도"];
+     const n2Purity = current["순도"];
 
      this.setText('#kpi-n2status', n2Status ?? '-');
      this.setText('#kpi-n2pressure', n2Pressure ?? '-');
      this.setText('#kpi-n2purity', n2Purity ?? '-');
 
-      // 상태 색상 적용
-     const statusLevel   = this.normalizeSystemStatus(n2Status);
+     // 상태 색상 적용
+     const statusLevel = this.normalizeSystemStatus(n2Status);
      const pressureLevel = this.getPressureStatus(n2Pressure);
-     const purityLevel   = this.getPurityStatus(n2Purity);
+     const purityLevel = this.getPurityStatus(n2Purity);
 
      this.setStatusColor('#kpi-n2status', statusLevel);
      this.setStatusColor('#kpi-n2pressure', pressureLevel);
@@ -772,7 +790,7 @@
      //  - 네 데이터 구조: 단 위 + 에어(산소농도) + 질소/에어(모드)
      // =========================
      const unit = (current["단 위"] ?? '').toString().trim();      // 예: PPM
-     const val  = (current["에어"] ?? '').toString().trim();       // 예: 10500 (산소농도)
+     const val = (current["에어"] ?? '').toString().trim();       // 예: 10500 (산소농도)
      const mode = (current["질소/에어"] ?? '').toString().trim();   // 예: N2
 
      // pv: "10500 PPM"
@@ -822,6 +840,80 @@
      return isNaN(dt.getTime()) ? null : dt;
     }
 
+    // =====================================================
+    // ✅ [추가] 승온/냉각(전이) 구간 판정용 안정상태 재계산
+    //  - rows를 시간순으로 훑으며 zone side(ZT/ZB)별로
+    //    "설정값에 도달한 적 있는지(settled)"를 갱신한다.
+    //  - 설정값이 바뀌면 settled=false (새 승온/변경 구간 시작)
+    //  - |현재값-설정값| <= SETTLE_TOL 이면 settled=true (안정 도달)
+    //  이 상태는 buildEvents / bindRiskAndCharts 의 위험판정에 쓰인다.
+    // =====================================================
+    recomputeSettleStates(rows) {
+     this._zoneSettled = {};
+     this._zoneLastSet = {};
+     this._zoneSettledAt = {};  // ✅ [추가] 최초 안정도달 시각 초기화
+
+     const rws = Array.isArray(rows) ? rows : [];
+     const sorted = rws
+     .map(r => ({r, t: this.parseKpiTime(r["날 짜"])}))
+     .filter(x => x.t)
+     .sort((a, b) => new Date(a.t).getTime() - new Date(b.t).getTime())
+     .map(x => x.r);
+
+     for (const row of sorted) {
+      const rowMs = (() => {
+       const t = this.parseKpiTime(row["날 짜"]);
+       return t ? new Date(t).getTime() : null;
+      })();
+      for (let z = 1; z <= 10; z++) {
+       for (const side of ['ZT', 'ZB']) {
+        const sv = this.toNum(row[`${side} 설정값${z}`]);
+        const cv = this.toNum(row[`${side} 현재값${z}`]);
+        if (sv == null || cv == null) continue;
+
+        const key = `${side}${z}`;
+
+        // 설정값이 바뀌면 안정 리셋 (새 승온/설정변경 구간)
+        if (this._zoneLastSet[key] != null && this._zoneLastSet[key] !== sv) {
+         this._zoneSettled[key] = false;
+         this._zoneSettledAt[key] = null;  // ✅ 유예 타이머도 리셋
+        }
+        this._zoneLastSet[key] = sv;
+
+        // 안정 도달 판정 (최초 도달 시각 기록 → 유예 판정용)
+        if (Math.abs(cv - sv) <= this.SETTLE_TOL && this._zoneSettled[key] !== true) {
+         this._zoneSettled[key] = true;
+         this._zoneSettledAt[key] = rowMs;
+        }
+       }
+      }
+     }
+    }
+
+    // =====================================================
+    // ✅ [추가] 특정 row가 "위험/주의 판정 대상"인지 여부
+    //  - 정지(냉각) 상태면 대상 아님
+    //  - 해당 zone side가 아직 settled 안됐으면(=승온/변경중) 대상 아님
+    //  - settled 됐어도 도달 후 GRACE_MS 안 지났으면(=오버슈트 안정화중) 대상 아님
+    // =====================================================
+    isStopped(row) {
+     return String(row["가동 상태"] ?? '').includes('정지');
+    }
+
+    isSideEvaluable(row, side, z) {
+     if (this.isStopped(row)) return false;
+     const key = `${side}${z}`;
+     if (this._zoneSettled[key] !== true) return false;
+
+     // ✅ 안정도달 후 유예시간(GRACE_MS) 경과했는지 확인
+     const settledAt = this._zoneSettledAt[key];
+     if (settledAt == null) return false;
+     const t = this.parseKpiTime(row["날 짜"]);
+     const rowMs = t ? new Date(t).getTime() : null;
+     if (rowMs == null) return false;
+     return (rowMs - settledAt) >= this.GRACE_MS;
+    }
+
     extractZones(row) {
      const zones = [];
      for (let z = 1; z <= 10; z++) {
@@ -839,24 +931,32 @@
        ? null
        : Math.max(dtTopAbs ?? 0, dtBotAbs ?? 0);
 
-      const ztZb = (ztCur != null && zbCur != null) ? (ztCur - zbCur) : null;
+      // ✅ [추가] 승온/냉각 구간을 제외한 "위험판정용 ΔT"
+      //  - 정지(냉각) 또는 아직 안정 도달 못한 side는 후보에서 제외
+      //  - 후보가 하나도 없으면 dtMaxAlarm = null → 위험/주의 판정 안함
+      const alarmCandidates = [];
+      if (dtTopAbs != null && this.isSideEvaluable(row, 'ZT', z)) alarmCandidates.push(dtTopAbs);
+      if (dtBotAbs != null && this.isSideEvaluable(row, 'ZB', z)) alarmCandidates.push(dtBotAbs);
+      const dtMaxAlarm = alarmCandidates.length ? Math.max(...alarmCandidates) : null;
 
       zones.push({
        zone: z,
        ztSet, ztCur, zbSet, zbCur,
-       dtMax,
-       ztZb,
+       dtMax,            // (기존) 표시/차트용 – 승온/냉각 포함 원본값
+       dtMaxAlarm,       // ✅ (추가) 위험판정용 – 승온/냉각 제외
+       ztZb: (ztCur != null && zbCur != null) ? (ztCur - zbCur) : null,
        avgCur: (ztCur != null && zbCur != null) ? (ztCur + zbCur) / 2 : (ztCur ?? zbCur ?? null)
       });
      }
      return zones;
     }
 
-    riskLabel(dtMax) {
-     if (dtMax == null) return { text: '-', cls: 'risk-ok' };
-     if (dtMax >= 6) return { text: '위험', cls: 'risk-crit' };
-     if (dtMax >= 3) return { text: '주의', cls: 'risk-warn' };
-     return { text: '정상', cls: 'risk-ok' };
+    // ✅ (변경) 기준값을 상수(DANGER_DT/WARN_DT)로 사용 + 승온/냉각 제외한 dtMaxAlarm 기준
+    riskLabel(dtForAlarm) {
+     if (dtForAlarm == null) return {text: '-', cls: 'risk-ok'};
+     if (dtForAlarm >= this.DANGER_DT) return {text: '위험', cls: 'risk-crit'};
+     if (dtForAlarm >= this.WARN_DT) return {text: '주의', cls: 'risk-warn'};
+     return {text: '정상', cls: 'risk-ok'};
     }
 
     bindRiskAndCharts(rows, current) {
@@ -865,6 +965,8 @@
      const zones = this.extractZones(current);
 
      // 1) 리스크 테이블(상위 3개)
+     //   - 표시 ΔT Max는 원본(dtMax)으로 보여주되,
+     //     상태(위험/주의/정상)는 승온/냉각 제외한 dtMaxAlarm으로 판정
      const riskRows = zones
      .filter(z => z.dtMax != null)
      .sort((a, b) => (b.dtMax ?? -1) - (a.dtMax ?? -1))
@@ -877,7 +979,7 @@
       $tb.append(`<tr><td colspan="4" style="text-align:center; color:#888; padding:10px;">데이터 없음</td></tr>`);
      } else {
       for (const r of riskRows) {
-       const lab = this.riskLabel(r.dtMax);
+       const lab = this.riskLabel(r.dtMaxAlarm);   // ✅ 판정은 dtMaxAlarm
        const dtMaxTxt = `${r.dtMax.toFixed(1)}℃`;
        const ztZbTxt = (r.ztZb == null) ? '-' : `${r.ztZb.toFixed(1)}℃`;
        $tb.append(`
@@ -891,7 +993,7 @@
       }
      }
 
-     // 2) Zone ΔT 바 차트
+     // 2) Zone ΔT 바 차트 (표시는 원본 dtMax 유지)
      const labels = zones.map(z => `Z${z.zone}`);
      const dataDt = zones.map(z => (z.dtMax == null ? 0 : Number(z.dtMax.toFixed(2))));
 
@@ -927,7 +1029,7 @@
 // 1) 최근 30분 타임버킷 생성 (라벨 끝 = now)
      const buckets = [];
      for (let ms = startMs; ms <= now.getTime(); ms += stepMs) {
-      buckets.push({ t: new Date(ms), value: null });
+      buckets.push({t: new Date(ms), value: null});
      }
 
 // 2) rows를 버킷에 매핑
@@ -992,7 +1094,7 @@
        options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } }
+        plugins: {legend: {display: false}}
        }
       });
      }
@@ -1020,10 +1122,10 @@
 
      // ✅ 1) 시간 파싱 + ✅ 2) 미래 row 제거 + ✅ 3) 30분 윈도우만
      const winRows = rws
-     .map(row => ({ row, t: this.parseKpiTime(row["날 짜"]) }))
+     .map(row => ({row, t: this.parseKpiTime(row["날 짜"])}))
      .filter(x => x.t)
      .filter(x => new Date(x.t).getTime() <= nowTs) // ✅ 미래 제거
-     .sort((a,b) => new Date(a.t).getTime() - new Date(b.t).getTime())
+     .sort((a, b) => new Date(a.t).getTime() - new Date(b.t).getTime())
      .filter(x => {
       const ms = new Date(x.t).getTime();
       return ms >= start.getTime() && ms <= nowTs;
@@ -1053,7 +1155,7 @@
      this.renderStopSummary(stopCnt);
 
      // 4) 생산량 그래프
-     const { labels, series } = this.calcProdDeltaSeries(winRows, start, now);
+     const {labels, series} = this.calcProdDeltaSeries(winRows, start, now);
      this.renderProdTrendChart(labels, series);
     }
 
@@ -1062,7 +1164,7 @@
      const stats = {}; // Z1..Z10
      const add = (zone, setv, curv) => {
       if (curv == null) return;
-      if (!stats[zone]) stats[zone] = { zone, set: setv, sum: 0, cnt: 0 };
+      if (!stats[zone]) stats[zone] = {zone, set: setv, sum: 0, cnt: 0};
       if (stats[zone].set == null && setv != null) stats[zone].set = setv;
       stats[zone].sum += curv;
       stats[zone].cnt += 1;
@@ -1079,14 +1181,14 @@
      }
 
      return Object.values(stats)
-     .sort((a,b) => parseInt(a.zone.slice(1),10) - parseInt(b.zone.slice(1),10))
+     .sort((a, b) => parseInt(a.zone.slice(1), 10) - parseInt(b.zone.slice(1), 10))
      .map(s => {
       const avg = s.cnt ? (s.sum / s.cnt) : null;
       const setv = s.set;
       const delta = (avg != null && setv != null) ? (avg - setv) : null;
       const absd = delta == null ? 0 : Math.abs(delta);
       const level = absd >= 5 ? 'risk' : absd >= 3 ? 'warn' : 'ok';
-      return { zone: s.zone, set: setv, avg, delta, level };
+      return {zone: s.zone, set: setv, avg, delta, level};
      });
     }
 
@@ -1103,10 +1205,10 @@
      for (const it of items) {
       const setTxt = it.set == null ? '-' : it.set.toFixed(0);
       const avgTxt = it.avg == null ? '-' : it.avg.toFixed(1);
-      const dTxt   = it.delta == null ? '-' : (it.delta >= 0 ? `+${it.delta.toFixed(1)}` : `${it.delta.toFixed(1)}`);
+      const dTxt = it.delta == null ? '-' : (it.delta >= 0 ? `+${it.delta.toFixed(1)}` : `${it.delta.toFixed(1)}`);
 
       const color = it.level === 'risk' ? '#d9534f' : it.level === 'warn' ? '#f0ad4e' : '#2e7d32';
-      const icon  = it.level === 'risk' ? ' ⚠' : '';
+      const icon = it.level === 'risk' ? ' ⚠' : '';
 
       $tb.append(`
       <tr>
@@ -1126,7 +1228,7 @@
       $('#flow-out').text('-');
       return;
      }
-     const inCnt  = this.toNum(latestRow["투입 수량"]);
+     const inCnt = this.toNum(latestRow["투입 수량"]);
      const outCnt = this.toNum(latestRow["생산 수량"]);
 
      $('#flow-in').text(inCnt == null ? '-' : inCnt.toLocaleString());
@@ -1165,13 +1267,13 @@
      const stepMs = 60 * 1000;
      const bucketCount = Math.floor((now.getTime() - start.getTime()) / stepMs) + 1;
 
-     const buckets = Array.from({ length: bucketCount }, (_, i) => ({
+     const buckets = Array.from({length: bucketCount}, (_, i) => ({
       t: new Date(start.getTime() + i * stepMs),
       v: null
      }));
 
      // 시간순
-     const sorted = [...(winRows || [])].sort((a,b) => {
+     const sorted = [...(winRows || [])].sort((a, b) => {
       const ta = this.parseKpiTime(a["날 짜"]);
       const tb = this.parseKpiTime(b["날 짜"]);
       return new Date(ta).getTime() - new Date(tb).getTime();
@@ -1183,7 +1285,7 @@
       if (!t0) continue;
 
       const t = new Date(t0);
-      t.setSeconds(0,0);
+      t.setSeconds(0, 0);
 
       const idx = Math.floor((t.getTime() - start.getTime()) / stepMs);
       if (idx < 0 || idx >= buckets.length) continue;
@@ -1199,13 +1301,13 @@
      }
 
      const labels = buckets.map(b => {
-      const hh = String(b.t.getHours()).padStart(2,'0');
-      const mm = String(b.t.getMinutes()).padStart(2,'0');
+      const hh = String(b.t.getHours()).padStart(2, '0');
+      const mm = String(b.t.getMinutes()).padStart(2, '0');
       return `${hh}:${mm}`;
      });
 
      const series = buckets.map(b => b.v);
-     return { labels, series };
+     return {labels, series};
     }
 
 // --- 생산량 그래프 렌더 (Chart.js)
@@ -1229,8 +1331,8 @@
        options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } }
+        plugins: {legend: {display: false}},
+        scales: {y: {beginAtZero: true}}
        }
       });
      } else {
@@ -1259,7 +1361,7 @@
      const skewMs = 90 * 1000; // 필요 없으면 0으로
 
      const sorted = rws
-     .map(r => ({ r, t: this.parseKpiTime(r["날 짜"]) }))
+     .map(r => ({r, t: this.parseKpiTime(r["날 짜"])}))
      .filter(x => x.t)
      // ✅ 미래 row 제거 (허용치 적용)
      .filter(x => new Date(x.t).getTime() <= nowTs + skewMs)
@@ -1287,14 +1389,14 @@
       // ✅ 오전/오후 + HH:mm 만들기
       const d = new Date(ev.ts);
       const hh = d.getHours();                 // 0~23
-      const mm = String(d.getMinutes()).padStart(2,'0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
       const ap = hh < 12 ? '오전' : '오후';
-      const hh12 = String((hh % 12) === 0 ? 12 : (hh % 12)).padStart(2,'0'); // 12시간제
+      const hh12 = String((hh % 12) === 0 ? 12 : (hh % 12)).padStart(2, '0'); // 12시간제
       const timeText = `${ap} ${hh12}:${mm}`;  // 예: "오전 08:55", "오후 01:05"
 
       // 레벨별 색상
-      const bg  = ev.level === 'DANGER' ? '#ffecec' : ev.level === 'WARN' ? '#fff8e6' : '#f5f7ff';
-      const bd  = ev.level === 'DANGER' ? '#ffb5b5' : ev.level === 'WARN' ? '#ffe3a3' : '#dfe6ff';
+      const bg = ev.level === 'DANGER' ? '#ffecec' : ev.level === 'WARN' ? '#fff8e6' : '#f5f7ff';
+      const bd = ev.level === 'DANGER' ? '#ffb5b5' : ev.level === 'WARN' ? '#ffe3a3' : '#dfe6ff';
       const badgeBg = ev.level === 'DANGER' ? '#ff4d4f' : ev.level === 'WARN' ? '#ffbf3a' : '#5b7cff';
       const badgeColor = ev.level === 'WARN' ? '#111' : '#fff';
 
@@ -1359,7 +1461,21 @@
      const outDeltas = [];
      let prevOutCum = null;
 
-     for (const row of rowsInWindow) {
+     // ✅ [추가] 타임라인은 "각 시점까지의" 안정상태로 판정해야 한다.
+     //  전역 _zoneSettled(하루 전체 최종본)에 의존하면 하루 첫 승온/설정변경
+     //  직후의 큰 스파이크를 걸러내지 못한다. 그래서 순회하면서 로컬로 계산한다.
+     const settledLocal = {};   // key: "ZT3"/"ZB9"...
+     const lastSetLocal = {};
+     const settledAtLocal = {}; // ✅ [추가] key별 최초 안정도달 시각(ms) – 유예 판정용
+
+     // ✅ 시간순 정렬 보장 (settled 누적 계산 정확성)
+     const rowsSorted = (rowsInWindow || [])
+     .map(r => ({r, t: this.parseKpiTime(r["날 짜"])}))
+     .filter(x => x.t)
+     .sort((a, b) => new Date(a.t).getTime() - new Date(b.t).getTime())
+     .map(x => x.r);
+
+     for (const row of rowsSorted) {
       const t = this.parseKpiTime(row["날 짜"]);
       if (!t) continue;
 
@@ -1371,27 +1487,66 @@
       const mode = String(row["가동 상태"] ?? '');
       const isStop = mode.includes('정지');
       if (prevModeStop !== null && prevModeStop === false && isStop === true) {
-       events.push({ ts, timeText, level:'DANGER', levelKorean:'위험', text:'자동정지 발생' });
+       events.push({ts, timeText, level: 'DANGER', levelKorean: '위험', text: '자동정지 발생'});
       }
       prevModeStop = isStop;
 
       // 2) Zone ΔT 초과 (WARN/DANGER 중 하나만 발생)
-      const zones = this.extractZones(row) || [];
-      for (const z of zones) {
-       if (z.dtMax == null) continue;
+      //    ✅ [변경] 승온/냉각/설정변경 구간 제외 + 상수 기준값(DANGER_DT/WARN_DT)
+      //     - 각 side(ZT/ZB)가 "이 시점까지 한 번이라도 설정값에 도달(settled)"했고
+      //       현재 가동중(정지 아님)일 때만 ΔT를 위험/주의 후보로 사용.
+      const stoppedNow = mode.includes('정지');
+      for (let z = 1; z <= 10; z++) {
+       const alarmCandidates = [];
+       for (const side of ['ZT', 'ZB']) {
+        const sv = this.toNum(row[`${side} 설정값${z}`]);
+        const cv = this.toNum(row[`${side} 현재값${z}`]);
+        if (sv == null || cv == null) continue;
 
-       const dt = Number(z.dtMax);
-       const zoneKey = String(z.zone);
+        const key = `${side}${z}`;
 
-       // ✅ 현재 레벨을 하나로 결정 (danger가 warn을 덮어씀)
-       const level =
-        dt >= 6 ? 'DANGER' :
-         dt >= 5 ? 'WARN'   :
-          null;
+        // 설정값이 바뀌면 안정 리셋 (새 승온/설정변경 구간 시작)
+        if (lastSetLocal[key] != null && lastSetLocal[key] !== sv) {
+         settledLocal[key] = false;
+         settledAtLocal[key] = null;  // ✅ 유예 타이머 리셋
+        }
+        lastSetLocal[key] = sv;
 
-       // ✅ 존별 현재 ON 상태(레벨) 추적: null/WARN/DANGER
-       zoneWarnOn[zoneKey]   ??= false;
+        const dtAbs = Math.abs(cv - sv);
+
+        // 안정 도달 판정 (최초 도달 시각 기록 → 유예 판정용)
+        if (dtAbs <= this.SETTLE_TOL && settledLocal[key] !== true) {
+         settledLocal[key] = true;
+         settledAtLocal[key] = ts;
+        }
+
+        // 가동중 + 안정도달 + 유예시간(GRACE_MS) 경과한 side만 위험판정 후보
+        const graceOk = settledLocal[key] === true
+         && settledAtLocal[key] != null
+         && (ts - settledAtLocal[key] >= this.GRACE_MS);
+        if (!stoppedNow && graceOk) {
+         alarmCandidates.push(dtAbs);
+        }
+       }
+
+       const dt = alarmCandidates.length ? Math.max(...alarmCandidates) : null;
+       const zoneKey = String(z);
+
+       zoneWarnOn[zoneKey] ??= false;
        zoneDangerOn[zoneKey] ??= false;
+
+       // 판정 대상이 아니면(승온/냉각/정지 → 후보 없음) 상태 OFF 후 skip
+       if (dt == null) {
+        zoneWarnOn[zoneKey] = false;
+        zoneDangerOn[zoneKey] = false;
+        continue;
+       }
+
+       // ✅ 현재 레벨 결정 (danger가 warn을 덮어씀)
+       const level =
+        dt >= this.DANGER_DT ? 'DANGER' :
+         dt >= this.WARN_DT ? 'WARN' :
+          null;
 
        // OFF 처리
        if (level === null) {
@@ -1404,11 +1559,11 @@
        if (level === 'DANGER') {
         if (!zoneDangerOn[zoneKey]) {
          zoneDangerOn[zoneKey] = true;
-         zoneWarnOn[zoneKey] = true; // danger면 warn도 “켜진 상태”로 취급(중복 방지)
+         zoneWarnOn[zoneKey] = true; // danger면 warn도 "켜진 상태"로 취급(중복 방지)
          events.push({
           ts, timeText,
           level: 'DANGER', levelKorean: '위험',
-          text: `Z${z.zone} ΔT ${dt.toFixed(1)}℃ 초과`
+          text: `Z${z} ΔT ${dt.toFixed(1)}℃ 초과`
          });
         }
         continue;
@@ -1420,7 +1575,7 @@
         events.push({
          ts, timeText,
          level: 'WARN', levelKorean: '주의',
-         text: `Z${z.zone} ΔT ${dt.toFixed(1)}℃ 초과`
+         text: `Z${z} ΔT ${dt.toFixed(1)}℃ 초과`
         });
        }
       }
@@ -1433,16 +1588,16 @@
        prevOutCum = outCum;
 
        if (delta != null) {
-        outDeltas.push({ ts, delta });
+        outDeltas.push({ts, delta});
 
         const fiveMinAgo = ts - 5 * 60 * 1000;
         const recent = outDeltas.filter(x => x.ts >= fiveMinAgo);
-        const avg = recent.length ? recent.reduce((a,b) => a + b.delta, 0) / recent.length : null;
+        const avg = recent.length ? recent.reduce((a, b) => a + b.delta, 0) / recent.length : null;
 
         if (avg != null && avg >= 1 && delta <= avg * 0.3) {
          const dup = events.find(ev => ev.text === '생산량 급감' && Math.abs(ev.ts - ts) <= 3 * 60 * 1000);
          if (!dup) {
-          events.push({ ts, timeText, level:'WARN', levelKorean:'주의', text:'생산량 급감' });
+          events.push({ts, timeText, level: 'WARN', levelKorean: '주의', text: '생산량 급감'});
          }
         }
        }
@@ -1478,8 +1633,8 @@
 
     hhmm(ts) {
      const d = new Date(ts);
-     const hh = String(d.getHours()).padStart(2,'0');
-     const mm = String(d.getMinutes()).padStart(2,'0');
+     const hh = String(d.getHours()).padStart(2, '0');
+     const mm = String(d.getMinutes()).padStart(2, '0');
      return `${hh}:${mm}`;
     }
 
