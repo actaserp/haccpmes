@@ -16,27 +16,32 @@ public class InspectionReportService {
     SqlRunner sqlRunner;
 
     // 목록 조회
-    public List<Map<String, Object>> getList(String start, String end, String spjangcd) {
+    public List<Map<String, Object>> getList(String start, String end, String spjangcd, Integer workcenterId) {
 
         MapSqlParameterSource param = new MapSqlParameterSource();
-        param.addValue("start",    start + " 00:00:00");
-        param.addValue("end",      end   + " 23:59:59");
-        param.addValue("spjangcd", spjangcd);
+        param.addValue("start",         start);
+        param.addValue("end",           end);
+        param.addValue("spjangcd",      spjangcd);
+        param.addValue("workcenter_id", workcenterId);
 
         String sql = """
             SELECT
                 h.id,
                 to_char(h.report_date, 'yyyy-mm-dd') AS report_date,
                 h.writer,
+                h.workcenter_id,
+                w."Name" AS workcenter_name,
                 COALESCE(SUM(r.inspection_count), 0) AS total_inspection,
-                COALESCE(SUM(r.inspection_wait), 0) AS total_wait,
-                COALESCE(SUM(r.delivery_wait), 0) AS total_delivery_wait,
+                COALESCE(SUM(r.inspection_wait),  0) AS total_wait,
+                COALESCE(SUM(r.delivery_wait),    0) AS total_delivery_wait,
                 COALESCE(SUM(r.repair_defect),    0) AS total_defect
             FROM inspection_report_head h
             LEFT JOIN inspection_report_row r ON r.head_id = h.id
+            LEFT JOIN work_center w           ON w.id = h.workcenter_id
             WHERE h.spjangcd = :spjangcd
-              AND h._created BETWEEN :start::timestamp AND :end::timestamp
-            GROUP BY h.id, h.report_date, h.writer
+              AND h.report_date BETWEEN :start::date AND :end::date
+              AND (:workcenter_id::int IS NULL OR h.workcenter_id = :workcenter_id::int)
+            GROUP BY h.id, h.report_date, h.writer, h.workcenter_id, w."Name"
             ORDER BY h.report_date DESC, h.id DESC
         """;
 
@@ -51,12 +56,15 @@ public class InspectionReportService {
 
         String headSql = """
             SELECT
-                id,
-                to_char(report_date, 'yyyy-mm-dd') AS report_date,
-                writer,
-                spjangcd
-            FROM inspection_report_head
-            WHERE id = :id
+                h.id,
+                to_char(h.report_date, 'yyyy-mm-dd') AS report_date,
+                h.writer,
+                h.spjangcd,
+                h.workcenter_id,
+                w."Name" AS workcenter_name
+            FROM inspection_report_head h
+            LEFT JOIN work_center w ON w.id = h.workcenter_id
+            WHERE h.id = :id
         """;
 
         String rowSql = """
@@ -95,7 +103,7 @@ public class InspectionReportService {
             ORDER BY row_order
         """;
 
-        Map<String, Object> head    = sqlRunner.getRow(headSql,    param);
+        Map<String, Object> head         = sqlRunner.getRow(headSql,    param);
         List<Map<String, Object>> rows   = sqlRunner.getRows(rowSql,    param);
         List<Map<String, Object>> noWork = sqlRunner.getRows(noWorkSql, param);
 
@@ -117,19 +125,21 @@ public class InspectionReportService {
         String reportDateStr = (String) payload.get("report_date");
         String writer        = (String) payload.get("writer");
         String spjangcd      = (String) payload.get("spjangcd");
+        Integer workcenterId = toIntOrNull(payload.get("workcenter_id"));
 
         MapSqlParameterSource headParam = new MapSqlParameterSource();
-        headParam.addValue("report_date", reportDateStr);
-        headParam.addValue("writer",      writer);
-        headParam.addValue("spjangcd",    spjangcd);
-        headParam.addValue("user_id",     user.getId());
+        headParam.addValue("report_date",   reportDateStr);
+        headParam.addValue("writer",        writer);
+        headParam.addValue("spjangcd",      spjangcd);
+        headParam.addValue("user_id",       user.getId());
+        headParam.addValue("workcenter_id", workcenterId);
 
         if (headId == null) {
             String insertHead = """
                 INSERT INTO inspection_report_head
-                    (report_date, writer, spjangcd, _creater_id, _modifier_id)
+                    (report_date, writer, spjangcd, workcenter_id, _creater_id, _modifier_id)
                 VALUES
-                    (:report_date::date, :writer, :spjangcd, :user_id, :user_id)
+                    (:report_date::date, :writer, :spjangcd, :workcenter_id, :user_id, :user_id)
                 RETURNING id
             """;
             headId = sqlRunner.queryForObject(insertHead, headParam, (rs, rn) -> rs.getInt(1));
@@ -137,10 +147,11 @@ public class InspectionReportService {
             headParam.addValue("id", headId);
             String updateHead = """
                 UPDATE inspection_report_head SET
-                    report_date  = :report_date::date,
-                    writer       = :writer,
-                    _modified    = now(),
-                    _modifier_id = :user_id
+                    report_date   = :report_date::date,
+                    writer        = :writer,
+                    workcenter_id = :workcenter_id,
+                    _modified     = now(),
+                    _modifier_id  = :user_id
                 WHERE id = :id
             """;
             sqlRunner.execute(updateHead, headParam);
@@ -158,7 +169,7 @@ public class InspectionReportService {
             for (int i = 0; i < rows.size(); i++) {
                 Map<String, Object> row = rows.get(i);
                 MapSqlParameterSource rp = new MapSqlParameterSource();
-                rp.addValue("head_id",          headId);
+                rp.addValue("head_id",           headId);
                 rp.addValue("row_order",         i);
                 rp.addValue("gubun",             nullStr(row.get("gubun")));
                 rp.addValue("production_model",  nullStr(row.get("production_model")));
@@ -187,7 +198,7 @@ public class InspectionReportService {
             for (int i = 0; i < noWork.size(); i++) {
                 Map<String, Object> nw = noWork.get(i);
                 MapSqlParameterSource np = new MapSqlParameterSource();
-                np.addValue("head_id",               headId);
+                np.addValue("head_id",                headId);
                 np.addValue("row_order",              i);
                 np.addValue("left_gubun",             nullStr(nw.get("left_gubun")));
                 np.addValue("left_stop_time",         nullStr(nw.get("left_stop_time")));
@@ -228,6 +239,12 @@ public class InspectionReportService {
         if (v == null || v.toString().isBlank()) return 0;
         try { return Integer.parseInt(v.toString().replace(",", "")); }
         catch (Exception e) { return 0; }
+    }
+    /** 미선택(빈 값)은 null 로 저장 */
+    private Integer toIntOrNull(Object v) {
+        if (v == null || v.toString().isBlank()) return null;
+        try { return Integer.parseInt(v.toString().trim()); }
+        catch (Exception e) { return null; }
     }
     private double toDouble(Object v) {
         if (v == null || v.toString().isBlank()) return 0;

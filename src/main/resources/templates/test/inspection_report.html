@@ -237,7 +237,7 @@
             </div>
             <ul class="page-navi">
                 <li><img src="/images/icon/ico-nav-home.svg" alt="홈아이콘"></li>
-                <li>검사관리</li>
+                <li>생산관리</li>
                 <li>검사일보</li>
             </ul>
         </div>
@@ -258,6 +258,17 @@
                                     <label for="srchEndDt" class="hide">종료일</label>
                                 </li>
                             </ul>
+                        </dd>
+                    </dl>
+                    <!-- ★ 라인(작업장) 검색조건 -->
+                    <dl>
+                        <dt>
+                            <label>라인</label>
+                        </dt>
+                        <dd>
+                            <div class="srch-box">
+                                <select id="SrchWorkCenter_id" name="SrchWorkCenter_id"></select>
+                            </div>
                         </dd>
                     </dl>
                     <dl>
@@ -305,7 +316,7 @@
         <div class="insp-popup-wrap" id="inspPopupRoot">
             <div class="insp-scroll-area">
 
-                <!-- 헤더: 작업일자 / 작성자만 -->
+                <!-- 헤더: 작업일자 / 라인 / 작성자 -->
                 <form id="inspHeadForm">
                     <input type="hidden" id="insp_id" name="id">
                     <table class="insp-form-table">
@@ -315,6 +326,10 @@
                                 <td>
                                     <input type="date" id="insp_report_date" name="report_date" style="width:160px;">
                                     <span id="insp_day_of_week" style="margin-left:8px; font-weight:bold;"></span>
+                                </td>
+                                <th style="width:80px;">라인</th>
+                                <td>
+                                    <select id="insp_workcenter" name="workcenter_id" style="width:160px; height:32px;"></select>
                                 </td>
                                 <th style="width:80px;">작성자</th>
                                 <td>
@@ -494,6 +509,7 @@
                             e.cell.style.textAlign = 'center';
                     },
                     columns: [
+                        {binding: 'workcenter_name', header: '라인', width: 120, align: 'center'},
                         {binding: 'report_date', header: '작업일자', width: 130, align: 'center'},
                         {binding: 'writer', header: '작성자', width: 120, align: 'center'},
                         {binding: 'total_inspection', header: '총 검사수', width: 110, align: 'right'},
@@ -557,6 +573,11 @@
                 $('#btnSearch').click(function () {
                     _this.search();
                 });
+
+                // 라인 변경 시 즉시 재조회
+                $('#SrchWorkCenter_id').off('change').on('change', function () {
+                    _this.search();
+                });
             }
 
             search() {
@@ -564,6 +585,7 @@
                 AjaxUtil.getAsyncData(this.url + '/read', {
                     start: $('#srchStartDt').val(),
                     end: $('#srchEndDt').val(),
+                    workcenter_id: $('#SrchWorkCenter_id').val() || '',
                     spjangcd: sessionStorage.getItem('spjangcd') || ''
                 }, function (res) {
                     if (res) _this.viewData.sourceCollection = res.data;
@@ -579,6 +601,10 @@
                 const $rowBody = $content.find('#inspRowBody');
                 const $noWorkBody = $content.find('#noWorkBody');
 
+                // 라인(작업장) 셀렉트 구성
+                const $inspWorkCenter = $content.find('#insp_workcenter');
+                AjaxUtil.fillSelectOptions($inspWorkCenter, 'workcenter', '', false);
+
                 $content.on('change', '#insp_report_date', function () {
                     const days = ['일', '월', '화', '수', '목', '금', '토'];
                     const d = new Date($(this).val());
@@ -588,6 +614,12 @@
                 if (data.mode === 'new') {
                     $content.find('#insp_report_date').val(CommonUtil.getYYYYMMDD());
                     $content.find('#insp_report_date').trigger('change');
+
+                    // 검색조건에서 선택한 라인을 기본값으로
+                    const mainWorkCenterVal = $('#SrchWorkCenter_id').val();
+                    if (mainWorkCenterVal) {
+                        $inspWorkCenter.val(mainWorkCenterVal);
+                    }
                 }
 
                 // 기존 데이터 바인딩
@@ -595,6 +627,7 @@
                     $content.find('#insp_id').val(data.id || '');
                     $content.find('#insp_report_date').val(data.report_date || '');
                     $content.find('#insp_writer').val(data.writer || '');
+                    $inspWorkCenter.val(data.workcenter_id || '');
 
                     (data.rows || []).forEach(r => addInspRow($rowBody, r));
                     (data.noWork || []).forEach(nw => addNoWorkRow($noWorkBody, nw));
@@ -624,10 +657,16 @@
                 });
 
                 // 저장
-                $content.find('#btnInspSave').off('click').on('click', function() {
+                $content.find('#btnInspSave').off('click').on('click', function () {
                     const reportDate = $content.find('#insp_report_date').val();
                     if (!reportDate) {
                         Alert.alert('', '작업일자를 입력해주세요.');
+                        return;
+                    }
+
+                    const workCenterId = $inspWorkCenter.val();
+                    if (!workCenterId) {
+                        Alert.alert('', '라인을 선택해주세요.');
                         return;
                     }
 
@@ -636,11 +675,11 @@
                         const $r = $(this);
 
                         const hasData = $r.find('[name=production_model]').val().trim() ||
-                            $r.find('[name=pcb_no]').val().trim()           ||
+                            $r.find('[name=pcb_no]').val().trim() ||
                             $r.find('[name=inspection_count]').val().trim() ||
-                            $r.find('[name=inspection_wait]').val().trim()  ||
-                            $r.find('[name=delivery_wait]').val().trim()    ||
-                            $r.find('[name=repair_defect]').val().trim()    ||
+                            $r.find('[name=inspection_wait]').val().trim() ||
+                            $r.find('[name=delivery_wait]').val().trim() ||
+                            $r.find('[name=repair_defect]').val().trim() ||
                             $r.find('[name=remarks]').val().trim();
 
                         if (!hasData) return;
@@ -661,17 +700,17 @@
                     $noWorkBody.find('tr:not(.nowork-row-template):visible').each(function () {
                         const $r = $(this);
 
-                        const hasData = $r.find('[name=left_stop_time]').val().trim()        ||
-                            $r.find('[name=left_man_hour]').val().trim()         ||
-                            $r.find('[name=left_no_work_content]').val().trim()  ||
-                            $r.find('[name=right_stop_time]').val().trim()       ||
-                            $r.find('[name=right_man_hour]').val().trim()        ||
+                        const hasData = $r.find('[name=left_stop_time]').val().trim() ||
+                            $r.find('[name=left_man_hour]').val().trim() ||
+                            $r.find('[name=left_no_work_content]').val().trim() ||
+                            $r.find('[name=right_stop_time]').val().trim() ||
+                            $r.find('[name=right_man_hour]').val().trim() ||
                             $r.find('[name=right_no_work_content]').val().trim();
 
                         if (!hasData) return;
 
                         noWork.push({
-                            left_gubun:  $r.find('[name=left_gubun_month]').val() + '/' + $r.find('[name=left_gubun_day]').val(),
+                            left_gubun: $r.find('[name=left_gubun_month]').val() + '/' + $r.find('[name=left_gubun_day]').val(),
                             left_stop_time: $r.find('[name=left_stop_time]').val(),
                             left_man_hour: $r.find('[name=left_man_hour]').val(),
                             left_no_work_content: $r.find('[name=left_no_work_content]').val(),
@@ -687,6 +726,7 @@
                             id: $content.find('#insp_id').val(),
                             report_date: reportDate,
                             writer: $content.find('#insp_writer').val(),
+                            workcenter_id: workCenterId,
                             spjangcd: sessionStorage.getItem('spjangcd') || '',
                             rows,
                             noWork,
@@ -710,18 +750,18 @@
                 let rowsHtml = '';
                 let totalInsp = 0, totalWait = 0, totalDelivery = 0, totalRepair = 0;
                 rows.forEach(r => {
-                    totalInsp     += parseInt(r.inspection_count) || 0;
-                    totalWait     += parseInt(r.inspection_wait)  || 0;
-                    totalDelivery += parseInt(r.delivery_wait)    || 0;
-                    totalRepair   += parseInt(r.repair_defect)    || 0;
+                    totalInsp += parseInt(r.inspection_count) || 0;
+                    totalWait += parseInt(r.inspection_wait) || 0;
+                    totalDelivery += parseInt(r.delivery_wait) || 0;
+                    totalRepair += parseInt(r.repair_defect) || 0;
                     rowsHtml += `<tr class="data-row">
     <td>${r.gubun || ''}</td>
     <td style="text-align:left;">${escapeForPrint(r.production_model)}</td>
     <td style="text-align:left;">${escapeForPrint(r.pcb_no)}</td>
     <td>${r.inspection_count || ''}</td>
-    <td>${r.inspection_wait  || ''}</td>
-    <td>${r.delivery_wait    || ''}</td>
-    <td>${r.repair_defect    || ''}</td>
+    <td>${r.inspection_wait || ''}</td>
+    <td>${r.delivery_wait || ''}</td>
+    <td>${r.repair_defect || ''}</td>
     <td style="text-align:left;">${escapeForPrint(r.remarks)}</td>
 </tr>`;
                 });
@@ -731,16 +771,16 @@
                 const maxNW = noWork.length;
                 for (let i = 0; i < maxNW; i++) {
                     const nw = noWork[i] || {};
-                    totalManHour += parseFloat(nw.left_man_hour)  || 0;
+                    totalManHour += parseFloat(nw.left_man_hour) || 0;
                     totalManHour += parseFloat(nw.right_man_hour) || 0;
                     nwHtml += `<tr class="data-row">
-    <td>${nw.left_gubun  || ''}</td>
+    <td>${nw.left_gubun || ''}</td>
     <td>${nw.left_stop_time || ''}</td>
-    <td>${nw.left_man_hour  || ''}</td>
+    <td>${nw.left_man_hour || ''}</td>
     <td style="text-align:left;">${escapeForPrint(nw.left_no_work_content)}</td>
     <td style="border-left:2px solid #555;">${nw.right_gubun || ''}</td>
     <td>${nw.right_stop_time || ''}</td>
-    <td>${nw.right_man_hour  || ''}</td>
+    <td>${nw.right_man_hour || ''}</td>
     <td style="text-align:left;">${escapeForPrint(nw.right_no_work_content)}</td>
 </tr>`;
                 }
@@ -795,6 +835,7 @@ tr.data-row td {
                     </div>
                     <div class="hd-row">
                         <span>■ 작업일자 : ${data.report_date || ''}</span>
+                        <span>라인 : ${data.workcenter_name || ''}</span>
                         <span>작성자 : ${data.writer || ''}</span>
                     </div>
 
@@ -852,7 +893,6 @@ tr.data-row td {
         }
 
         // 합계 계산
-        // calcTotals() 수정
         function calcTotals($content) {
             let total = 0, wait = 0, delivery = 0, repair = 0;
             $content.find('#inspRowBody tr:not(.insp-row-template):visible').each(function () {
@@ -881,7 +921,7 @@ tr.data-row td {
             if (data?.gubun) {
                 const parts = String(data.gubun).split('/');
                 $row.find('[name=gubun_month]').val(parts[0] || today.getMonth() + 1);
-                $row.find('[name=gubun_day]').val(parts[1]   || today.getDate());
+                $row.find('[name=gubun_day]').val(parts[1] || today.getDate());
             } else {
                 $row.find('[name=gubun_month]').val(today.getMonth() + 1);
                 $row.find('[name=gubun_day]').val(today.getDate());
@@ -907,7 +947,7 @@ tr.data-row td {
             if (data?.left_gubun) {
                 const parts = String(data.left_gubun).split('/');
                 $row.find('[name=left_gubun_month]').val(parts[0] || today.getMonth() + 1);
-                $row.find('[name=left_gubun_day]').val(parts[1]   || today.getDate());
+                $row.find('[name=left_gubun_day]').val(parts[1] || today.getDate());
             } else {
                 $row.find('[name=left_gubun_month]').val(today.getMonth() + 1);
                 $row.find('[name=left_gubun_day]').val(today.getDate());
@@ -916,7 +956,7 @@ tr.data-row td {
             if (data?.right_gubun) {
                 const parts = String(data.right_gubun).split('/');
                 $row.find('[name=right_gubun_month]').val(parts[0] || today.getMonth() + 1);
-                $row.find('[name=right_gubun_day]').val(parts[1]   || today.getDate());
+                $row.find('[name=right_gubun_day]').val(parts[1] || today.getDate());
             } else {
                 $row.find('[name=right_gubun_month]').val(today.getMonth() + 1);
                 $row.find('[name=right_gubun_day]').val(today.getDate());
@@ -962,6 +1002,10 @@ tr.data-row td {
             page = new InspectionReportPage();
             $('#srchStartDt').val(CommonUtil.getYYYYMMDD(-30));
             $('#srchEndDt').val(CommonUtil.getYYYYMMDD());
+
+            // 라인(작업장) 목록 채우기 - 전체 선택 허용
+            AjaxUtil.fillSelectOptions($('#SrchWorkCenter_id'), 'workcenter', 'all', false);
+
             page.search();
         });
 

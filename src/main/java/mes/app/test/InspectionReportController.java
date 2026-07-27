@@ -29,9 +29,12 @@ public class InspectionReportController {
             @RequestParam(value = "start", required = false) String start,
             @RequestParam(value = "end",   required = false) String end,
             @RequestParam(value = "spjangcd") String spjangcd,
+            @RequestParam(value = "workcenter_id", required = false) Integer workcenterId,
             HttpServletRequest request) {
 
-        List<Map<String, Object>> items = inspectionReportService.getList(start, end, spjangcd);
+        List<Map<String, Object>> items =
+                inspectionReportService.getList(start, end, spjangcd, workcenterId);
+
         AjaxResult result = new AjaxResult();
         result.data = items;
         return result;
