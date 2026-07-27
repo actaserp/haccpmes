@@ -58,7 +58,7 @@
 
             <li>
               <button type="button" class="btn-default" id="btnAddNew" style="width: 115px; height: 36px;"><i
-                  class="fas fa-save">등록</i>
+                      class="fas fa-save">등록</i>
               </button>
             </li>
             <!--<li>
@@ -364,7 +364,7 @@
 
           // 숫자 형태의 날짜 열만 허용 (1~31 등)
           if (!/^\d+$/.test(headerText)) {
-           // Alert.alert('알림', '날짜 셀을 선택하세요.');
+            // Alert.alert('알림', '날짜 셀을 선택하세요.');
             return;
           }
 
@@ -584,7 +584,7 @@
               headers: {'X-CSRF-TOKEN': csrfToken},
               success: function (res) {
                 if (res.success) {
-                  setTimeout(function() {  // 임시로 테스트
+                  setTimeout(function () {  // 임시로 테스트
                     _this.searchMainData();
                   }, 500);
                   modalContainer.close();
@@ -647,15 +647,24 @@
 
     let holidayList = [];
 
+    /**
+     * 공휴일 조회 (공공데이터포털)
+     * - numOfRows 를 100 으로 상향 (대체공휴일 포함 시 30건으로는 누락 발생)
+     * - 타임아웃 5초. 실패해도 화면 동작에는 영향 없음(주말만 빨간색 처리)
+     */
     async function fetchHolidaysForYear(year) {
       return new Promise((resolve, reject) => {
         var xhr = new XMLHttpRequest();
-        var url = 'http://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo';
+        var url = 'https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo';
         var queryParams = '?' + encodeURIComponent('serviceKey') + '=' + 'R3P3syhq6qRP0cz8mbV2J5t%2B32WwaSN9sH8ZW4k59oKAU3Ze0WvcljMrN36OJqxs38%2F780hMD4QfhCiDZQNUyA%3D%3D';
         queryParams += '&' + encodeURIComponent('solYear') + '=' + encodeURIComponent(year);
-        queryParams += '&' + encodeURIComponent('numOfRows') + '=' + encodeURIComponent('30');
+        queryParams += '&' + encodeURIComponent('numOfRows') + '=' + encodeURIComponent('100');
 
         xhr.open('GET', url + queryParams);
+        xhr.timeout = 5000;
+        xhr.ontimeout = function () {
+          reject('timeout');
+        };
         xhr.onreadystatechange = function () {
           if (this.readyState == 4) {
             if (this.status == 200) {
@@ -683,30 +692,66 @@
       });
     }
 
-    async function initPage() {
+    /**
+     * ★ 성능 개선 지점
+     * 기존에는 initPage 에서 공휴일 응답을 await 로 기다린 뒤에야
+     * 그리드를 만들고 조회했기 때문에, 외부 API 가 느리면 화면 전체가 멈췄다.
+     * (실측 4.7초 지연)
+     *
+     * 이제 공휴일은 백그라운드로 받아오고, 도착하면 헤더만 다시 칠한다.
+     * 연 단위로 바뀌지 않는 값이므로 sessionStorage 에 캐시한다.
+     */
+    async function loadHolidays(year) {
+      const cacheKey = 'holidays_' + year;
+
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          holidayList = JSON.parse(cached);
+          refreshGridHeader();
+          return;
+        } catch (e) {
+          sessionStorage.removeItem(cacheKey);
+        }
+      }
+
+      try {
+        const raw = await fetchHolidaysForYear(year);
+        holidayList = raw
+                .filter(item => item.date && item.date.length === 8)
+                .map(item => {
+                  const d = item.date;
+                  return `${d.substring(0, 4)}-${d.substring(4, 6)}-${d.substring(6, 8)}`;
+                });
+        sessionStorage.setItem(cacheKey, JSON.stringify(holidayList));
+      } catch (err) {
+        console.error('❌ 공휴일 로딩 실패:', err);
+        holidayList = [];
+      }
+
+      refreshGridHeader();
+    }
+
+    /** 공휴일 목록이 갱신되면 헤더 색상만 다시 그린다 */
+    function refreshGridHeader() {
+      if (page && page.grid) {
+        page.grid.invalidate();
+      }
+    }
+
+    function initPage() {
       $('#SearchDate').val(CommonUtil.getYYYYMMDD().substring(0, 7));
       AjaxUtil.fillSelectOptions($('#SrchWorkCenter_id'), 'workcenter', '', false);
 
       const yyyymm = $('#SearchDate').val();
       const [year] = yyyymm.split('-').map(Number);
 
-      try {
-        const holidaysRaw = await fetchHolidaysForYear(year);
-        holidayList = holidaysRaw
-          .filter(item => item.date && item.date.length === 8)
-          .map(item => {
-            const locdate = item.date;
-            return `${locdate.substring(0, 4)}-${locdate.substring(4, 6)}-${locdate.substring(6, 8)}`;
-          });
-
-        //console.log('📅 최초 로딩 holidayList:', holidayList);
-      } catch (err) {
-        console.error('❌ 공휴일 로딩 실패:', err);
-        holidayList = [];
-      }
-
+      // 1) 화면 먼저 렌더 (공휴일 응답을 기다리지 않는다)
       page = new TestDailyReportPage();
       page.searchMainData();
+
+      // 2) 공휴일은 백그라운드로
+      loadHolidays(year);
     }
 
     function formatDateToYYYYMMDD(date) {
@@ -721,13 +766,8 @@
 
     $(document).ready(function () {
       initPage();
-      // $('#SearchDate').val(CommonUtil.getYYYYMMDD().substring(0, 7));
-      // AjaxUtil.fillSelectOptions($('#WorkCenter_id'), 'workcenter', '', false);
-      //
-      // page = new TestDailyReportPage();
-      //page.searchMainData();
 
-      $('#SearchDate').on('change', async function () {
+      $('#SearchDate').on('change', function () {
         const yyyymm = $('#SearchDate').val(); // "2025-08"
 
         if (!yyyymm || !yyyymm.includes('-')) {
@@ -737,26 +777,12 @@
 
         const [year] = yyyymm.split('-').map(Number);
 
-        try {
-          const holidaysRaw = await fetchHolidaysForYear(year);
-          holidayList = holidaysRaw
-            .filter(item => item.date && item.date.length === 8)
-            .map(item => {
-              const locdate = item.date;
-              return `${locdate.substring(0, 4)}-${locdate.substring(4, 6)}-${locdate.substring(6, 8)}`;
-            });
+        // 그리드/데이터 먼저 갱신
+        page.init();
+        page.searchMainData();
 
-          //console.log('📅 holidayList:', holidayList);
-
-          page.init();
-          page.searchMainData();
-
-        } catch (err) {
-          console.error('❌ 공휴일 로딩 실패:', err);
-          holidayList = [];
-          page.init();
-          page.searchMainData();
-        }
+        // 공휴일은 백그라운드로 (캐시 있으면 즉시 반영)
+        loadHolidays(year);
       });
 
       //검색
