@@ -16,8 +16,8 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 /**
- * 변경점: API 를 직접 호출하지 않고 LogService 의 큐에 적재만 한다.
- * 실제 전송은 SmartFactoryLogService 의 10분 주기 스케줄러가 담당한다.
+ * 요청 완료 시점에 접속 구분(useSe)·사용자·IP·데이터 사용량을 산출하여
+ * SmartFactoryLogService 로 넘긴다. 실제 전송은 비동기로 처리된다.
  */
 @Slf4j
 @Component
@@ -51,7 +51,7 @@ public class SmartFactoryInterceptor implements HandlerInterceptor {
 
         if (isSuccess || isRedirectSuccess) {
             long bytes = calcDataUsage(request, response);
-            logService.enqueue(useSe, userId, ip, bytes);
+            logService.sendLog(useSe, userId, ip, bytes);
         }
     }
 
