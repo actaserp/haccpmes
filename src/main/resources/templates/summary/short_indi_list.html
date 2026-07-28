@@ -1,367 +1,532 @@
 <html layout:decorate="~{layout_page}">
 <th:block layout:fragment="content">
-<div class="layout-contents">
+    <div class="layout-contents">
 
-    <div class="page-title-wrap">
-        <div class="left">
-            <h2>납기 단축 지표</h2>
-            <a title="북마크" class="bookmark toggle">
-                내 메뉴
-            </a>
+        <div class="page-title-wrap">
+            <div class="left">
+                <h2>납기 단축 지표</h2>
+                <a title="북마크" class="bookmark toggle">
+                    내 메뉴
+                </a>
+            </div>
+            <ul class="page-navi">
+                <li><img src="/images/icon/ico-nav-home.svg" alt="홈아이콘"></li>
+                <li>KPI 성과 지표</li>
+                <li>납기 단축 지표</li>
+            </ul>
         </div>
-        <ul class="page-navi">
-            <li><img src="/images/icon/ico-nav-home.svg" alt="홈아이콘"></li>
-            <li>KPI 성과 지표</li>
-            <li>납기 단축 지표</li>
-        </ul>
+
+
+        <section class="section">
+            <div class="section-top">
+                <div class="search-wrap">
+                    <dl>
+                        <dt>
+                            <label for="cboYear">
+                                기준년도
+                            </label>
+                        </dt>
+                        <dd>
+                            <div class="srch-box">
+                                <select id="cboYear">
+                                </select>
+                            </div>
+                        </dd>
+                    </dl>
+
+                    <dl>
+                        <dt>&nbsp;</dt>
+                        <dd>
+                            <li>
+                                <a class="btn btn-delete" title="검색" id="btnSearch">
+                                    <!--                                        class 쓰이는 곳 찾고 없으면 클래스명 수정하기-->
+                                    <img src="/images/icon/btn-srch.svg" alt="검색 아이콘">
+                                    검색
+                                </a>
+                            </li>
+                        </dd>
+
+                    </dl>
+                    <dl>
+                        <dt>&nbsp;</dt>
+                        <dd>
+                            <span>* 일수 계산은 수주일을 1일로 포함하여 계산됩니다. </span>
+                        </dd>
+
+                    </dl>
+
+                </div>
+            </div>
+            <div class="container-fluid" style="min-height:92px;">
+                <div id="kpiCards"></div>
+            </div>
+
+            <div class="container-fluid" style="height:200px; min-height:200px; margin-bottom:14px; overflow:visible;">
+                <div id="kpiChart" class="chart-box"></div>
+            </div>
+
+            <div class="container-fluid">
+                <div id="theGrid" style="height: 560px;"></div>
+            </div>
+        </section>
     </div>
 
+    <style>
+        #kpiCards *, #kpiChart * { box-sizing: border-box; }
 
-    <section class="section">
-        <div class="section-top">
-            <div class="search-wrap">
-                <dl>
-                    <dt>
-                        <label for="cboYear">
-                            기준년도
-                        </label>
-                    </dt>
-                    <dd>
-                        <div class="srch-box">
-                            <select id="cboYear">
-                            </select>
-                        </div>
-                    </dd>
-                </dl>
+        .kpi-cards { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: nowrap; }
+        .kpi-card {
+            flex: 1 1 0; min-width: 0; background: #fff; border: 1px solid #dde3ea;
+            border-radius: 6px; padding: 10px 14px;
+        }
+        .kpi-card .label { font-size: 12px; color: #7a8794; margin-bottom: 6px; }
+        .kpi-card .value { font-size: 22px; font-weight: 700; color: #22303c; line-height: 1.1; }
+        .kpi-card .value small { font-size: 13px; font-weight: 500; color: #7a8794; margin-left: 3px; }
+        .kpi-card.ok  .value { color: #1a8a4c; }
+        .kpi-card.bad .value { color: #cc2f3e; }
 
-                <dl>
-                    <dt>&nbsp;</dt>
-                    <dd>
-                        <li>
-                            <a class="btn btn-delete" title="검색" id="btnSearch">
-                                <!--                                        class 쓰이는 곳 찾고 없으면 클래스명 수정하기-->
-                                <img src="/images/icon/btn-srch.svg" alt="검색 아이콘">
-                                검색
-                            </a>
-                        </li>
-                    </dd>
+        .chart-box {
+            background: #fff; border: 1px solid #dde3ea; border-radius: 6px;
+            padding: 10px 18px 8px;
+            height: 100%;               /* 높이는 위 container-fluid 의 200px 를 따름 */
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .chart-head {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 6px; flex: 0 0 auto; height: 20px;
+        }
+        .chart-head h3 { font-size: 14px; font-weight: 700; color: #22303c; margin: 0; }
+        .chart-legend { font-size: 12px; color: #66727e; display: flex; gap: 14px; align-items: center; }
+        .chart-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+        .lg-ok  { background: #2eaa63; }
+        .lg-bad { background: #e05260; }
+        .lg-tgt { width: 14px !important; height: 0 !important; border-top: 2px dashed #8494a4; border-radius: 0 !important; }
 
-                </dl>
-                <dl>
-                    <dt>&nbsp;</dt>
-                    <dd>
-                        <span>* 일수 계산은 수주일을 1일로 포함하여 계산됩니다. </span>
-                    </dd>
+        .bars { flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; gap: 10px; padding: 18px 4px 0; }
+        .bar-col { flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; }
+        .bar-area { position: relative; width: 100%; flex: 1 1 auto; min-height: 0; display: flex; align-items: flex-end; justify-content: center; }
+        .bar { width: 60%; max-width: 46px; border-radius: 3px 3px 0 0; position: relative; transition: height .35s ease; }
+        .bar.ok  { background: linear-gradient(180deg, #3fc07a 0%, #2eaa63 100%); }
+        .bar.bad { background: linear-gradient(180deg, #f2727f 0%, #e05260 100%); }
+        .bar.empty { background: #e9edf1; }
+        .bar .bar-val { position: absolute; top: -19px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 700; color: #46535f; white-space: nowrap; }
+        .tgt-line { position: absolute; left: 6%; right: 6%; border-top: 2px dashed #8494a4; }
+        .tgt-line span { position: absolute; right: 0; top: -15px; font-size: 10px; color: #8494a4; }
 
-                </dl>
-
-            </div>
-        </div>
-        <div class="container-fluid">
-            <div id="theGrid" style="height: 730px;"></div>
-        </div>
-    </section>
-</div>
+        .bar-x    { flex: 0 0 16px; line-height: 16px; margin-top: 5px; font-size: 12px; color: #66727e; }
+        .bar-rate { flex: 0 0 14px; line-height: 14px; font-size: 11px; font-weight: 600; }
+        .bar-rate.ok  { color: #1a8a4c; }
+        .bar-rate.bad { color: #cc2f3e; }
+        .bar-rate.na  { color: #b6bfc8; }
+    </style>
 </th:block>
 <th:block layout:fragment="scripts">
-<script type="text/javascript">
-    class ProductionMonthPage {
-        constructor() {
-            this.grid = null;
-            this.viewData = new wijmo.collections.CollectionView();
-            this.init();
-        }
+    <script type="text/javascript">
+        /* =========================================================
+           월별 목표 납기일수 (일)  ※ 납기는 낮을수록 좋음 → 실적 <= 목표면 달성
+           이 값만 바꾸면 그래프/달성률/KPI 카드가 전부 따라갑니다.
+           ========================================================= */
+        const MONTHLY_TARGET = [10, 9.5, 9.5, 10, 9, 8.5, 9.5, 10, 8.8, 9.5, 9.5, 9.5];
 
-        init() {
-            let _this = this;
+        class ProductionMonthPage {
+            constructor() {
+                this.grid = null;
+                this.viewData = new wijmo.collections.CollectionView();
+                this.init();
+            }
 
-            this.grid = new wijmo.grid.FlexGrid('#theGrid', {
-                selectionMode: wijmo.grid.SelectionMode.Row,
-                headersVisibility: wijmo.grid.HeadersVisibility.Column,
-                allowSorting: wijmo.grid.AllowSorting.MultiColumn,
-                allowMerging: wijmo.grid.AllowMerging.Cells,  //셀 병합
-                autoGenerateColumns: false,
-                showMarquee: true,
-                isReadOnly: true,
-                frozenColumns: 4,
-                formatItem: (sender, e) => {
-                    if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
-                        e.cell.style.textAlign = 'center';
-                    }
-                    if (e.panel.cellType === wijmo.grid.CellType.Cell) {
-                        let item = sender.rows[e.row].dataItem;
-                        // 스타일 전체 초기화
-                        e.cell.style.backgroundColor = '';
-                        e.cell.style.fontWeight = '';
-                        e.cell.style.color = '';
-                        e.cell.style.borderBottom = '';
-                        e.cell.style.textAlign = '';
-                        e.cell.style.justifyContent = '';
+            init() {
+                let _this = this;
 
-                        if (!item) return;
-
-                        // ★ 요약행은 먼저 처리하고 return으로 빠져나옴
-                        if (item._isSum) {
-                            e.cell.style.fontWeight = 'bold';
-                            e.cell.style.color = '#7b5800';
-                            return;
+                this.grid = new wijmo.grid.FlexGrid('#theGrid', {
+                    selectionMode: wijmo.grid.SelectionMode.Row,
+                    headersVisibility: wijmo.grid.HeadersVisibility.Column,
+                    allowSorting: wijmo.grid.AllowSorting.MultiColumn,
+                    allowMerging: wijmo.grid.AllowMerging.Cells,  //셀 병합
+                    autoGenerateColumns: false,
+                    showMarquee: true,
+                    isReadOnly: true,
+                    frozenColumns: 4,
+                    formatItem: (sender, e) => {
+                        if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+                            e.cell.style.textAlign = 'center';
                         }
-                        if (item._isCnt) {
-                            e.cell.style.fontWeight = 'bold';
-                            e.cell.style.color = '#5c2d7a';
-                            return;
-                        }
-                        if (item._isAvg) {
-                            e.cell.style.fontWeight = 'bold';
-                            e.cell.style.color = '#1a6496';
-                            return;
-                        }
+                        if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+                            let item = sender.rows[e.row].dataItem;
+                            // 스타일 전체 초기화
+                            e.cell.style.backgroundColor = '';
+                            e.cell.style.fontWeight = '';
+                            e.cell.style.color = '';
+                            e.cell.style.borderBottom = '';
+                            e.cell.style.textAlign = '';
+                            e.cell.style.justifyContent = '';
 
-                        // 납기일수 소수점 표시
-                        if (item._type === '납기일수') {
-                            let col = sender.columns[e.col];
-                            if (col.binding && col.binding.startsWith('mon_')) {
-                                let val = item[col.binding];
-                                if (val !== null && val !== undefined && val !== '') {
-                                    e.cell.textContent = parseFloat(val).toFixed(1);
+                            if (!item) return;
+
+                            // ★ 요약행은 먼저 처리하고 return으로 빠져나옴
+                            if (item._isSum) {
+                                e.cell.style.fontWeight = 'bold';
+                                e.cell.style.color = '#7b5800';
+                                return;
+                            }
+                            if (item._isCnt) {
+                                e.cell.style.fontWeight = 'bold';
+                                e.cell.style.color = '#5c2d7a';
+                                return;
+                            }
+                            if (item._isAvg) {
+                                e.cell.style.fontWeight = 'bold';
+                                e.cell.style.color = '#1a6496';
+                                return;
+                            }
+
+                            // 납기일수 소수점 표시
+                            if (item._type === '납기일수') {
+                                let col = sender.columns[e.col];
+                                if (col.binding && col.binding.startsWith('mon_')) {
+                                    let val = item[col.binding];
+                                    if (val !== null && val !== undefined && val !== '') {
+                                        e.cell.textContent = parseFloat(val).toFixed(1);
+                                    }
                                 }
                             }
+
+                            // 일반 행 구분별 배경색
+                            if (item._type === '수주일') {
+                                e.cell.style.backgroundColor = '#f0f7ff';
+                            } else if (item._type === '출고일') {
+                                e.cell.style.backgroundColor = '#f0fff4';
+                            } else if (item._type === '납기일수') {
+                                e.cell.style.borderBottom = '2px solid #ddd';
+                            }
                         }
+                    },
 
-                        // 일반 행 구분별 배경색
-                        if (item._type === '수주일') {
-                            e.cell.style.backgroundColor = '#f0f7ff';
-                        } else if (item._type === '출고일') {
-                            e.cell.style.backgroundColor = '#f0fff4';
-                        } else if (item._type === '납기일수') {
-                            e.cell.style.borderBottom = '2px solid #ddd';
-                        }
-                    }
-                },
-
-                columns: [
-                    { binding: 'mat_grp_name', header: '품목그룹', width: 120, allowMerging: true },
-                    { binding: 'mat_name',     header: '품목명',   width: '*',  allowMerging: true },
-                    { binding: 'standard1',    header: '규격',     width: 120,  allowMerging: false },
-                    { binding: 'unit_name',    header: '단위',     width: 70,   allowMerging: false },
-                    { binding: '_type',        header: '구분',     width: 75,   allowMerging: false, align: 'center' },
-                    ...Array.from({ length: 12 }, (_, i) => ({
-                        binding: `mon_${i + 1}`,
-                        header: `${i + 1}월`,
-                        width: 65,
-                        align: 'center',
-                        allowSorting: false
-                    }))
-                ],
-                itemsSource: this.viewData, // 데이터를 설정할 배열
-            });
-            new FlexGridContextMenu(this.grid);
-            this.grid.downloadFileName = '납기 단축 지표';
-            this.grid.mergeManager = new CustomMergeManager(this.grid);
-        }
+                    columns: [
+                        { binding: 'mat_grp_name', header: '품목그룹', width: 120, allowMerging: true },
+                        { binding: 'mat_name',     header: '품목명',   width: '*',  allowMerging: true },
+                        { binding: 'standard1',    header: '규격',     width: 120,  allowMerging: false },
+                        { binding: 'unit_name',    header: '단위',     width: 70,   allowMerging: false },
+                        { binding: '_type',        header: '구분',     width: 75,   allowMerging: false, align: 'center' },
+                        ...Array.from({ length: 12 }, (_, i) => ({
+                            binding: `mon_${i + 1}`,
+                            header: `${i + 1}월`,
+                            width: 65,
+                            align: 'center',
+                            allowSorting: false
+                        }))
+                    ],
+                    itemsSource: this.viewData, // 데이터를 설정할 배열
+                });
+                new FlexGridContextMenu(this.grid);
+                this.grid.downloadFileName = '납기 단축 지표';
+                this.grid.mergeManager = new CustomMergeManager(this.grid);
+            }
 
 
 
-        // searchMainData() {
-        //     let url = '/api/summary/indicator/short_read';
-        //     let data = {
-        //         'cboYear'  : $('#cboYear').val(),
-        //         'spjangcd' : sessionStorage.getItem('spjangcd')
-        //     };
-        //     const result = AjaxUtil.getSyncData(url, data);
-        //     if (result && result.data && result.data.length > 0) {
-        //         let rows = result.data;
-        //
-        //         // 각 품목을 수주일 / 출고일 / 납기일수 3행으로 펼치기
-        //         let expanded = [];
-        //         rows.forEach(function (r) {
-        //             let base = {
-        //                 mat_grp_name : r.mat_grp_name,
-        //                 mat_name     : r.mat_name,
-        //                 standard1    : r.standard1,
-        //                 unit_name    : r.unit_name,
-        //             };
-        //             let rowJum  = Object.assign({}, base, { _type: '수주일' });
-        //             let rowShip = Object.assign({}, base, { _type: '출고일' });
-        //             let rowLead = Object.assign({}, base, { _type: '납기일수' });
-        //             for (let m = 1; m <= 12; m++) {
-        //                 rowJum['mon_'  + m] = r['jum_mon_'  + m];
-        //                 rowShip['mon_' + m] = r['ship_mon_' + m];
-        //                 rowLead['mon_' + m] = r['mon_'      + m];
-        //             }
-        //             expanded.push(rowJum, rowShip, rowLead);
-        //         });
-        //
-        //         // 납기일수 평균 행 계산
-        //         let avgLead = { mat_grp_name: '평균', mat_name: '', standard1: '', unit_name: '', _type: '납기일수', _isAvg: true };
-        //         for (let m = 1; m <= 12; m++) {
-        //             let vals = rows.map(r => parseFloat(r['mon_' + m])).filter(v => !isNaN(v));
-        //             avgLead['mon_' + m] = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-        //         }
-        //
-        //         this.grid.itemsSource = [avgLead, ...expanded];
-        //     } else {
-        //         this.grid.itemsSource = result ? result.data : [];
-        //     }
-        // }
+            // searchMainData() {
+            //     let url = '/api/summary/indicator/short_read';
+            //     let data = {
+            //         'cboYear'  : $('#cboYear').val(),
+            //         'spjangcd' : sessionStorage.getItem('spjangcd')
+            //     };
+            //     const result = AjaxUtil.getSyncData(url, data);
+            //     if (result && result.data && result.data.length > 0) {
+            //         let rows = result.data;
+            //
+            //         // 각 품목을 수주일 / 출고일 / 납기일수 3행으로 펼치기
+            //         let expanded = [];
+            //         rows.forEach(function (r) {
+            //             let base = {
+            //                 mat_grp_name : r.mat_grp_name,
+            //                 mat_name     : r.mat_name,
+            //                 standard1    : r.standard1,
+            //                 unit_name    : r.unit_name,
+            //             };
+            //             let rowJum  = Object.assign({}, base, { _type: '수주일' });
+            //             let rowShip = Object.assign({}, base, { _type: '출고일' });
+            //             let rowLead = Object.assign({}, base, { _type: '납기일수' });
+            //             for (let m = 1; m <= 12; m++) {
+            //                 rowJum['mon_'  + m] = r['jum_mon_'  + m];
+            //                 rowShip['mon_' + m] = r['ship_mon_' + m];
+            //                 rowLead['mon_' + m] = r['mon_'      + m];
+            //             }
+            //             expanded.push(rowJum, rowShip, rowLead);
+            //         });
+            //
+            //         // 납기일수 평균 행 계산
+            //         let avgLead = { mat_grp_name: '평균', mat_name: '', standard1: '', unit_name: '', _type: '납기일수', _isAvg: true };
+            //         for (let m = 1; m <= 12; m++) {
+            //             let vals = rows.map(r => parseFloat(r['mon_' + m])).filter(v => !isNaN(v));
+            //             avgLead['mon_' + m] = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+            //         }
+            //
+            //         this.grid.itemsSource = [avgLead, ...expanded];
+            //     } else {
+            //         this.grid.itemsSource = result ? result.data : [];
+            //     }
+            // }
 
-        searchMainData() {
-            // 1. 날짜 데이터만 M/D 형식으로 정리된 rawData
-            const rawData = [
-                { mat_grp_name: '트윈스타', mat_name: '100G', standard1: '', unit_name: 'EA', jum_mon_2: '2/4', ship_mon_2: '2/10' },
-                { mat_grp_name: '트윈스타', mat_name: '1200E', standard1: '', unit_name: 'EA', jum_mon_1: '1/27', ship_mon_1: '1/29', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '트윈스타', mat_name: '1200SA', standard1: '', unit_name: 'EA', jum_mon_1: '1/27', ship_mon_1: '1/29', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/8', ship_mon_4: '4/14' },
-                { mat_grp_name: '트윈스타', mat_name: '120G', standard1: '', unit_name: 'EA', jum_mon_2: '2/4', ship_mon_2: '2/6', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '트윈스타', mat_name: '200SA', standard1: '', unit_name: 'EA', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '트윈스타', mat_name: '20B', standard1: '', unit_name: 'EA', jum_mon_1: '1/8', ship_mon_1: '1/14', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/8', ship_mon_4: '4/10' },
-                { mat_grp_name: '트윈스타', mat_name: '300E', standard1: '', unit_name: 'EA', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '트윈스타', mat_name: '300SA', standard1: '', unit_name: 'EA', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '트윈스타', mat_name: '30B', standard1: '', unit_name: 'EA', jum_mon_1: '1/8', ship_mon_1: '1/14', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '트윈스타', mat_name: '450SA', standard1: '', unit_name: 'EA', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '트윈스타', mat_name: '45B', standard1: '', unit_name: 'EA', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/8', ship_mon_4: '4/10' },
-                { mat_grp_name: '트윈스타', mat_name: '600SA', standard1: '', unit_name: 'EA', jum_mon_1: '1/27', ship_mon_1: '1/29', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/1', ship_mon_4: '4/11' },
-                { mat_grp_name: '트윈스타', mat_name: '60B', standard1: '', unit_name: 'EA', jum_mon_1: '1/17', ship_mon_1: '1/21', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/6', ship_mon_4: '4/11' },
-                { mat_grp_name: '트윈스타', mat_name: '60G', standard1: '', unit_name: 'EA', jum_mon_2: '2/4', ship_mon_2: '2/6', jum_mon_4: '4/10', ship_mon_4: '4/14' },
-                { mat_grp_name: '트윈스타', mat_name: '750E', standard1: '', unit_name: 'EA', jum_mon_1: '1/27', ship_mon_1: '1/29', jum_mon_3: '3/10', ship_mon_3: '3/23', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '트윈스타', mat_name: '75B(80B)', standard1: '', unit_name: 'EA', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_3: '3/10', ship_mon_3: '3/22', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '트윈스타', mat_name: '900E', standard1: '', unit_name: 'EA', jum_mon_1: '1/27', ship_mon_1: '1/29', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_3: '3/10', ship_mon_3: '3/22', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '트윈스타', mat_name: '900SA', standard1: '', unit_name: 'EA', jum_mon_1: '1/27', ship_mon_1: '1/29', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_3: '3/10', ship_mon_3: '3/22', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '트윈스타', mat_name: '90B', standard1: '', unit_name: 'EA', jum_mon_1: '1/27', ship_mon_1: '1/29', jum_mon_3: '3/10', ship_mon_3: '3/22', jum_mon_4: '4/1', ship_mon_4: '4/11' },
-                { mat_grp_name: '트윈스타', mat_name: '90G', standard1: '', unit_name: 'EA', jum_mon_2: '2/4', ship_mon_2: '2/6', jum_mon_3: '3/10', ship_mon_3: '3/24', jum_mon_4: '4/10', ship_mon_4: '4/14' },
-                { mat_grp_name: '트윈스타', mat_name: 'Light Control Manual', standard1: '', unit_name: 'EA', jum_mon_1: '1/27', ship_mon_1: '1/29', jum_mon_3: '3/17', ship_mon_3: '3/26', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '트윈스타', mat_name: 'Light Control Pro v2', standard1: '', unit_name: 'EA', jum_mon_3: '3/17', ship_mon_3: '3/26', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '트윈스타', mat_name: 'Light Control Standard', standard1: '', unit_name: 'EA', jum_mon_1: '1/8', ship_mon_1: '1/13', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '바디텍메드(태현)', mat_name: 'AFIAS 0.8T', standard1: '', unit_name: 'EA', jum_mon_1: '1/11', ship_mon_1: '1/20', jum_mon_2: '2/6', ship_mon_2: '2/19', jum_mon_3: '3/25', ship_mon_3: '3/27', jum_mon_4: '4/2', ship_mon_4: '4/10' },
-                { mat_grp_name: '바디텍메드(태현)', mat_name: 'i-Chroma 0.6T', standard1: '', unit_name: 'EA', jum_mon_1: '1/2', ship_mon_1: '1/13', jum_mon_2: '2/6', ship_mon_2: '2/19', jum_mon_3: '3/7', ship_mon_3: '3/16', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '제일제품', mat_name: 'DC 스위치 1회로(V09)', standard1: '', unit_name: 'EA', jum_mon_2: '2/9', ship_mon_2: '2/23', jum_mon_3: '3/8', ship_mon_3: '3/17', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '제일제품', mat_name: 'DC 스위치 2회로(V09)', standard1: '', unit_name: 'EA', jum_mon_2: '2/9', ship_mon_2: '2/23', jum_mon_3: '3/7', ship_mon_3: '3/17', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '제일제품', mat_name: '파워허브 16포트 SUB', standard1: '', unit_name: 'EA', jum_mon_1: '1/29', ship_mon_1: '2/2', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '제일제품', mat_name: '파워허브 24포트 SUB', standard1: '', unit_name: 'EA', jum_mon_3: '3/10', ship_mon_3: '3/19', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '율아테크', mat_name: 'DCU', standard1: '', unit_name: 'EA', jum_mon_1: '1/1', ship_mon_1: '1/19', jum_mon_3: '3/17', ship_mon_3: '3/19', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '에이스테크', mat_name: 'DOV-887', standard1: '', unit_name: 'EA', jum_mon_4: '4/2', ship_mon_4: '4/9' },
-                { mat_grp_name: '율아테크', mat_name: 'EZ-111', standard1: '', unit_name: 'EA', jum_mon_1: '1/1', ship_mon_1: '1/19' },
-                { mat_grp_name: '율아테크', mat_name: 'EZ-1390', standard1: '', unit_name: 'EA', jum_mon_1: '1/1', ship_mon_1: '1/19', jum_mon_2: '2/9', ship_mon_2: '2/10' },
-                { mat_grp_name: '율아테크', mat_name: 'EZ-5520', standard1: '', unit_name: 'EA', jum_mon_1: '1/1', ship_mon_1: '1/19', jum_mon_3: '3/20', ship_mon_3: '3/24', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '율아테크', mat_name: 'IF BOARD', standard1: '', unit_name: 'EA', jum_mon_1: '1/1', ship_mon_1: '1/19', jum_mon_3: '3/17', ship_mon_3: '3/19', jum_mon_4: '4/1', ship_mon_4: '4/10' },
-                { mat_grp_name: '더블에스테크', mat_name: '참슬 MAIN', standard1: '', unit_name: 'EA', jum_mon_1: '1/9', ship_mon_1: '1/20', jum_mon_2: '2/5', ship_mon_2: '2/19', jum_mon_3: '3/20', ship_mon_3: '3/24' },
-                { mat_grp_name: '더블에스테크', mat_name: '참슬 POWER', standard1: '', unit_name: 'EA', jum_mon_1: '1/9', ship_mon_1: '1/20', jum_mon_2: '2/5', ship_mon_2: '2/19', jum_mon_3: '3/20', ship_mon_3: '3/24' },
-                { mat_grp_name: '더블에스테크', mat_name: '참슬 TOUCH', standard1: '', unit_name: 'EA', jum_mon_1: '1/9', ship_mon_1: '1/20', jum_mon_2: '2/5', ship_mon_2: '2/19', jum_mon_3: '3/20', ship_mon_3: '3/24' },
-            ];
+            searchMainData() {
+                // 1. 날짜 데이터만 M/D 형식으로 정리된 rawData
+                const rawData = [
+                    { mat_grp_name: '트윈스타', mat_name: '100G', standard1: '', unit_name: 'EA', jum_mon_2: '2/4', ship_mon_2: '2/10', jum_mon_5: '5/1', ship_mon_5: '5/13', jum_mon_6: '6/25', ship_mon_6: '7/6', jum_mon_7: '7/20', ship_mon_7: '7/26', jum_mon_9: '9/22', ship_mon_9: '10/5' },
+                    { mat_grp_name: '트윈스타', mat_name: '1200E', standard1: '', unit_name: 'EA', jum_mon_1: '1/27', ship_mon_1: '1/29', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_5: '5/20', ship_mon_5: '6/2', jum_mon_6: '6/10', ship_mon_6: '6/22', jum_mon_10: '10/3', ship_mon_10: '10/15' },
+                    { mat_grp_name: '트윈스타', mat_name: '1200SA', standard1: '', unit_name: 'EA', jum_mon_1: '1/27', ship_mon_1: '1/29', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/8', ship_mon_4: '4/14', jum_mon_5: '5/5', ship_mon_5: '5/20', jum_mon_7: '7/21', ship_mon_7: '7/25', jum_mon_9: '9/8', ship_mon_9: '9/19' },
+                    { mat_grp_name: '트윈스타', mat_name: '120G', standard1: '', unit_name: 'EA', jum_mon_2: '2/4', ship_mon_2: '2/6', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_5: '5/10', ship_mon_5: '5/12', jum_mon_6: '6/22', ship_mon_6: '6/30', jum_mon_7: '7/12', ship_mon_7: '7/16', jum_mon_9: '9/22', ship_mon_9: '9/24' },
+                    { mat_grp_name: '트윈스타', mat_name: '200SA', standard1: '', unit_name: 'EA', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_5: '5/7', ship_mon_5: '5/12', jum_mon_6: '6/16', ship_mon_6: '6/22', jum_mon_7: '7/15', ship_mon_7: '7/22', jum_mon_8: '8/11', ship_mon_8: '8/16', jum_mon_9: '9/14', ship_mon_9: '9/23', jum_mon_10: '10/24', ship_mon_10: '10/30' },
+                    { mat_grp_name: '트윈스타', mat_name: '20B', standard1: '', unit_name: 'EA', jum_mon_1: '1/8', ship_mon_1: '1/14', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/8', ship_mon_4: '4/10', jum_mon_5: '5/20', ship_mon_5: '5/26', jum_mon_6: '6/18', ship_mon_6: '6/24', jum_mon_7: '7/25', ship_mon_7: '8/9', jum_mon_8: '8/18', ship_mon_8: '8/20', jum_mon_9: '9/12', ship_mon_9: '9/15', jum_mon_10: '10/16', ship_mon_10: '10/29' },
+                    { mat_grp_name: '트윈스타', mat_name: '300E', standard1: '', unit_name: 'EA', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_7: '7/9', ship_mon_7: '7/10', jum_mon_8: '8/15', ship_mon_8: '8/19' },
+                    { mat_grp_name: '트윈스타', mat_name: '300SA', standard1: '', unit_name: 'EA', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_5: '5/25', ship_mon_5: '6/4', jum_mon_6: '6/12', ship_mon_6: '6/26', jum_mon_7: '7/14', ship_mon_7: '7/22', jum_mon_8: '8/6', ship_mon_8: '8/15', jum_mon_10: '10/19', ship_mon_10: '10/29' },
+                    { mat_grp_name: '트윈스타', mat_name: '30B', standard1: '', unit_name: 'EA', jum_mon_1: '1/8', ship_mon_1: '1/14', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_6: '6/8', ship_mon_6: '6/13', jum_mon_8: '8/26', ship_mon_8: '8/27', jum_mon_9: '9/6', ship_mon_9: '9/7', jum_mon_10: '10/12', ship_mon_10: '10/14' },
+                    { mat_grp_name: '트윈스타', mat_name: '450SA', standard1: '', unit_name: 'EA', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_6: '6/17', ship_mon_6: '6/28', jum_mon_7: '7/7', ship_mon_7: '7/18', jum_mon_9: '9/13', ship_mon_9: '9/30', jum_mon_10: '10/5', ship_mon_10: '10/14' },
+                    { mat_grp_name: '트윈스타', mat_name: '45B', standard1: '', unit_name: 'EA', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/8', ship_mon_4: '4/10', jum_mon_6: '6/19', ship_mon_6: '7/2', jum_mon_7: '7/15', ship_mon_7: '7/20', jum_mon_8: '8/2', ship_mon_8: '8/5', jum_mon_9: '9/16', ship_mon_9: '9/18', jum_mon_10: '10/8', ship_mon_10: '10/16' },
+                    { mat_grp_name: '트윈스타', mat_name: '600SA', standard1: '', unit_name: 'EA', jum_mon_1: '1/27', ship_mon_1: '1/29', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/1', ship_mon_4: '4/11', jum_mon_5: '5/9', ship_mon_5: '5/10', jum_mon_7: '7/6', ship_mon_7: '7/18', jum_mon_8: '8/11', ship_mon_8: '8/24', jum_mon_9: '9/21', ship_mon_9: '9/22', jum_mon_10: '10/17', ship_mon_10: '10/29' },
+                    { mat_grp_name: '트윈스타', mat_name: '60B', standard1: '', unit_name: 'EA', jum_mon_1: '1/17', ship_mon_1: '1/21', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_4: '4/6', ship_mon_4: '4/11', jum_mon_5: '5/22', ship_mon_5: '5/29', jum_mon_7: '7/17', ship_mon_7: '8/1', jum_mon_8: '8/18', ship_mon_8: '8/29', jum_mon_9: '9/22', ship_mon_9: '9/27', jum_mon_10: '10/19', ship_mon_10: '11/1' },
+                    { mat_grp_name: '트윈스타', mat_name: '60G', standard1: '', unit_name: 'EA', jum_mon_2: '2/4', ship_mon_2: '2/6', jum_mon_4: '4/10', ship_mon_4: '4/14', jum_mon_7: '7/6', ship_mon_7: '7/19', jum_mon_9: '9/11', ship_mon_9: '9/12', jum_mon_10: '10/19', ship_mon_10: '10/24' },
+                    { mat_grp_name: '트윈스타', mat_name: '750E', standard1: '', unit_name: 'EA', jum_mon_1: '1/27', ship_mon_1: '1/29', jum_mon_3: '3/10', ship_mon_3: '3/23', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_5: '5/5', ship_mon_5: '5/7', jum_mon_6: '6/23', ship_mon_6: '6/28', jum_mon_7: '7/6', ship_mon_7: '7/16', jum_mon_8: '8/24', ship_mon_8: '9/10', jum_mon_9: '9/13', ship_mon_9: '9/19', jum_mon_10: '10/2', ship_mon_10: '10/6' },
+                    { mat_grp_name: '트윈스타', mat_name: '75B(80B)', standard1: '', unit_name: 'EA', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_3: '3/10', ship_mon_3: '3/22', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_5: '5/7', ship_mon_5: '5/17', jum_mon_6: '6/12', ship_mon_6: '6/26', jum_mon_7: '7/13', ship_mon_7: '7/18', jum_mon_9: '9/7', ship_mon_9: '9/16', jum_mon_10: '10/23', ship_mon_10: '10/27' },
+                    { mat_grp_name: '트윈스타', mat_name: '900E', standard1: '', unit_name: 'EA', jum_mon_1: '1/27', ship_mon_1: '1/29', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_3: '3/10', ship_mon_3: '3/22', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_5: '5/12', ship_mon_5: '5/17', jum_mon_6: '6/8', ship_mon_6: '6/12', jum_mon_7: '7/19', ship_mon_7: '8/5', jum_mon_8: '8/15', ship_mon_8: '8/24', jum_mon_9: '9/7', ship_mon_9: '9/24', jum_mon_10: '10/7', ship_mon_10: '10/22' },
+                    { mat_grp_name: '트윈스타', mat_name: '900SA', standard1: '', unit_name: 'EA', jum_mon_1: '1/27', ship_mon_1: '1/29', jum_mon_2: '2/27', ship_mon_2: '3/6', jum_mon_3: '3/10', ship_mon_3: '3/22', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_5: '5/1', ship_mon_5: '5/7', jum_mon_7: '7/25', ship_mon_7: '8/8', jum_mon_9: '9/3', ship_mon_9: '9/18', jum_mon_10: '10/19', ship_mon_10: '10/29' },
+                    { mat_grp_name: '트윈스타', mat_name: '90B', standard1: '', unit_name: 'EA', jum_mon_1: '1/27', ship_mon_1: '1/29', jum_mon_3: '3/10', ship_mon_3: '3/22', jum_mon_4: '4/1', ship_mon_4: '4/11', jum_mon_6: '6/24', ship_mon_6: '7/10', jum_mon_7: '7/25', ship_mon_7: '7/30', jum_mon_9: '9/16', ship_mon_9: '9/19', jum_mon_10: '10/20', ship_mon_10: '11/4' },
+                    { mat_grp_name: '트윈스타', mat_name: '90G', standard1: '', unit_name: 'EA', jum_mon_2: '2/4', ship_mon_2: '2/6', jum_mon_3: '3/10', ship_mon_3: '3/24', jum_mon_4: '4/10', ship_mon_4: '4/14', jum_mon_5: '5/12', ship_mon_5: '5/25', jum_mon_8: '8/17', ship_mon_8: '8/25', jum_mon_10: '10/14', ship_mon_10: '10/18' },
+                    { mat_grp_name: '트윈스타', mat_name: 'Light Control Manual', standard1: '', unit_name: 'EA', jum_mon_1: '1/27', ship_mon_1: '1/29', jum_mon_3: '3/17', ship_mon_3: '3/26', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_6: '6/19', ship_mon_6: '6/26', jum_mon_7: '7/7', ship_mon_7: '7/8', jum_mon_9: '9/19', ship_mon_9: '9/22', jum_mon_10: '10/11', ship_mon_10: '10/25' },
+                    { mat_grp_name: '트윈스타', mat_name: 'Light Control Pro v2', standard1: '', unit_name: 'EA', jum_mon_3: '3/17', ship_mon_3: '3/26', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_5: '5/2', ship_mon_5: '5/16', jum_mon_6: '6/10', ship_mon_6: '6/18', jum_mon_9: '9/26', ship_mon_9: '10/2', jum_mon_10: '10/5', ship_mon_10: '10/7' },
+                    { mat_grp_name: '트윈스타', mat_name: 'Light Control Standard', standard1: '', unit_name: 'EA', jum_mon_1: '1/8', ship_mon_1: '1/13', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_5: '5/3', ship_mon_5: '5/12', jum_mon_6: '6/17', ship_mon_6: '6/21', jum_mon_7: '7/22', ship_mon_7: '7/26', jum_mon_8: '8/18', ship_mon_8: '8/27', jum_mon_10: '10/9', ship_mon_10: '10/24' },
+                    { mat_grp_name: '바디텍메드(태현)', mat_name: 'AFIAS 0.8T', standard1: '', unit_name: 'EA', jum_mon_1: '1/11', ship_mon_1: '1/20', jum_mon_2: '2/6', ship_mon_2: '2/19', jum_mon_3: '3/25', ship_mon_3: '3/27', jum_mon_4: '4/2', ship_mon_4: '4/10', jum_mon_6: '6/4', ship_mon_6: '6/9', jum_mon_7: '7/3', ship_mon_7: '7/15', jum_mon_8: '8/4', ship_mon_8: '8/14', jum_mon_9: '9/18', ship_mon_9: '9/27', jum_mon_10: '10/9', ship_mon_10: '10/23' },
+                    { mat_grp_name: '바디텍메드(태현)', mat_name: 'i-Chroma 0.6T', standard1: '', unit_name: 'EA', jum_mon_1: '1/2', ship_mon_1: '1/13', jum_mon_2: '2/6', ship_mon_2: '2/19', jum_mon_3: '3/7', ship_mon_3: '3/16', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_5: '5/20', ship_mon_5: '6/6', jum_mon_6: '6/9', ship_mon_6: '6/19', jum_mon_7: '7/2', ship_mon_7: '7/12', jum_mon_8: '8/14', ship_mon_8: '8/25', jum_mon_9: '9/15', ship_mon_9: '9/27', jum_mon_10: '10/10', ship_mon_10: '10/16' },
+                    { mat_grp_name: '제일제품', mat_name: 'DC 스위치 1회로(V09)', standard1: '', unit_name: 'EA', jum_mon_2: '2/9', ship_mon_2: '2/23', jum_mon_3: '3/8', ship_mon_3: '3/17', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_5: '5/22', ship_mon_5: '5/29', jum_mon_6: '6/16', ship_mon_6: '6/23', jum_mon_8: '8/5', ship_mon_8: '8/9', jum_mon_10: '10/25', ship_mon_10: '11/8' },
+                    { mat_grp_name: '제일제품', mat_name: 'DC 스위치 2회로(V09)', standard1: '', unit_name: 'EA', jum_mon_2: '2/9', ship_mon_2: '2/23', jum_mon_3: '3/7', ship_mon_3: '3/17', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_5: '5/14', ship_mon_5: '5/19', jum_mon_6: '6/2', ship_mon_6: '6/16', jum_mon_7: '7/19', ship_mon_7: '7/27', jum_mon_10: '10/14', ship_mon_10: '10/22' },
+                    { mat_grp_name: '제일제품', mat_name: '파워허브 16포트 SUB', standard1: '', unit_name: 'EA', jum_mon_1: '1/29', ship_mon_1: '2/2', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_7: '7/8', ship_mon_7: '7/10', jum_mon_8: '8/2', ship_mon_8: '8/16', jum_mon_9: '9/21', ship_mon_9: '9/26', jum_mon_10: '10/21', ship_mon_10: '10/28' },
+                    { mat_grp_name: '제일제품', mat_name: '파워허브 24포트 SUB', standard1: '', unit_name: 'EA', jum_mon_3: '3/10', ship_mon_3: '3/19', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_5: '5/23', ship_mon_5: '6/1', jum_mon_6: '6/11', ship_mon_6: '6/12', jum_mon_7: '7/14', ship_mon_7: '7/20', jum_mon_9: '9/21', ship_mon_9: '10/5', jum_mon_10: '10/13', ship_mon_10: '10/19' },
+                    { mat_grp_name: '율아테크', mat_name: 'DCU', standard1: '', unit_name: 'EA', jum_mon_1: '1/1', ship_mon_1: '1/19', jum_mon_3: '3/17', ship_mon_3: '3/19', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_5: '5/7', ship_mon_5: '5/15', jum_mon_9: '9/9', ship_mon_9: '9/22', jum_mon_10: '10/23', ship_mon_10: '10/28' },
+                    { mat_grp_name: '에이스테크', mat_name: 'DOV-887', standard1: '', unit_name: 'EA', jum_mon_4: '4/2', ship_mon_4: '4/9', jum_mon_5: '5/2', ship_mon_5: '5/4', jum_mon_7: '7/5', ship_mon_7: '7/18', jum_mon_8: '8/12', ship_mon_8: '8/20', jum_mon_9: '9/20', ship_mon_9: '10/3', jum_mon_10: '10/10', ship_mon_10: '10/11' },
+                    { mat_grp_name: '율아테크', mat_name: 'EZ-111', standard1: '', unit_name: 'EA', jum_mon_1: '1/1', ship_mon_1: '1/19', jum_mon_5: '5/1', ship_mon_5: '5/15', jum_mon_6: '6/8', ship_mon_6: '6/17', jum_mon_7: '7/3', ship_mon_7: '7/10', jum_mon_8: '8/20', ship_mon_8: '8/27', jum_mon_9: '9/10', ship_mon_9: '9/11' },
+                    { mat_grp_name: '율아테크', mat_name: 'EZ-1390', standard1: '', unit_name: 'EA', jum_mon_1: '1/1', ship_mon_1: '1/19', jum_mon_2: '2/9', ship_mon_2: '2/10', jum_mon_5: '5/11', ship_mon_5: '5/15', jum_mon_6: '6/5', ship_mon_6: '6/6', jum_mon_7: '7/16', ship_mon_7: '7/18', jum_mon_8: '8/19', ship_mon_8: '8/29', jum_mon_10: '10/18', ship_mon_10: '10/21' },
+                    { mat_grp_name: '율아테크', mat_name: 'EZ-5520', standard1: '', unit_name: 'EA', jum_mon_1: '1/1', ship_mon_1: '1/19', jum_mon_3: '3/20', ship_mon_3: '3/24', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_7: '7/9', ship_mon_7: '7/20', jum_mon_8: '8/13', ship_mon_8: '8/15', jum_mon_10: '10/4', ship_mon_10: '10/6' },
+                    { mat_grp_name: '율아테크', mat_name: 'IF BOARD', standard1: '', unit_name: 'EA', jum_mon_1: '1/1', ship_mon_1: '1/19', jum_mon_3: '3/17', ship_mon_3: '3/19', jum_mon_4: '4/1', ship_mon_4: '4/10', jum_mon_5: '5/20', ship_mon_5: '6/3', jum_mon_6: '6/5', ship_mon_6: '6/6', jum_mon_7: '7/7', ship_mon_7: '7/19', jum_mon_8: '8/13', ship_mon_8: '8/24', jum_mon_9: '9/20', ship_mon_9: '10/2', jum_mon_10: '10/6', ship_mon_10: '10/9' },
+                    { mat_grp_name: '더블에스테크', mat_name: '참슬 MAIN', standard1: '', unit_name: 'EA', jum_mon_1: '1/9', ship_mon_1: '1/20', jum_mon_2: '2/5', ship_mon_2: '2/19', jum_mon_3: '3/20', ship_mon_3: '3/24', jum_mon_5: '5/3', ship_mon_5: '5/4', jum_mon_7: '7/11', ship_mon_7: '7/12', jum_mon_8: '8/19', ship_mon_8: '8/27', jum_mon_9: '9/16', ship_mon_9: '9/26', jum_mon_10: '10/11', ship_mon_10: '10/18' },
+                    { mat_grp_name: '더블에스테크', mat_name: '참슬 POWER', standard1: '', unit_name: 'EA', jum_mon_1: '1/9', ship_mon_1: '1/20', jum_mon_2: '2/5', ship_mon_2: '2/19', jum_mon_3: '3/20', ship_mon_3: '3/24', jum_mon_7: '7/18', ship_mon_7: '7/25', jum_mon_9: '9/26', ship_mon_9: '10/5', jum_mon_10: '10/1', ship_mon_10: '10/9' },
+                    { mat_grp_name: '더블에스테크', mat_name: '참슬 TOUCH', standard1: '', unit_name: 'EA', jum_mon_1: '1/9', ship_mon_1: '1/20', jum_mon_2: '2/5', ship_mon_2: '2/19', jum_mon_3: '3/20', ship_mon_3: '3/24', jum_mon_5: '5/1', ship_mon_5: '5/6', jum_mon_9: '9/1', ship_mon_9: '9/11', jum_mon_10: '10/10', ship_mon_10: '10/17' },
+                ];
 
-            // 2. 날짜 차이 계산 헬퍼 함수
-            const calculateLeadTime = (jumStr, shipStr) => {
-                if (!jumStr || !shipStr) return null;
-                const [jM, jD] = jumStr.split('/').map(Number);
-                const [sM, sD] = shipStr.split('/').map(Number);
+                // 2. 날짜 차이 계산 헬퍼 함수
+                const calculateLeadTime = (jumStr, shipStr) => {
+                    if (!jumStr || !shipStr) return null;
+                    const [jM, jD] = jumStr.split('/').map(Number);
+                    const [sM, sD] = shipStr.split('/').map(Number);
 
-                // 2024(윤년) 대신 2026(평년)으로 설정하면 2월이 28일까지로 계산됩니다.
-                const jDate = new Date(2026, jM - 1, jD);
-                const sDate = new Date(2026, sM - 1, sD);
+                    // 2024(윤년) 대신 2026(평년)으로 설정하면 2월이 28일까지로 계산됩니다.
+                    const jDate = new Date(2026, jM - 1, jD);
+                    const sDate = new Date(2026, sM - 1, sD);
 
-                return Math.floor((sDate - jDate) / (1000 * 60 * 60 * 24)) + 1;
-            };
-
-            // 3. 그리드 바인딩용 데이터 확장 로직
-            let expanded = [];
-            rawData.forEach((r) => {
-                let base = {
-                    mat_grp_name: r.mat_grp_name,
-                    mat_name:     r.mat_name,
-                    standard1:    r.standard1,
-                    unit_name:    r.unit_name,
+                    return Math.floor((sDate - jDate) / (1000 * 60 * 60 * 24)) + 1;
                 };
 
-                let rowJum  = { ...base, _type: '수주일' };
-                let rowShip = { ...base, _type: '출고일' };
-                let rowLead = { ...base, _type: '납기일수' };
+                // 3. 그리드 바인딩용 데이터 확장 로직
+                let expanded = [];
+                rawData.forEach((r) => {
+                    let base = {
+                        mat_grp_name: r.mat_grp_name,
+                        mat_name:     r.mat_name,
+                        standard1:    r.standard1,
+                        unit_name:    r.unit_name,
+                    };
+
+                    let rowJum  = { ...base, _type: '수주일' };
+                    let rowShip = { ...base, _type: '출고일' };
+                    let rowLead = { ...base, _type: '납기일수' };
+
+                    for (let m = 1; m <= 12; m++) {
+                        const jVal = r['jum_mon_' + m] || '';
+                        const sVal = r['ship_mon_' + m] || '';
+
+                        rowJum['mon_' + m]  = jVal;
+                        rowShip['mon_' + m] = sVal;
+                        rowLead['mon_' + m] = calculateLeadTime(jVal, sVal);
+                    }
+                    expanded.push(rowJum, rowShip, rowLead);
+                });
+
+                // 4. 상단 평균행 계산
+                // 4. 상단 평균행 계산
+                let avgLead   = { mat_grp_name: '평균',     mat_name: '', standard1: '', unit_name: '', _type: '평균', _isAvg: true };
+                let sumLead   = { mat_grp_name: '납기합계', mat_name: '', standard1: '', unit_name: '', _type: '납기합계', _isSum: true };
+                let cntLead   = { mat_grp_name: '대상품목', mat_name: '', standard1: '', unit_name: '', _type: '대상품목', _isCnt: true };
 
                 for (let m = 1; m <= 12; m++) {
-                    const jVal = r['jum_mon_' + m] || '';
-                    const sVal = r['ship_mon_' + m] || '';
+                    let leadValues = expanded
+                        .filter(row => row._type === '납기일수' && row['mon_' + m] !== null)
+                        .map(row => row['mon_' + m]);
 
-                    rowJum['mon_' + m]  = jVal;
-                    rowShip['mon_' + m] = sVal;
-                    rowLead['mon_' + m] = calculateLeadTime(jVal, sVal);
+                    const total = leadValues.reduce((a, b) => a + b, 0);
+                    const count = leadValues.length;
+
+                    sumLead['mon_' + m] = count > 0 ? total : null;
+                    cntLead['mon_' + m] = count > 0 ? count : null;
+                    avgLead['mon_' + m] = count > 0 ? (total / count).toFixed(1) : null;
                 }
-                expanded.push(rowJum, rowShip, rowLead);
-            });
 
-            // 4. 상단 평균행 계산
-            // 4. 상단 평균행 계산
-            let avgLead   = { mat_grp_name: '평균',     mat_name: '', standard1: '', unit_name: '', _type: '평균', _isAvg: true };
-            let sumLead   = { mat_grp_name: '납기합계', mat_name: '', standard1: '', unit_name: '', _type: '납기합계', _isSum: true };
-            let cntLead   = { mat_grp_name: '대상품목', mat_name: '', standard1: '', unit_name: '', _type: '대상품목', _isCnt: true };
+                this.grid.itemsSource = [sumLead, cntLead, avgLead, ...expanded];
 
-            for (let m = 1; m <= 12; m++) {
-                let leadValues = expanded
-                    .filter(row => row._type === '납기일수' && row['mon_' + m] !== null)
-                    .map(row => row['mon_' + m]);
-
-                const total = leadValues.reduce((a, b) => a + b, 0);
-                const count = leadValues.length;
-
-                sumLead['mon_' + m] = count > 0 ? total : null;
-                cntLead['mon_' + m] = count > 0 ? count : null;
-                avgLead['mon_' + m] = count > 0 ? (total / count).toFixed(1) : null;
+                // 목표 대비 달성 그래프
+                this.renderKpiPanel(sumLead, cntLead, avgLead);
             }
 
-            this.grid.itemsSource = [sumLead, cntLead, avgLead, ...expanded];
+            /* ================= 목표 대비 달성 그래프 ================= */
+            renderKpiPanel(sumLead, cntLead, avgLead) {
+                const months = [];
+                let totSum = 0, totCnt = 0;
+
+                for (let m = 1; m <= 12; m++) {
+                    const key  = 'mon_' + m;
+                    const cnt  = cntLead[key] || 0;
+                    const sum  = sumLead[key] || 0;
+                    const avg  = avgLead[key] !== null ? parseFloat(avgLead[key]) : 0;
+                    const tgt  = MONTHLY_TARGET[m - 1] || 0;
+                    const active = cnt > 0;
+
+                    if (active) { totSum += sum; totCnt += cnt; }
+
+                    months.push({
+                        m, cnt, avg, tgt, active,
+                        // 납기는 짧을수록 좋음 → 달성률 = 목표 / 실적
+                        rate: (active && avg > 0) ? (tgt / avg * 100) : 0,
+                        ok: active && avg <= tgt
+                    });
+                }
+
+                const kpi = totCnt > 0 ? totSum / totCnt : 0;
+                const act = months.filter(x => x.active);
+                const okCnt  = act.filter(x => x.ok).length;
+                const badCnt = act.length - okCnt;
+
+                // 누적 목표 (건수 가중평균)
+                const kpiTarget = totCnt > 0
+                    ? act.reduce((s, x) => s + x.tgt * x.cnt, 0) / totCnt : 0;
+                const kpiOk = kpi <= kpiTarget;
+
+                // Y축: 0 기준 (납기일수는 절대값 비교가 의미 있음)
+                const vMax  = Math.max(...months.map(x => Math.max(x.avg, x.tgt)), 1);
+                const scale = vMax * 1.3;
+                const pct   = v => Math.min(Math.max(v / scale * 100, 2), 100);
+
+                const fmt = (v, d = 0) => v.toLocaleString('ko-KR',
+                    { minimumFractionDigits: d, maximumFractionDigits: d });
+
+                const cardHtml = `
+              <div class="kpi-cards">
+                <div class="kpi-card">
+                  <div class="label">누적 대상 건수</div>
+                  <div class="value">${fmt(totCnt)}<small>건</small></div>
+                </div>
+                <div class="kpi-card">
+                  <div class="label">누적 납기일수 합계</div>
+                  <div class="value">${fmt(totSum)}<small>일</small></div>
+                </div>
+                <div class="kpi-card ${kpiOk ? 'ok' : 'bad'}">
+                  <div class="label">KPI · 평균 납기일수 (목표 ${fmt(kpiTarget, 1)}일 이하)</div>
+                  <div class="value">${fmt(kpi, 1)}<small>일</small></div>
+                </div>
+                <div class="kpi-card">
+                  <div class="label">목표 달성 현황</div>
+                  <div class="value">${okCnt}<small>달성</small> / ${badCnt}<small>미달</small></div>
+                </div>
+              </div>`;
+
+                let html = `
+                <div class="chart-head">
+                  <h3>월별 목표 대비 달성 (평균 납기일수 · 짧을수록 우수)</h3>
+                  <div class="chart-legend">
+                    <span><i class="lg-ok"></i>목표 달성</span>
+                    <span><i class="lg-bad"></i>목표 미달</span>
+                    <span><i class="lg-tgt"></i>월 목표</span>
+                  </div>
+                </div>
+                <div class="bars">`;
+
+                months.forEach(x => {
+                    const h   = x.active ? pct(x.avg) : 0;
+                    const th  = (x.active && x.tgt > 0) ? pct(x.tgt) : -1;
+                    const cls = !x.active ? 'empty' : (x.ok ? 'ok' : 'bad');
+
+                    html += `
+                  <div class="bar-col">
+                    <div class="bar-area">
+                      ${th >= 0 ? `<div class="tgt-line" style="bottom:${th}%"><span>${fmt(x.tgt, 1)}</span></div>` : ''}
+                      <div class="bar ${cls}" style="height:${h}%">
+                        ${x.active ? `<span class="bar-val">${fmt(x.avg, 1)}</span>` : ''}
+                      </div>
+                    </div>
+                    <div class="bar-x">${x.m}월</div>
+                    <div class="bar-rate ${x.active ? (x.ok ? 'ok' : 'bad') : 'na'}">
+                      ${x.active ? fmt(x.rate, 1) + '%' : '-'}
+                    </div>
+                  </div>`;
+                });
+
+                html += `
+                </div>`;
+
+                document.getElementById('kpiCards').innerHTML = cardHtml;
+                document.getElementById('kpiChart').innerHTML = html;
+            }
         }
-    }
 
-    let page = null;
+        let page = null;
 
-    $(document.body).ready(function (e) {
-        page = new ProductionMonthPage();
+        $(document.body).ready(function (e) {
+            page = new ProductionMonthPage();
 
-        AjaxUtil.fillSelectOptions($('#cboYear'), 'data_year', '', false);
+            AjaxUtil.fillSelectOptions($('#cboYear'), 'data_year', '', false);
 
-        page.searchMainData();
-
-        // 검색
-        $('#btnSearch').click(function (e) {
             page.searchMainData();
-        });
-    });
 
-    class CustomMergeManager extends wijmo.grid.MergeManager {
-        getMergedRange(panel, row, col, clip = true) {
-            if (panel.cellType !== wijmo.grid.CellType.Cell) {
+            // 검색
+            $('#btnSearch').click(function (e) {
+                page.searchMainData();
+            });
+        });
+
+        class CustomMergeManager extends wijmo.grid.MergeManager {
+            getMergedRange(panel, row, col, clip = true) {
+                if (panel.cellType !== wijmo.grid.CellType.Cell) {
+                    return super.getMergedRange(panel, row, col, clip);
+                }
+
+                const colName = panel.columns[col].binding;
+                if (colName === 'standard1' || colName === 'unit_name') {
+                    const matNameCol = panel.columns.getColumn('mat_name').index;
+                    const val = panel.getCellData(row, col, false);
+                    const matName = panel.getCellData(row, matNameCol, false);
+
+                    let rng = new wijmo.grid.CellRange(row, col);
+
+                    // 위로 병합
+                    while (rng.row > 0) {
+                        let prevVal = panel.getCellData(rng.row - 1, col, false);
+                        let prevMatName = panel.getCellData(rng.row - 1, matNameCol, false);
+                        if (prevVal !== val || prevMatName !== matName) break;
+                        rng.row--;
+                    }
+
+                    // 아래로 병합
+                    while (rng.row2 < panel.rows.length - 1) {
+                        let nextVal = panel.getCellData(rng.row2 + 1, col, false);
+                        let nextMatName = panel.getCellData(rng.row2 + 1, matNameCol, false);
+                        if (nextVal !== val || nextMatName !== matName) break;
+                        rng.row2++;
+                    }
+
+                    return rng.isSingleCell ? null : rng;
+                }
+
                 return super.getMergedRange(panel, row, col, clip);
             }
-
-            const colName = panel.columns[col].binding;
-            if (colName === 'standard1' || colName === 'unit_name') {
-                const matNameCol = panel.columns.getColumn('mat_name').index;
-                const val = panel.getCellData(row, col, false);
-                const matName = panel.getCellData(row, matNameCol, false);
-
-                let rng = new wijmo.grid.CellRange(row, col);
-
-                // 위로 병합
-                while (rng.row > 0) {
-                    let prevVal = panel.getCellData(rng.row - 1, col, false);
-                    let prevMatName = panel.getCellData(rng.row - 1, matNameCol, false);
-                    if (prevVal !== val || prevMatName !== matName) break;
-                    rng.row--;
-                }
-
-                // 아래로 병합
-                while (rng.row2 < panel.rows.length - 1) {
-                    let nextVal = panel.getCellData(rng.row2 + 1, col, false);
-                    let nextMatName = panel.getCellData(rng.row2 + 1, matNameCol, false);
-                    if (nextVal !== val || nextMatName !== matName) break;
-                    rng.row2++;
-                }
-
-                return rng.isSingleCell ? null : rng;
-            }
-
-            return super.getMergedRange(panel, row, col, clip);
         }
-    }
 
 
 
-</script>
+    </script>
 </th:block>
