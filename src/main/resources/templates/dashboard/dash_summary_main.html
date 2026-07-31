@@ -366,16 +366,31 @@
         }
 
         let page = null;
+        let evtSource = null;
 
         $(document).ready(function (e) {
             page = new DashboardPage();
 
-            const evtSource = new EventSource('/sse/stream');
-            evtSource.addEventListener("refresh", function(event) {
+            const spjangcd = sessionStorage.getItem("spjangcd");
+            if (!spjangcd) return;
+
+            if (evtSource) evtSource.close();
+            evtSource = new EventSource(
+                withCtx('/sse/stream') + '?spjangcd=' + encodeURIComponent(spjangcd)
+            );
+
+            evtSource.addEventListener("refresh", function (event) {
                 console.log("실시간 이벤트 감지 → 부족재고 갱신");
                 page.refreshOptimalStock();
             });
 
+            evtSource.onerror = function (err) {
+                console.log("stream 오류, readyState:", evtSource.readyState);
+            };
+        });
+
+        window.addEventListener('beforeunload', function () {
+            if (evtSource) evtSource.close();
         });
     </script>
 </th:block>

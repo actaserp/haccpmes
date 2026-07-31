@@ -31,6 +31,7 @@ public class WebMvcConfig implements WebMvcConfigurer{
                         "/api/common/**",
                         "/user-auth/getspjangcd",
                         "/weather/**",
+                        "/sse/**",
                         "/*.ico",
                         "/*.html",
                         "/gui/**",

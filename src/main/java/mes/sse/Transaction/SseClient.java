@@ -27,4 +27,12 @@ public class SseClient implements SseObserver{
     public SseEmitter getEmitter(){
         return emitter;
     }
+
+    public void ping() {
+        try {
+            emitter.send(SseEmitter.event().comment("keepalive"));
+        } catch (Exception e) {
+            emitter.completeWithError(e);
+        }
+    }
 }

@@ -3,39 +3,61 @@ package mes.app.common;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Map;
+import java.util.concurrent.*;
 
 @Component
 public class SseBroadcaster {
 
     private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+    private final ExecutorService sendPool = Executors.newFixedThreadPool(4);
+    private final ScheduledExecutorService heartbeat = Executors.newSingleThreadScheduledExecutor();
+
+    @PostConstruct
+    void init() {
+        heartbeat.scheduleAtFixedRate(this::ping, 15, 15, TimeUnit.SECONDS);
+    }
+
+    @PreDestroy
+    void shutdown() {
+        heartbeat.shutdownNow();
+        sendPool.shutdownNow();
+        emitters.forEach(SseEmitter::complete);
+    }
 
     public SseEmitter registerEmitter() {
-        SseEmitter emitter = new SseEmitter(0L); // 무제한
+        SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);   // 0L 금지
         emitters.add(emitter);
 
-        emitter.onCompletion(() -> emitters.remove(emitter));
-        emitter.onTimeout(() -> emitters.remove(emitter));
-        emitter.onError((e) -> emitters.remove(emitter));
+        Runnable cleanup = () -> emitters.remove(emitter);
+        emitter.onCompletion(cleanup);
+        emitter.onTimeout(cleanup);
+        emitter.onError(e -> cleanup.run());
 
         return emitter;
     }
 
     public void sendEvent(String eventName, Object data) {
-        List<SseEmitter> deadEmitters = new ArrayList<>();
-
-        emitters.forEach(em -> {
+        emitters.forEach(em -> sendPool.submit(() -> {
             try {
-                em.send(SseEmitter.event()
-                        .name(eventName)
-                        .data(data));
+                em.send(SseEmitter.event().name(eventName).data(data));
             } catch (Exception e) {
-                deadEmitters.add(em);
+                em.completeWithError(e);      // onError가 리스트에서 제거
             }
-        });
+        }));
+    }
 
-        emitters.removeAll(deadEmitters);
+    private void ping() {
+        emitters.forEach(em -> sendPool.submit(() -> {
+            try {
+                em.send(SseEmitter.event().comment("keepalive"));
+            } catch (Exception e) {
+                em.completeWithError(e);
+            }
+        }));
     }
 }

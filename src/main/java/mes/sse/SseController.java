@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
@@ -20,31 +22,46 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SseController {
 
     private final SseSubject subject = new SseSubject();
-    /*SseController(){
-        startBroadcastTestMessages();
-    }*/
+    private final ScheduledExecutorService heartbeat = Executors.newSingleThreadScheduledExecutor();
+
+    @PostConstruct
+    void init() {
+        heartbeat.scheduleAtFixedRate(subject::ping, 15, 15, TimeUnit.SECONDS);
+    }
+
+    @PreDestroy
+    void shutdown() {
+        heartbeat.shutdownNow();
+        subject.shutdown();
+    }
 
     @GetMapping(value = "/subscribe", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter subscribe(@RequestParam String spjangcd){
-        SseEmitter emitter = new SseEmitter(60 * 60 * 1000L); // 1시간 타임아웃
+    public SseEmitter subscribe(@RequestParam String spjangcd) {
+        SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
         SseClient client = new SseClient(emitter);
-
-        System.out.println(spjangcd);
 
         subject.addObservers(spjangcd, client);
 
-        emitter.onCompletion(() -> subject.removeObserver(spjangcd, client));
-        emitter.onTimeout(() -> subject.removeObserver(spjangcd, client));
-        emitter.onError((e) -> subject.removeObserver(spjangcd, client));
+        emitter.onCompletion(() -> {
+            subject.removeObserver(spjangcd, client);
+        });
+        emitter.onTimeout(() -> {
+            subject.removeObserver(spjangcd, client);
+        });
+        emitter.onError(e -> {
+            e.printStackTrace();
+            subject.removeObserver(spjangcd, client);
+        });
 
         try {
-            emitter.send(SseEmitter.event().name("연결").data("연결"));
+            emitter.send(SseEmitter.event().name("CONNECTED").data("연결"));
         } catch (IOException e) {
             emitter.completeWithError(e);
         }
 
         return emitter;
     }
+
 
     public void SendingToClientMessage(String spjangcd, String accnum) {
         subject.notify(spjangcd, accnum);
