@@ -1557,12 +1557,10 @@
         });
 
         eventSource.addEventListener("CONNECTED", function () {
-            console.log("SSE 연결 완료");
             retryDelay = 1000;                      // 성공 시 백오프 리셋
         });
 
         eventSource.onerror = function (err) {
-            console.log("SSE 오류, readyState:", eventSource.readyState);
             eventSource.close();
             eventSource = null;
             setTimeout(sseConnect, retryDelay);
