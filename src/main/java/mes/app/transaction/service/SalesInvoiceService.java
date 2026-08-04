@@ -32,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -526,47 +527,54 @@ public class SalesInvoiceService {
     }
 
 
-    // 단건 사업자 검증
-    public JsonNode validateSingleBusiness(String businessNumber) {
-        try {
-            String cleanBno = businessNumber.replaceAll("-", "");
-
-            String url = "https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=" + invoiceeCheckApiKey + "&returnType=JSON";
-            URI uri = URI.create(url);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            String jsonBody = jacksonObjectMapper.writeValueAsString(Map.of("b_no", List.of(cleanBno)));
-
-            HttpEntity<String> request = new HttpEntity<>(jsonBody, headers);
-
-            ResponseEntity<String> response = restTemplate.postForEntity(uri, request, String.class);
-
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                JsonNode json = jacksonObjectMapper.readTree(response.getBody());
-                JsonNode dataNode = json.path("data");
-                if (dataNode.isArray() && dataNode.size() > 0) {
-                    JsonNode item = dataNode.get(0);
-                    String state = item.path("b_stt_cd").asText(); // "01": 정상
-                    if (!"01".equals(state)) {
-                        return null; // 휴업, 폐업 등 처리
-                    }
-                    return item;
-                } else {
-                    throw new RuntimeException("사업자 정보가 없습니다.");
-                }
-            } else {
-                throw new RuntimeException("사업자 진위 확인 실패 - 응답 없음");
-            }
-        } catch (Exception e) {
-            log.info("=== 사업자 진위확인 API 예외 발생 ===");
-            log.info("에러 메시지     : {}", e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException("사업자 진위 확인 중 오류");
+    /** 국세청 API 장애 등으로 진위확인 자체가 불가능할 때 */
+    public static class BusinessCheckUnavailableException extends RuntimeException {
+        public BusinessCheckUnavailableException(String msg, Throwable cause) {
+            super(msg, cause);
         }
     }
 
+    public JsonNode validateSingleBusiness(String businessNumber) {
+        String cleanBno = businessNumber.replaceAll("-", "");
+
+        String url = "https://api.odcloud.kr/api/nts-businessman/v1/status"
+                + "?serviceKey=" + invoiceeCheckApiKey + "&returnType=JSON";
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            String jsonBody = jacksonObjectMapper.writeValueAsString(
+                    Map.of("b_no", List.of(cleanBno)));
+
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    URI.create(url), new HttpEntity<>(jsonBody, headers), String.class);
+
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                throw new BusinessCheckUnavailableException("진위확인 응답 없음", null);
+            }
+
+            JsonNode dataNode = jacksonObjectMapper.readTree(response.getBody()).path("data");
+            if (!dataNode.isArray() || dataNode.size() == 0) {
+                return null;                        // 조회 결과 없음 → 검증 실패
+            }
+
+            JsonNode item = dataNode.get(0);
+            if (!"01".equals(item.path("b_stt_cd").asText())) {
+                return null;                        // 휴업·폐업
+            }
+            return item;                            // 정상 사업자
+
+        } catch (RestClientException e) {
+            // ★ 503, 타임아웃, 커넥션 거부 → API 장애
+            log.warn("사업자 진위확인 API 장애 | 사업자번호: {} | 사유: {}", cleanBno, e.getMessage());
+            throw new BusinessCheckUnavailableException("사업자 진위확인 서비스 응답 없음", e);
+
+        } catch (Exception e) {
+            log.error("사업자 진위확인 처리 오류 | 사업자번호: {}", cleanBno, e);
+            throw new BusinessCheckUnavailableException("사업자 진위확인 처리 오류", e);
+        }
+    }
     // 다건 사업자 검증
     public List<JsonNode> validateMultipleBusinesses(List<String> businessNumbers) {
         try {

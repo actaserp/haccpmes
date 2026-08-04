@@ -49,7 +49,6 @@ public class SseController {
             subject.removeObserver(spjangcd, client);
         });
         emitter.onError(e -> {
-            e.printStackTrace();
             subject.removeObserver(spjangcd, client);
         });
 

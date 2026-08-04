@@ -18,8 +18,7 @@ public class SseClient implements SseObserver{
     public void send(String message) {
         try {
             emitter.send(SseEmitter.event().data(message));
-        } catch (IOException e) {
-            System.out.println("emitter.send 실패 → 연결 종료 → 클라이언트가 재연결 시도함");
+        } catch (Exception e) {
             emitter.completeWithError(e);
         }
     }

@@ -2,6 +2,7 @@ package mes.app.transaction;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder;
+import lombok.extern.slf4j.Slf4j;
 import mes.app.aop.DecryptField;
 import mes.app.transaction.service.SalesInvoiceService;
 import mes.config.Settings;
@@ -27,6 +28,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/tran/sales")
 public class SalesInvoiceController {
@@ -126,6 +128,9 @@ public class SalesInvoiceController {
 				}
 			}
 
+		} catch (SalesInvoiceService.BusinessCheckUnavailableException e) {
+			result.success = false;
+			result.message = "국세청 사업자 조회 서비스가 일시적으로 응답하지 않습니다.\n잠시 후 다시 시도해주세요.";
 		} catch (Exception e) {
 			result.success = false;
 			result.message = "사업자 진위 확인 실패: " + e.getMessage();
@@ -200,10 +205,15 @@ public class SalesInvoiceController {
 			String corpNum = (String) form.get("InvoiceeCorpNum");
 
 			// 2. 사업자번호 유효성 체크
-			if (salesInvoiceService.validateSingleBusiness(corpNum) == null) {
-				result.success = false;
-				result.message = "휴/폐업 사업자번호입니다.\n공급받는자 등록번호를 확인해주세요.";
-				return result;
+			try {
+				if (salesInvoiceService.validateSingleBusiness(corpNum) == null) {
+					result.success = false;
+					result.message = "휴/폐업 사업자번호입니다.\n공급받는자 등록번호를 확인해주세요.";
+					return result;
+				}
+			} catch (SalesInvoiceService.BusinessCheckUnavailableException e) {
+				// ★ 국세청 API 장애 → 검증만 건너뛰고 저장은 진행
+				log.warn("사업자 진위확인 불가 - 검증 생략하고 저장 진행 | 사업자번호: {}", corpNum);
 			}
 
 			// 3. company 테이블에 존재 확인
